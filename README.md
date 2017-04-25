@@ -27,8 +27,8 @@ Key Aspects
 Spiegel User Defined Docs
 ---
 
-1. replicator
-
+1. `replicator`
+    ```js
     {
       source: '<couch-url>', // e.g. https://user@db.example.com:6984. Passwords maintained via
                              // host_passwords config
@@ -36,16 +36,18 @@ Spiegel User Defined Docs
       filter: '<filter>',
       query_params: '<query-params>'
     }
+    ```
 
-2. filter
-
+2. `filter`
+    ```js
     {
       type: 'filter',
       regex: '<regex>'
     }
+    ```
 
-3. on_change
-
+3. `on_change`
+    ```js
     {
       type: 'on_change',
       regex: '<regex>',
@@ -59,18 +61,20 @@ Spiegel User Defined Docs
       block: <true|false>, // API request must resolve before moving on
       debounce: <true|false> // Duplicate API requests are ignored
     }
+    ```
 
 
 Spiegel Internal Docs
 ---
 
-1. Change Listener:
-
+1. `Change Listener`:
+    ```js
     {
       type: 'change_listener',
       db_name: '<dbName>',
       dirty: '<true>|<false>'
     }
+    ```
 
 
 onChange()
@@ -85,7 +89,7 @@ DBUpdatesListener Service
 ---
 1. cache - JSON flat file
   * `last_seq` - the last sequence number to be processed
-2. Listen to _global_changes/_changes?since=cache.last_seq&heartbeat=true and run `filters`. If a `filter` returns true and ChangesListener (CL) does not exist for the DB or CL is clean then mark CL as dirty.
+2. Listen to `_global_changes/_changes?since=cache.last_seq&heartbeat=true` and run `filters`. If a `filter` returns true and ChangesListener (CL) does not exist for the DB or CL is clean then mark CL as dirty.
 
 
 ChangesListener (CL) Service
@@ -93,11 +97,13 @@ ChangesListener (CL) Service
 1. Config
   * `max_concurrent_api_requests` - the max number of concurrent user-defined API requests. Let a user-defined API request be those requests made from Spiegel to any user-defined API, not including requests made to CouchDB
   * `host_passwords`
+      ```js
       {
         '<host>': {
           '<username>': '<password>'
         }
       }
+      ```
 2. Listen to _changes feed on spiegel database to identify when any CLs are marked as dirty
   * For each dirty CL:
     * Set `locked=<timestamp>`
@@ -117,6 +123,7 @@ Common config per service
 ---
 1. `max_concurrent_db_connections` - the max number of concurrent DB connections (per service instance) to CouchDB. This is used to prevent the service from starving the database of DB connections.
 2. `couchdb`
+    ```js
     {
       scheme: '<https|http>',
       host: '<host>',
@@ -124,3 +131,4 @@ Common config per service
       username: '<username>',
       password: '<password>'
     }
+    ```
