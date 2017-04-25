@@ -67,7 +67,7 @@ Spiegel User Defined Docs
 Spiegel Internal Docs
 ---
 
-1. `Change Listener`:
+1. `Change Listener`
     ```js
     {
       type: 'change_listener',
@@ -88,15 +88,15 @@ onChange()
 DBUpdatesListener Service
 ---
 1. cache - JSON flat file
-  * `last_seq` - the last sequence number to be processed
+    * `last_seq` - the last sequence number to be processed
 2. Listen to `_global_changes/_changes?since=cache.last_seq&heartbeat=true` and run `filters`. If a `filter` returns true and ChangesListener (CL) does not exist for the DB or CL is clean then mark CL as dirty.
 
 
 ChangesListener (CL) Service
 ---
 1. Config
-  * `max_concurrent_api_requests` - the max number of concurrent user-defined API requests. Let a user-defined API request be those requests made from Spiegel to any user-defined API, not including requests made to CouchDB
-  * `host_passwords`
+    * `max_concurrent_api_requests` - the max number of concurrent user-defined API requests. Let a user-defined API request be those requests made from Spiegel to any user-defined API, not including requests made to CouchDB
+    * `host_passwords`
       ```js
       {
         '<host>': {
@@ -105,13 +105,13 @@ ChangesListener (CL) Service
       }
       ```
 2. Listen to _changes feed on spiegel database to identify when any CLs are marked as dirty
-  * For each dirty CL:
-    * Set `locked=<timestamp>`
-    * If conflict then move to next CL
-    * Run any replicators for the target DB using _Debouncer_. Use `host_passwords` to insert password for supplied username and hostname.
-    * If filter passes: execute `onChange()` for all `on_change` docs.
-    * Set `locked=false` and `dirty=false`. If another process marks this CL as dirty in the meantime, then a conflict will occur. If this is the case then just set `locked=false` (unlock CL) so that the CL will be processed later
-  * Handle CL failures: Twice every `retry_change_listener_after_seconds`, look for any locked CLs that have been locked for `retry_change_listener_after_seconds` and then unlock them by setting `locked=false`
+    * For each dirty CL:
+      * Set `locked=<timestamp>`
+      * If conflict then move to next CL
+      * Run any replicators for the target DB using _Debouncer_. Use `host_passwords` to insert password for supplied username and hostname.
+      * If filter passes: execute `onChange()` for all `on_change` docs.
+      * Set `locked=false` and `dirty=false`. If another process marks this CL as dirty in the meantime, then a conflict will occur. If this is the case then just set `locked=false` (unlock CL) so that the CL will be processed later
+    * Handle CL failures: Twice every `retry_change_listener_after_seconds`, look for any locked CLs that have been locked for `retry_change_listener_after_seconds` and then unlock them by setting `locked=false`
 
 
 Misc
