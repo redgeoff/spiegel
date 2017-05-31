@@ -38,11 +38,21 @@ Spiegel User Defined Docs
     }
     ```
 
-2. `filter`
+2. `sieve`
     ```js
     {
-      type: 'filter',
-      regex: '<regex>' // Matches against a DB name
+      id: '_design/sieve',
+      views: {
+        sieve: {
+          map: "function(doc) {
+            if (!doc.key) {
+              return;
+            }
+            if (/dbname1|dbname2/.test(doc.key)) {
+               emit(/:(.*)$/.exec(doc.key))[1]);
+            }
+          }"
+      },
     }
     ```
 
@@ -91,7 +101,7 @@ DBUpdatesListener Service
 ---
 1. cache - JSON flat file (used to store details specific to service instance)
     * `last_seq` - the last sequence number to be processed
-2. Listen to `_global_changes/_changes?since=cache.last_seq&heartbeat=true` and run `filters`. If a `filter` returns true and ChangesListener (CL) does not exist for the DB or CL is clean then mark CL as dirty. If `cache.last_seq` doesn't exist then use `last_seq` in `{ _id: 'config' }`, if specified, otherwise assume 0.
+2. Listen to `_global_changes/_changes?since=cache.last_seq&heartbeat=true`, filtered by the `sieve` view. If a ChangesListener (CL) does not exist for the DB or CL is clean then mark CL as dirty. If `cache.last_seq` doesn't exist then use `last_seq` in `{ _id: 'config' }`, if specified, otherwise assume 0.
 3. Every `save_seq_after_seconds` the DBUpdatesListener saves `last_seq` in the `{ _id: 'config' }` doc. This value is then used to start any new DBUpdatesListeners at the last sequence number so that they don't have to start from the beginning.
 
 
@@ -113,7 +123,7 @@ ChangesListener (CL) Service
       * Set `locked=<timestamp>`
       * If conflict then move to next CL
       * Run any replicators for the target DB using _Debouncer_. Use `host_passwords` to insert password for supplied username and hostname.
-      * If filter.regex matches DB name: for all `on_change` docs, if on_change.regex matches DB name, execute `onChange()`.
+      * For all `on_change` docs, if on_change.regex matches DB name, execute `onChange()`.
       * Set `locked=false` and `dirty=false`. If another process marks this CL as dirty in the meantime, then a conflict will occur. If this is the case then just set `locked=false` (unlock CL) so that the CL will be processed later
     * Handle CL failures: Twice every `retry_change_listener_after_seconds`, look for any locked CLs that have been locked for `retry_change_listener_after_seconds` and then unlock them by setting `locked=false`
 
