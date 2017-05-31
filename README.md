@@ -89,7 +89,7 @@ onChange()
 
 DBUpdatesListener Service
 ---
-1. cache - JSON flat file
+1. cache - JSON flat file (used to store details specific to service instance)
     * `last_seq` - the last sequence number to be processed
 2. Listen to `_global_changes/_changes?since=cache.last_seq&heartbeat=true` and run `filters`. If a `filter` returns true and ChangesListener (CL) does not exist for the DB or CL is clean then mark CL as dirty. If `cache.last_seq` doesn't exist then use `last_seq` in `{ _id: 'config' }`, if specified, otherwise assume 0.
 3. Every `save_seq_after_seconds` the DBUpdatesListener saves `last_seq` in the `{ _id: 'config' }` doc. This value is then used to start any new DBUpdatesListeners at the last sequence number so that they don't have to start from the beginning.
@@ -108,6 +108,7 @@ ChangesListener (CL) Service
       }
       ```
 2. Listen to _changes feed on spiegel database to identify when any CLs are marked as dirty
+    * List of dirty CLs is retrieved using a design doc on the spiegel DB
     * For each dirty CL:
       * Set `locked=<timestamp>`
       * If conflict then move to next CL
