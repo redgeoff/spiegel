@@ -52,7 +52,8 @@ Spiegel User Defined Docs
                emit(/:(.*)$/.exec(doc.key))[1]);
             }
           }"
-      },
+        }
+      }
     }
     ```
 
