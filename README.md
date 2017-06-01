@@ -44,14 +44,14 @@ Spiegel User Defined Docs
       id: '_design/sieve',
       views: {
         sieve: {
-          map: 'function(doc) {
-            if (!doc.key) {
-              return;
-            }
-            if (/dbname1|dbname2/.test(doc.key)) {
-              emit(/:(.*)$/.exec(doc.key))[1]);
-            }
-          }'
+          map: ['function (doc) {',
+            'if (!doc.key) {',
+              'return;',
+            '}',
+            'if (/dbname1|dbname2/.test(doc.key)) {',
+              'emit(/:(.*)$/.exec(doc.key)[1]);',
+            '}',
+          '}'].join(' ')
         }
       }
     }
