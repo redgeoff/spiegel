@@ -1,0 +1,32 @@
+{
+  "curly": true,
+  "eqeqeq": true,
+  "immed": true,
+  "newcap": true,
+  "noarg": true,
+  "sub": true,
+  "undef": true,
+  "unused": true,
+  "eqnull": true,
+  "browser": true,
+  "node": true,
+  "strict": true,
+  "globalstrict": true,
+  "white": true,
+  "indent": 2,
+  "maxlen": 100,
+  "globals": {
+    "process": false,
+    "global": false,
+    "require": false,
+    "console": false,
+    "describe": false,
+    "before": false,
+    "beforeEach": false,
+    "after": false,
+    "afterEach": false,
+    "it": false,
+    "emit": false,
+    "mocha": false
+  }
+}

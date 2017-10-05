@@ -8,9 +8,10 @@
     "url": "git://github.com/redgeoff/spiegel"
   },
   "keywords": [
-    "js",
-    "stream",
-    "iterator"
+    "couchdb",
+    "scalable",
+    "replication",
+    "change listening"
   ],
   "author": "Geoffrey Cox",
   "license": "MIT",
@@ -37,25 +38,23 @@
     "TODO-build": "",
     "TODO-test-in-sauce": ""
   },
-  "dependencies": {
-    "bluebird": "^3.5.0",
-    "events": "^1.1.1",
-    "inherits": "^2.0.3"
-  },
   "devDependencies": {
     "beautify-proj": "^1.0.0",
     "browserify": "^14.4.0",
-    "chai": "^4.0.2",
+    "chai": "^4.1.0",
     "chai-as-promised": "^6.0.0",
-    "gofur": "0.0.6",
+    "gofur": "^0.0.8",
     "istanbul": "^0.4.5",
     "jshint": "^2.9.4",
-    "mocha": "^3.4.2",
+    "mocha": "^4.0.0",
     "request": "^2.81.0"
   },
   "greenkeeper": {
     "ignore": [
       "chai-as-promised"
     ]
+  },
+  "dependencies": {
+    "sporks": "0.0.2"
   }
 }
