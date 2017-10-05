@@ -17,5 +17,3 @@ test:
 
   override:
     - nvm use 7.10.0 && npm run node-full-test
-    - nvm use 7.10.0 && npm run browser-test-phantomjs
-    - nvm use 7.10.0 && npm run browser-coverage-full-test

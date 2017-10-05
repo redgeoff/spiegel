@@ -22,19 +22,9 @@
     "assert-beautified": "beautify-proj -i test -c beautify.json && beautify-proj -i scripts -c beautify.json",
     "beautify": "beautify-proj -i test -o . -c beautify.json && beautify-proj -i scripts -o . -c beautify.json",
     "jshint": "jshint -c .jshintrc test scripts",
-    "node-test": "istanbul test --dir cache/coverage/node node_modules/mocha/bin/_mocha test/node.js",
+    "node-test": "istanbul test --dir cache/coverage/node node_modules/mocha/bin/_mocha test/index.js",
     "node-full-test": "npm run node-test --coverage && istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100",
-    "browser-server": "node_modules/gofur/scripts/browser/serve.js -c cache -t test/browser.js",
-    "browser-test": "node_modules/gofur/scripts/browser/test.js -c cache -t test/browser.js",
-    "browser-test-firefox": "node_modules/gofur/scripts/browser/test.js -c cache -t test/browser.js -b selenium:firefox",
-    "browser-test-chrome": "node_modules/gofur/scripts/browser/test.js -c cache -t test/browser.js -b selenium:chrome",
-    "browser-test-phantomjs": "node_modules/gofur/scripts/browser/test.js -c cache -t test/browser.js -b selenium:phantomjs",
-    "browser-coverage-server": "node_modules/gofur/scripts/browser-coverage/serve.js -c cache -t test/browser.js",
-    "browser-coverage-test": "node_modules/gofur/scripts/browser-coverage/test.js -c cache -t test/browser.js",
-    "browser-coverage-report": "istanbul report --dir cache/coverage/browser --root cache/coverage/browser lcov",
-    "browser-coverage-check": "istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100 cache/coverage/browser/coverage.json",
-    "browser-coverage-full-test": "npm run browser-coverage-test && npm run browser-coverage-report && npm run browser-coverage-check",
-    "test": "npm run assert-beautified && npm run jshint && npm run node-full-test && npm run browser-coverage-full-test",
+    "test": "npm run assert-beautified && npm run jshint && npm run node-full-test",
     "TODO-build": "",
     "TODO-test-in-sauce": ""
   },
@@ -55,6 +45,7 @@
     ]
   },
   "dependencies": {
+    "node-fs-extra": "^0.8.2",
     "sporks": "0.0.2"
   }
 }

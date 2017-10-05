@@ -15,6 +15,7 @@
   "white": true,
   "indent": 2,
   "maxlen": 100,
+  "esversion": 6,
   "globals": {
     "process": false,
     "global": false,
