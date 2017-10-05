@@ -4,7 +4,7 @@ const Cache = require('../../../scripts/common/cache');
 
 describe('cache', () => {
 
-  var cache = new Cache( /* path */ );
+  let cache = new Cache( /* path */ );
 
   it('should set', async() => {
     await cache.set('foo', 'bar');
