@@ -1,11 +1,9 @@
 'use strict';
 
 class DBUpdateListener {
-
-  constructor (opts) {
+  constructor(opts) {
     this._opts = opts;
   }
-
 }
 
 module.exports = DBUpdateListener;

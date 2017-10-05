@@ -5,7 +5,5 @@ chai.use(require('chai-as-promised'));
 chai.should();
 
 describe('spiegel', () => {
-
   require('./spec');
-
 });

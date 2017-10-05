@@ -20,7 +20,8 @@
   },
   "scripts": {
     "assert-beautified": "beautify-proj -i test -c beautify.json && beautify-proj -i scripts -c beautify.json",
-    "beautify": "beautify-proj -i test -o . -c beautify.json && beautify-proj -i scripts -o . -c beautify.json",
+    "REMOVE-beautify": "beautify-proj -i test -o . -c beautify.json && beautify-proj -i scripts -o . -c beautify.json",
+    "beautify": "prettier-eslint --write \"scripts/**/*.js\" \"test/**/*.js\"",
     "jshint": "jshint -c .jshintrc test scripts",
     "node-test": "istanbul test --dir cache/coverage/node node_modules/mocha/bin/_mocha test/index.js",
     "node-full-test": "npm run node-test --coverage && istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100",
@@ -37,6 +38,7 @@
     "istanbul": "^0.4.5",
     "jshint": "^2.9.4",
     "mocha": "^4.0.0",
+    "prettier-eslint-cli": "^4.4.0",
     "request": "^2.81.0"
   },
   "greenkeeper": {

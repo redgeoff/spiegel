@@ -6,7 +6,6 @@
 // const fs = require('fs-extra');
 
 class Cache {
-
   constructor(path) {
     this._path = path;
     this._values = {};
@@ -20,7 +19,6 @@ class Cache {
   get(name) {
     return Promise.resolve(this._values[name]);
   }
-
 }
 
 module.exports = Cache;
