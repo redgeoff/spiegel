@@ -1,6 +1,6 @@
 'use strict'
 
-const Cache = require('../../../scripts/common/cache')
+const Cache = require('../../../src/common/cache')
 
 describe('cache', () => {
   let cache = new Cache()

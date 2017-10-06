@@ -14,8 +14,8 @@
     "url": "https://github.com/redgeoff/spiegel/issues"
   },
   "scripts": {
-    "beautify": "prettier-eslint --write \"scripts/**/*.js\" \"test/**/*.js\"",
-    "lint": "eslint test scripts",
+    "beautify": "prettier-eslint --write \"src/**/*.js\" \"test/**/*.js\"",
+    "lint": "eslint test src",
     "node-test":
       "istanbul test --dir cache/coverage/node node_modules/mocha/bin/_mocha test/index.js",
     "node-full-test":
