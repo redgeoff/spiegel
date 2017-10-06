@@ -1,9 +1,9 @@
-'use strict';
+'use strict'
 
-const chai = require('chai');
-chai.use(require('chai-as-promised'));
-chai.should();
+const chai = require('chai')
+chai.use(require('chai-as-promised'))
+chai.should()
 
 describe('spiegel', () => {
-  require('./spec');
-});
+  require('./spec')
+})

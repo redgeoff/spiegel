@@ -1,13 +1,13 @@
-'use strict';
+'use strict'
 
-const Cache = require('../../../scripts/common/cache');
+const Cache = require('../../../scripts/common/cache')
 
 describe('cache', () => {
-  let cache = new Cache /* path */();
+  let cache = new Cache()
 
   it('should set', async () => {
-    await cache.set('foo', 'bar');
-    const foo = await cache.get('foo');
-    foo.should.eql('bar');
-  });
-});
+    await cache.set('foo', 'bar')
+    const foo = await cache.get('foo')
+    foo.should.eql('bar')
+  })
+})

@@ -1,5 +1,5 @@
-'use strict';
+'use strict'
 
 class ChangeListener {}
 
-module.exports = ChangeListener;
+module.exports = ChangeListener

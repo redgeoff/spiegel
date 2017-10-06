@@ -2,7 +2,7 @@
 
 ## Beautify
 
-We use [beautify-proj](https://github.com/delta-db/beautify-proj) to beautify all of our code. This helps us to keep our coding style standardized. If the `assert-beautified` test fails, you'll want to run `npm run beautify` and then commit the changes.
+We use [prettier](https://github.com/prettier/prettier) to beautify all of our code. This helps us to keep our coding style standardized. If the `lint` test fails, you'll want to run `npm run beautify` and then commit the changes.
 
 ## Test in node
 

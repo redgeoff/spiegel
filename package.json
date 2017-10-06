@@ -7,33 +7,33 @@
     "type": "git",
     "url": "git://github.com/redgeoff/spiegel"
   },
-  "keywords": [
-    "couchdb",
-    "scalable",
-    "replication",
-    "change listening"
-  ],
+  "keywords": ["couchdb", "scalable", "replication", "change listening"],
   "author": "Geoffrey Cox",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/redgeoff/spiegel/issues"
   },
   "scripts": {
-    "assert-beautified": "beautify-proj -i test -c beautify.json && beautify-proj -i scripts -c beautify.json",
-    "REMOVE-beautify": "beautify-proj -i test -o . -c beautify.json && beautify-proj -i scripts -o . -c beautify.json",
     "beautify": "prettier-eslint --write \"scripts/**/*.js\" \"test/**/*.js\"",
-    "jshint": "jshint -c .jshintrc test scripts",
-    "node-test": "istanbul test --dir cache/coverage/node node_modules/mocha/bin/_mocha test/index.js",
-    "node-full-test": "npm run node-test --coverage && istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100",
-    "test": "npm run assert-beautified && npm run jshint && npm run node-full-test",
+    "lint": "eslint test scripts",
+    "node-test":
+      "istanbul test --dir cache/coverage/node node_modules/mocha/bin/_mocha test/index.js",
+    "node-full-test":
+      "npm run node-test --coverage && istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100",
+    "test": "npm run lint && npm run node-full-test",
     "TODO-build": "",
     "TODO-test-in-sauce": ""
   },
   "devDependencies": {
-    "beautify-proj": "^1.0.0",
-    "browserify": "^14.4.0",
+    "babel-eslint": "^7.2.3",
     "chai": "^4.1.0",
     "chai-as-promised": "^6.0.0",
+    "eslint": "^4.8.0",
+    "eslint-config-standard": "^10.2.1",
+    "eslint-plugin-import": "^2.7.0",
+    "eslint-plugin-node": "^5.2.0",
+    "eslint-plugin-promise": "^3.5.0",
+    "eslint-plugin-standard": "^3.0.1",
     "gofur": "^0.0.8",
     "istanbul": "^0.4.5",
     "jshint": "^2.9.4",
@@ -42,9 +42,7 @@
     "request": "^2.81.0"
   },
   "greenkeeper": {
-    "ignore": [
-      "chai-as-promised"
-    ]
+    "ignore": ["chai-as-promised"]
   },
   "dependencies": {
     "node-fs-extra": "^0.8.2",
