@@ -1,4 +1,7 @@
 # spiegel
+
+[![Circle CI](https://circleci.com/gh/redgeoff/slouch.svg?style=svg&circle-token=71ef4a94aae37c96dde8268b3ed094f5fb73dd7f)](https://circleci.com/gh/redgeoff/slouch)
+
 Scalable replication and change listening for CouchDB
 
 Status
