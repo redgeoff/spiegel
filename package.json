@@ -21,6 +21,7 @@
     "node-full-test":
       "npm run node-test --coverage && istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100",
     "test": "npm run lint && npm run node-full-test",
+    "reset-db": "./scripts/reset-db.js",
     "TODO-build": "",
     "TODO-test-in-sauce": ""
   },
@@ -45,6 +46,7 @@
     "ignore": ["chai-as-promised"]
   },
   "dependencies": {
+    "couch-slouch": "^0.1.1",
     "node-fs-extra": "^0.8.2",
     "sporks": "0.0.2"
   }
