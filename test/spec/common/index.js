@@ -1,3 +1,3 @@
 'use strict'
 
-require('./cache')
+require('./globals')
