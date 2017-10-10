@@ -10,6 +10,7 @@ class Utils {
     this.spiegel = this._newSpiegel()
     this._slouch = this.spiegel._slouch
     this._dbNames = []
+    this.TIMEOUT = 10000
   }
 
   _newSpiegel () {

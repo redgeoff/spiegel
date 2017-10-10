@@ -8,7 +8,7 @@ const testUtils = require('./utils')
 
 describe('spiegel', function () {
   // Extend the timeout as the DB needs more time to process changes
-  this.timeout(10000)
+  this.timeout(testUtils.TIMEOUT)
 
   before(() => {
     return testUtils.spiegel.create()
