@@ -21,7 +21,10 @@ class UpdateListeners {
     return this._throttler.allDone()
   }
 
-  _onUpdate (update) {}
+  _onUpdate (update) {
+    // TODO: how to quickly iterate through replicators without hitting DB for each update? Probably
+    // use PouchDB with replicators view and find()
+  }
 
   _onError (err) {
     log.error(err)

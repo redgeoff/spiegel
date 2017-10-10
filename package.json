@@ -25,6 +25,7 @@
     "node-full-test": "npm run node-test --coverage && istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100",
     "test": "npm run lint && npm run node-full-test",
     "reset-db": "./scripts/reset-db.js",
+    "benchmark-pouch-query": "node_modules/mocha/bin/_mocha test/benchmark/pouch-query.js",
     "TODO-build": "",
     "TODO-test-in-sauce": ""
   },
@@ -42,6 +43,7 @@
     "istanbul": "^0.4.5",
     "jshint": "^2.9.4",
     "mocha": "^4.0.0",
+    "node-fs-extra": "^0.8.2",
     "prettier-eslint-cli": "^4.4.0",
     "request": "^2.81.0"
   },
@@ -53,7 +55,6 @@
   "dependencies": {
     "bunyan": "^1.8.12",
     "couch-slouch": "^0.1.2",
-    "node-fs-extra": "^0.8.2",
     "pouchdb": "^6.3.4",
     "pouchdb-adapter-memory": "^6.3.4",
     "sporks": "0.0.3"

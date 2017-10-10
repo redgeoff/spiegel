@@ -77,7 +77,6 @@ class OnChanges extends events.EventEmitter {
   }
 
   stop () {
-    // return this._from.cancel()
     let completed = sporks.once(this._from, 'complete')
     this._from.cancel()
     return completed
