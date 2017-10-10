@@ -9,15 +9,16 @@ const PouchDB = require('pouchdb')
 const slouch = testUtils.spiegel._slouch
 const sporks = require('sporks')
 const utils = require('../../src/utils')
-const fs = require('fs-extra')
 
 // Question: What is the fastest way to look up a replicator in a local CouchDB instance?
 
 describe('pouch-query', function () {
+  this.timeout(10000)
+
   let db = null
   let from = null
   const N = 2
-  const DB_NAME = 'test_replicator'
+  const DB_NAME = 'test_replicators'
 
   const createDB = () => {
     return slouch.db.create(DB_NAME)
@@ -82,17 +83,8 @@ describe('pouch-query', function () {
     return completed
   }
 
-  const destroyPouchDB = () => {
-    // The following results in "OpenError: IO error: cache/test_bm_replicators: Invalid argument"
-    // errors so we just remove all the files manually
-    //
-    // await db.destroy()
-
-    return fs.remove('cache/test_bm_replicators')
-  }
-
   beforeEach(async () => {
-    db = new PouchDB('cache/test_bm_replicators')
+    db = new PouchDB(utils.levelPath() + '/test_bm_replicators')
     await createDB()
     await createReplicatorsByDBNameView()
     await createDocs()
@@ -101,11 +93,16 @@ describe('pouch-query', function () {
 
   afterEach(async () => {
     await stopReplicating()
-    await destroyPouchDB()
+    await db.destroy()
     await destroyDB()
   })
 
-  it('should find', () => {})
+  it('should find', async () => {
+    let docs = await db.allDocs({ include_docs: true })
+    docs.rows.forEach(function (doc) {
+      console.log('doc=', doc)
+    })
+  })
 
   // it('should query', () => {})
 })
