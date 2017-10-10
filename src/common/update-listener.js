@@ -35,7 +35,7 @@ class UpdateListener {
       heartbeat: true,
       since: self._lastSeq,
       filter: '_view',
-      view: 'sieve/sieve'
+      view: self._spiegel._namespace + 'sieve/sieve'
     })
 
     self._dbUpdatesIterator.on('error', function (err) {

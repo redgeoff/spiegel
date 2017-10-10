@@ -8,6 +8,10 @@ class Spiegel {
   constructor (opts) {
     this._slouch = slouch
     this._dbName = opts && opts.dbName ? opts.dbName : 'spiegel'
+
+    // Used to create a separate namespace for testing
+    this._namespace = opts && opts.namespace ? opts.namespace : ''
+
     this._listener = new Listener(this)
     this._replicator = new Replicator(this)
   }

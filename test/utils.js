@@ -13,12 +13,12 @@ class Utils {
   }
 
   _newSpiegel () {
-    return new Spiegel({ dbName: 'test_spiegel' })
+    return new Spiegel({ dbName: 'test_spiegel', namespace: 'test_' })
   }
 
   createSieve () {
     return this._slouch.doc.create('_global_changes', {
-      _id: '_design/sieve',
+      _id: '_design/' + this.spiegel._namespace + 'sieve',
       views: {
         sieve: {
           map: [
@@ -34,7 +34,10 @@ class Utils {
   }
 
   destroySieve () {
-    return this._slouch.doc.getAndDestroy('_global_changes', '_design/sieve')
+    return this._slouch.doc.getAndDestroy(
+      '_global_changes',
+      '_design/' + this.spiegel._namespace + 'sieve'
+    )
   }
 
   async createTestDB (dbName) {
