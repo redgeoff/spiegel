@@ -1,10 +1,10 @@
 'use strict'
 
-const OnChange = require('../../src/on-change')
+const OnChanges = require('../../src/on-changes')
 const testUtils = require('../utils')
 
-describe('on-change', () => {
-  let onChange = null
+describe('on-changes', () => {
+  let onChanges = null
   let docIds = []
 
   const createOnChanges = async () => {
@@ -36,18 +36,18 @@ describe('on-change', () => {
   })
 
   beforeEach(async () => {
-    onChange = new OnChange(testUtils.spiegel)
-    await onChange.start()
+    onChanges = new OnChanges(testUtils.spiegel)
+    await onChanges.start()
   })
 
   afterEach(async () => {
-    await onChange.stop()
+    await onChanges.stop()
   })
 
   it('should get all', async () => {
     // let before = new Date()
 
-    let docs = await onChange.all()
+    let docs = await onChanges.all()
 
     // See 'should get all with forEach' for speed analysis
     // let after = new Date()

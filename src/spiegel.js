@@ -1,10 +1,10 @@
 'use strict'
 
 const slouch = require('./slouch')
-const UpdateListener = require('./update-listener')
+const UpdateListeners = require('./update-listeners')
 const ChangeListeners = require('./change-listeners')
-const Replicator = require('./replicator')
-const OnChange = require('./on-change')
+const Replicators = require('./replicators')
+const OnChanges = require('./on-changes')
 
 class Spiegel {
   constructor (opts) {
@@ -14,39 +14,39 @@ class Spiegel {
     // Used to create a separate namespace for testing
     this._namespace = opts && opts.namespace ? opts.namespace : ''
 
-    this._updateListener = new UpdateListener(this, opts)
+    this._updateListeners = new UpdateListeners(this, opts)
     this._changeListeners = new ChangeListeners(this)
-    this._replicator = new Replicator(this)
-    this._onChange = new OnChange(this)
+    this._replicators = new Replicators(this)
+    this._onChanges = new OnChanges(this)
   }
 
   async create () {
     await this._slouch.db.create(this._dbName)
     await this._slouch.security.onlyAdminCanView(this._dbName)
     await this._changeListeners.create()
-    await this._onChange.create()
-    await this._replicator.create()
+    await this._onChanges.create()
+    await this._replicators.create()
   }
 
   async destroy () {
     await this._changeListeners.destroy()
-    await this._replicator.destroy()
-    await this._onChange.destroy()
+    await this._replicators.destroy()
+    await this._onChanges.destroy()
     await this._slouch.db.destroy(this._dbName)
   }
 
   async start () {
-    await this._updateListener.start()
+    await this._updateListeners.start()
     // await this._changeListeners.start()
-    await this._onChange.start()
-    // await this._replicator.start()
+    await this._onChanges.start()
+    // await this._replicators.start()
   }
 
   async stop () {
-    await this._updateListener.stop()
+    await this._updateListeners.stop()
     // await this._changeListeners.stop()
-    await this._onChange.stop()
-    // await this._replicator.stop()
+    await this._onChanges.stop()
+    // await this._replicators.stop()
   }
 }
 

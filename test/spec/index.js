@@ -2,5 +2,5 @@
 
 require('./change-listeners')
 require('./globals')
-require('./on-change')
-require('./update-listener')
+require('./on-changes')
+require('./update-listeners')

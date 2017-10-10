@@ -4,7 +4,7 @@ const Throttler = require('squadron').Throttler
 const Globals = require('./globals')
 const log = require('./log')
 
-class UpdateListener {
+class UpdateListeners {
   constructor (spiegel, opts) {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
@@ -58,4 +58,4 @@ class UpdateListener {
   }
 }
 
-module.exports = UpdateListener
+module.exports = UpdateListeners

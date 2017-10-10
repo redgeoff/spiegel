@@ -7,7 +7,7 @@ const utils = require('./utils')
 const sporks = require('sporks')
 const log = require('./log')
 
-class OnChange extends events.EventEmitter {
+class OnChanges extends events.EventEmitter {
   constructor (spiegel) {
     super()
 
@@ -89,4 +89,4 @@ class OnChange extends events.EventEmitter {
   }
 }
 
-module.exports = OnChange
+module.exports = OnChanges

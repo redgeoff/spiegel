@@ -1,6 +1,6 @@
 'use strict'
 
-class Replicator {
+class Replicators {
   constructor (spiegel) {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
@@ -84,4 +84,4 @@ class Replicator {
   }
 }
 
-module.exports = Replicator
+module.exports = Replicators

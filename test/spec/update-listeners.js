@@ -1,29 +1,29 @@
 'use strict'
 
-const UpdateListener = require('../../src/update-listener')
+const UpdateListeners = require('../../src/update-listeners')
 const testUtils = require('../utils')
 const sporks = require('sporks')
 
-describe('update-listener', () => {
-  let listener = null
+describe('update-listeners', () => {
+  let listeners = null
   let updates = []
 
   const spyOnUpdates = () => {
-    listener._onUpdate = update => {
+    listeners._onUpdate = update => {
       updates[update.id] = true
     }
   }
 
   beforeEach(async () => {
-    listener = new UpdateListener(testUtils.spiegel)
+    listeners = new UpdateListeners(testUtils.spiegel)
     await testUtils.createSieve()
     spyOnUpdates()
-    await listener.start()
+    await listeners.start()
     await testUtils.createTestDBs(['test_db1', 'test_db2', 'test_db3'])
   })
 
   afterEach(async () => {
-    await listener.stop()
+    await listeners.stop()
     await testUtils.destroySieve()
     await testUtils.destroyTestDBs()
   })
