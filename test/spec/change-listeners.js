@@ -80,7 +80,48 @@ describe('change-listeners', () => {
     upserts.length.should.eql(1)
   })
 
-  // it('should clean listener', async () => {})
+  it('should clean listener', async () => {
+    // Create dirty listener
+    let listener = await dirtyListener()
 
-  // TODO: variations on cleanOrUpdateLastSeq, including conflicts with dirty
+    // Clean listener
+    let lastSeq = '123'
+    await listeners._clean(listener, lastSeq)
+
+    // Make sure it is now clean and the lastSeq was set
+    listener = await listeners._get('test_db1')
+    listener.dirty.should.eql(false)
+    listener.last_seq.should.eql(lastSeq)
+  })
+
+  it('cleanOrUpdateLastSeq should clean', async () => {
+    // Create dirty listener
+    let listener = await dirtyListener()
+
+    // Clean listener
+    let lastSeq = '123'
+    await listeners.cleanOrUpdateLastSeq(listener, lastSeq)
+
+    // Make sure it is now clean and the lastSeq was set
+    listener = await listeners._get('test_db1')
+    listener.dirty.should.eql(false)
+    listener.last_seq.should.eql(lastSeq)
+  })
+
+  it('cleanOrUpdateLastSeq should update', async () => {
+    // Create dirty listener
+    let listener = await dirtyListener()
+
+    // Update the lastSeq to prepare for the conflict
+    await listeners._updateLastSeq(listener._id, '123')
+
+    // Attempt to clean, but actually set last seq
+    let lastSeq = '222'
+    await listeners.cleanOrUpdateLastSeq(listener, lastSeq)
+
+    // Make sure it is still dirty, but the lastSeq was updated
+    listener = await listeners._get('test_db1')
+    listener.dirty.should.eql(true)
+    listener.last_seq.should.eql(lastSeq)
+  })
 })
