@@ -51,7 +51,7 @@ class Utils {
       thing: 'play'
     })
 
-    await this._slouch.doc.getMergeUpsert(dbName, {
+    await this._slouch.doc.upsert(dbName, {
       _id: '1',
       thing: 'code'
     })

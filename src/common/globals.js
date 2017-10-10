@@ -13,7 +13,7 @@ class Globals {
   }
 
   set (name, value) {
-    return this._slouch.doc.getMergeUpsert(this._spiegel._dbName, {
+    return this._slouch.doc.upsert(this._spiegel._dbName, {
       _id: this._toId(name),
       type: 'global',
       value: value
