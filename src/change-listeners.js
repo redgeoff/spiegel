@@ -52,6 +52,10 @@ class ChangeListeners {
     return this._slouch.doc.getIgnoreMissing(this._spiegel._dbName, this._toId(dbName))
   }
 
+  _upsert (listener) {
+    return this._slouch.doc.upsert(this._spiegel._dbName, listener)
+  }
+
   async dirtyIfClean (dbName) {
     let listener = await this._get(dbName)
 
@@ -75,7 +79,7 @@ class ChangeListeners {
 
       // Upsert a change as we want the listener to be considered dirty even if it was cleaned since
       // we got the doc.
-      await this._slouch.doc.upsert(this._spiegel._dbName, listener)
+      await this._upsert(listener)
     }
   }
 
