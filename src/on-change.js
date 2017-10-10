@@ -1,6 +1,7 @@
 'use strict'
 
 const PouchDB = require('pouchdb')
+PouchDB.plugin(require('pouchdb-adapter-memory'))
 const events = require('events')
 const utils = require('./utils')
 const sporks = require('sporks')
@@ -12,10 +13,10 @@ class OnChange extends events.EventEmitter {
 
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
-    this._db = new PouchDB('./cache/' + this._spiegel._namespace + 'on_changes')
 
-    // A promise that resolves once the PouchDB has loaded
-    this._loaded = sporks.once(this, 'loaded')
+    // We use a memory adapter as we want to be able to read the changes from memory very quickly as
+    // they will be read many times over
+    this._db = new PouchDB(this._spiegel._namespace + 'on_changes', { adapter: 'memory' })
   }
 
   _createOnChangesView () {
@@ -54,8 +55,11 @@ class OnChange extends events.EventEmitter {
   }
 
   start () {
+    // A promise that resolves once the PouchDB has loaded
+    let loaded = sporks.once(this, 'load')
+
     this._from = this._db.replicate
-      .from(utils.couchDBURL(), {
+      .from(utils.couchDBURL() + '/' + this._spiegel._dbName, {
         live: true,
         retry: true,
         filter: '_view',
@@ -63,22 +67,25 @@ class OnChange extends events.EventEmitter {
       })
       .once('paused', () => {
         // Alert that the data has been loaded and is ready to be used
-        this.emit('loaded')
+        this.emit('load')
       })
-      .on('change', function () {})
       .on('error', function (err) {
         log.error(err)
       })
+
+    return loaded
   }
 
   stop () {
-    return this._from.cancel()
+    // return this._from.cancel()
+    let completed = sporks.once(this._from, 'complete')
+    this._from.cancel()
+    return completed
   }
 
   async all () {
     // Make sure the data has been loaded before querying for all docs
-    await this._loaded
-    return this._db.allDocs()
+    return this._db.allDocs({ include_docs: true })
   }
 }
 
