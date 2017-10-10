@@ -2,6 +2,7 @@
 
 const Throttler = require('squadron').Throttler
 const Globals = require('./globals')
+const log = require('./log')
 
 class UpdateListener {
   constructor (spiegel, opts) {
@@ -23,8 +24,7 @@ class UpdateListener {
   _onUpdate (update) {}
 
   _onError (err) {
-    // TODO: create log construct in sporks and use it log errors
-    console.error('update-listener, err=', err)
+    log.error(err)
   }
 
   _listen () {

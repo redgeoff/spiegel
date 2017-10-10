@@ -4,6 +4,7 @@ const PouchDB = require('pouchdb')
 const events = require('events')
 const utils = require('./utils')
 const sporks = require('sporks')
+const log = require('./log')
 
 class OnChange extends events.EventEmitter {
   constructor (spiegel) {
@@ -11,7 +12,7 @@ class OnChange extends events.EventEmitter {
 
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
-    this._db = new PouchDB('./cache/on_changes')
+    this._db = new PouchDB('./cache/' + this._spiegel._namespace + 'on_changes')
 
     // A promise that resolves once the PouchDB has loaded
     this._loaded = sporks.once(this, 'loaded')
@@ -63,6 +64,10 @@ class OnChange extends events.EventEmitter {
       .once('paused', () => {
         // Alert that the data has been loaded and is ready to be used
         this.emit('loaded')
+      })
+      .on('change', function () {})
+      .on('error', function (err) {
+        log.error(err)
       })
   }
 

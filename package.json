@@ -51,6 +51,7 @@
     ]
   },
   "dependencies": {
+    "bunyan": "^1.8.12",
     "couch-slouch": "^0.1.2",
     "node-fs-extra": "^0.8.2",
     "pouchdb": "^6.3.4",
