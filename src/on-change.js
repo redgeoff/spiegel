@@ -1,16 +1,27 @@
 'use strict'
 
-class OnChange {
+const PouchDB = require('pouchdb')
+const events = require('events')
+const utils = require('./utils')
+const sporks = require('sporks')
+
+class OnChange extends events.EventEmitter {
   constructor (spiegel) {
+    super()
+
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
+    this._db = new PouchDB('./cache/on_changes')
+
+    // A promise that resolves once the PouchDB has loaded
+    this._loaded = sporks.once(this, 'loaded')
   }
 
   _createOnChangesView () {
     var doc = {
       _id: '_design/on_changes',
       views: {
-        dirty_listeners: {
+        on_changes: {
           map: [
             'function(doc) {',
             'if (doc.type === "on_change") {',
@@ -39,6 +50,30 @@ class OnChange {
 
   destroy () {
     return this._destroyViews()
+  }
+
+  start () {
+    this._from = this._db.replicate
+      .from(utils.couchDBURL(), {
+        live: true,
+        retry: true,
+        filter: '_view',
+        view: 'on_changes'
+      })
+      .once('paused', () => {
+        // Alert that the data has been loaded and is ready to be used
+        this.emit('loaded')
+      })
+  }
+
+  stop () {
+    return this._from.cancel()
+  }
+
+  async all () {
+    // Make sure the data has been loaded before querying for all docs
+    await this._loaded
+    return this._db.allDocs()
   }
 }
 
