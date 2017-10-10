@@ -1,14 +1,14 @@
 'use strict'
 
 const Globals = require('../../../src/common/globals')
-const Spiegel = require('../../../src/common/spiegel')
+const testUtils = require('../../utils')
 
 describe('globals', () => {
-  let globals = new Globals(new Spiegel())
+  let globals = new Globals(testUtils.spiegel)
 
   it('should set & get', async () => {
-    await globals.set('lastSeq', '123')
-    let seq = await globals.get('lastSeq')
+    await globals.set('testGlobal', '123')
+    let seq = await globals.get('testGlobal')
     seq.should.eql('123')
   })
 })

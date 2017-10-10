@@ -48,11 +48,8 @@ Spiegel User Defined Docs
       views: {
         sieve: {
           map: ['function (doc) {',
-            'if (!doc.key) {',
-              'return;',
-            '}',
-            'if (/dbname1|dbname2/.test(doc.key)) {',
-              'emit(/:(.*)$/.exec(doc.key)[1]);',
+            'if (/dbname1|dbname2/.test(doc._id)) {',
+              'emit(/:(.*)$/.exec(doc._id)[1]);',
             '}',
           '}'].join(' ')
         }

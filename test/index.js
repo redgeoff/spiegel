@@ -4,17 +4,18 @@ const chai = require('chai')
 chai.use(require('chai-as-promised'))
 chai.should()
 
-const Spiegel = require('../src/common/spiegel')
+const testUtils = require('./utils')
 
-describe('spiegel', () => {
-  let spiegel = new Spiegel()
+describe('spiegel', function () {
+  // Extend the timeout as the DB needs more time to process changes
+  this.timeout(10000)
 
   before(() => {
-    return spiegel.create()
+    return testUtils.spiegel.create()
   })
 
   after(() => {
-    return spiegel.destroy()
+    return testUtils.spiegel.destroy()
   })
 
   require('./spec')

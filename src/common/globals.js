@@ -21,8 +21,8 @@ class Globals {
   }
 
   async get (name) {
-    let doc = await this._slouch.doc.get(this._spiegel._dbName, this._toId(name))
-    return doc.value
+    let doc = await this._slouch.doc.getIgnoreMissing(this._spiegel._dbName, this._toId(name))
+    return doc ? doc.value : undefined
   }
 }
 

@@ -7,7 +7,12 @@
     "type": "git",
     "url": "git://github.com/redgeoff/spiegel"
   },
-  "keywords": ["couchdb", "scalable", "replication", "change listening"],
+  "keywords": [
+    "couchdb",
+    "scalable",
+    "replication",
+    "change listening"
+  ],
   "author": "Geoffrey Cox",
   "license": "MIT",
   "bugs": {
@@ -16,10 +21,8 @@
   "scripts": {
     "beautify": "prettier-eslint --write \"src/**/*.js\" \"test/**/*.js\"",
     "lint": "eslint test src",
-    "node-test":
-      "istanbul test --dir cache/coverage/node node_modules/mocha/bin/_mocha test/index.js",
-    "node-full-test":
-      "npm run node-test --coverage && istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100",
+    "node-test": "istanbul test --dir cache/coverage/node node_modules/mocha/bin/_mocha test/index.js",
+    "node-full-test": "npm run node-test --coverage && istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100",
     "test": "npm run lint && npm run node-full-test",
     "reset-db": "./scripts/reset-db.js",
     "TODO-build": "",
@@ -43,11 +46,13 @@
     "request": "^2.81.0"
   },
   "greenkeeper": {
-    "ignore": ["chai-as-promised"]
+    "ignore": [
+      "chai-as-promised"
+    ]
   },
   "dependencies": {
-    "couch-slouch": "^0.1.1",
+    "couch-slouch": "^0.1.2",
     "node-fs-extra": "^0.8.2",
-    "sporks": "0.0.2"
+    "sporks": "0.0.3"
   }
 }

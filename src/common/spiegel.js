@@ -5,9 +5,9 @@ const Listener = require('./listener')
 const Replicator = require('./replicator')
 
 class Spiegel {
-  constructor () {
+  constructor (opts) {
     this._slouch = slouch
-    this._dbName = 'spiegel'
+    this._dbName = opts && opts.dbName ? opts.dbName : 'spiegel'
     this._listener = new Listener(this)
     this._replicator = new Replicator(this)
   }
