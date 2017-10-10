@@ -72,6 +72,20 @@ class Utils {
       })
     )
   }
+
+  shouldEqual (var1, var2) {
+    // prettier appears to find fault with notation like `(myVar === undefined).should.eql(true)` so
+    // this helper function will keep things clean
+    let eq = var1 === var2
+    eq.should.eql(true)
+  }
+
+  shouldNotEqual (var1, var2) {
+    // prettier appears to find fault with notation like `(myVar === undefined).should.eql(false)`
+    // so this helper function will keep things clean
+    let eq = var1 !== var2
+    eq.should.eql(false)
+  }
 }
 
 module.exports = new Utils()

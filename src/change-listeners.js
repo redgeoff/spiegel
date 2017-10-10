@@ -1,5 +1,7 @@
 'use strict'
 
+const sporks = require('sporks')
+
 class ChangeListeners {
   constructor (spiegel) {
     this._spiegel = spiegel
@@ -87,19 +89,26 @@ class ChangeListeners {
     return this._slouch.doc.getMergeUpsert(this._spiegel._dbName, { _id: id, last_seq: lastSeq })
   }
 
-  _clean (listener, lastSeq) {
+  _update (listener) {
+    return this._slouch.doc.update(this._spiegel._dbName, listener)
+  }
+
+  _cleanAndUnlock (listener, lastSeq) {
     // Update listener and set last_seq and dirty=false. We must not ignore any errors from a
     // conflict as we want the routine that marks the monitor as dirty to always win so that we
     // prevent race conditions while setting the dirty status.
     listener.last_seq = lastSeq
     listener.dirty = false
 
-    return this._slouch.doc.update(this._spiegel._dbName, listener)
+    // Release the lock
+    delete listener.locked_at
+
+    return this._update(listener)
   }
 
-  async cleanOrUpdateLastSeq (listener, lastSeq) {
+  async cleanAndUnlockOrUpdateLastSeq (listener, lastSeq) {
     try {
-      await this._clean(listener, lastSeq)
+      await this._cleanAndUnlock(listener, lastSeq)
     } catch (err) {
       if (err.error === 'conflict') {
         await this._updateLastSeq(listener._id, lastSeq)
@@ -107,6 +116,16 @@ class ChangeListeners {
         throw err
       }
     }
+  }
+
+  async lock (listener) {
+    // We use update instead of upsert as we want there to be a conflict as we only want one process
+    // to hold the lock at any given time
+    let lockedListener = sporks.clone(listener)
+    lockedListener.locked_at = new Date().toISOString()
+    let response = await this._update(lockedListener)
+    lockedListener._rev = response._rev
+    return lockedListener
   }
 
   // TODO:

@@ -52,7 +52,7 @@ describe('change-listeners', () => {
 
     // Clean listener
     let lastSeq = '123'
-    await listeners._clean(listener, lastSeq)
+    await listeners._cleanAndUnlock(listener, lastSeq)
 
     // Dirty the clean listener
     await listeners.dirtyIfClean('test_db1')
@@ -80,13 +80,49 @@ describe('change-listeners', () => {
     upserts.length.should.eql(1)
   })
 
-  it('should clean listener', async () => {
+  it('lock listener', async () => {
+    // Create dirty listener
+    let listener = await dirtyListener()
+
+    // Lock listener
+    let lockedListener = await listeners.lock(listener)
+
+    // Get the saved listener and compare
+    let savedListener = await listeners._get('test_db1')
+    savedListener.should.eql(lockedListener)
+
+    // The rev should have changed
+    lockedListener._rev.should.not.eql(listener._rev)
+
+    // The locked_at value should have been populated
+    lockedListener.locked_at.should.not.eql(undefined)
+  })
+
+  it('should clean and unlock listener', async () => {
+    // Create dirty listener
+    let listener = await dirtyListener()
+
+    // Lock listener
+    listener = await listeners.lock(listener)
+
+    // Clean listener
+    let lastSeq = '123'
+    await listeners._cleanAndUnlock(listener, lastSeq)
+
+    // Make sure it is now clean and the lastSeq was set
+    listener = await listeners._get('test_db1')
+    listener.dirty.should.eql(false)
+    listener.last_seq.should.eql(lastSeq)
+    testUtils.shouldEqual(listener.locked_at, undefined)
+  })
+
+  it('cleanAndUnlockOrUpdateLastSeq should clean and unlock', async () => {
     // Create dirty listener
     let listener = await dirtyListener()
 
     // Clean listener
     let lastSeq = '123'
-    await listeners._clean(listener, lastSeq)
+    await listeners.cleanAndUnlockOrUpdateLastSeq(listener, lastSeq)
 
     // Make sure it is now clean and the lastSeq was set
     listener = await listeners._get('test_db1')
@@ -94,21 +130,7 @@ describe('change-listeners', () => {
     listener.last_seq.should.eql(lastSeq)
   })
 
-  it('cleanOrUpdateLastSeq should clean', async () => {
-    // Create dirty listener
-    let listener = await dirtyListener()
-
-    // Clean listener
-    let lastSeq = '123'
-    await listeners.cleanOrUpdateLastSeq(listener, lastSeq)
-
-    // Make sure it is now clean and the lastSeq was set
-    listener = await listeners._get('test_db1')
-    listener.dirty.should.eql(false)
-    listener.last_seq.should.eql(lastSeq)
-  })
-
-  it('cleanOrUpdateLastSeq should update', async () => {
+  it('cleanAndUnlockOrUpdateLastSeq should update', async () => {
     // Create dirty listener
     let listener = await dirtyListener()
 
@@ -117,7 +139,7 @@ describe('change-listeners', () => {
 
     // Attempt to clean, but actually set last seq
     let lastSeq = '222'
-    await listeners.cleanOrUpdateLastSeq(listener, lastSeq)
+    await listeners.cleanAndUnlockOrUpdateLastSeq(listener, lastSeq)
 
     // Make sure it is still dirty, but the lastSeq was updated
     listener = await listeners._get('test_db1')
