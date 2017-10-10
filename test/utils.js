@@ -3,7 +3,7 @@
 // TODO: need to prefix sieve design doc for testing so doesn't interfer with any other project
 // sharing the same DB
 
-const Spiegel = require('../src/common/spiegel')
+const Spiegel = require('../src/spiegel')
 
 class Utils {
   constructor () {

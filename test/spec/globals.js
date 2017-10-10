@@ -1,7 +1,7 @@
 'use strict'
 
-const Globals = require('../../../src/common/globals')
-const testUtils = require('../../utils')
+const Globals = require('../../src/globals')
+const testUtils = require('../utils')
 
 describe('globals', () => {
   let globals = new Globals(testUtils.spiegel)

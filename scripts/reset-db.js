@@ -2,6 +2,6 @@
 
 'use strict'
 
-const slouch = require('../src/common/slouch')
+const slouch = require('../src/slouch')
 
 slouch.system.reset()

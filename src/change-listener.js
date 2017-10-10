@@ -1,6 +1,6 @@
 'use strict'
 
-class Listener {
+class ChangeListener {
   constructor (spiegel) {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
@@ -42,4 +42,4 @@ class Listener {
   }
 }
 
-module.exports = Listener
+module.exports = ChangeListener

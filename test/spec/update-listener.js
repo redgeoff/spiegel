@@ -1,7 +1,7 @@
 'use strict'
 
-const UpdateListener = require('../../../src/common/update-listener')
-const testUtils = require('../../utils')
+const UpdateListener = require('../../src/update-listener')
+const testUtils = require('../utils')
 const sporks = require('sporks')
 
 describe('update-listener', () => {
