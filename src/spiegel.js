@@ -2,7 +2,7 @@
 
 const slouch = require('./slouch')
 const UpdateListener = require('./update-listener')
-const ChangeListener = require('./change-listener')
+const ChangeListeners = require('./change-listeners')
 const Replicator = require('./replicator')
 const OnChange = require('./on-change')
 
@@ -15,7 +15,7 @@ class Spiegel {
     this._namespace = opts && opts.namespace ? opts.namespace : ''
 
     this._updateListener = new UpdateListener(this, opts)
-    this._changeListener = new ChangeListener(this)
+    this._changeListeners = new ChangeListeners(this)
     this._replicator = new Replicator(this)
     this._onChange = new OnChange(this)
   }
@@ -23,13 +23,13 @@ class Spiegel {
   async create () {
     await this._slouch.db.create(this._dbName)
     await this._slouch.security.onlyAdminCanView(this._dbName)
-    await this._changeListener.create()
+    await this._changeListeners.create()
     await this._onChange.create()
     await this._replicator.create()
   }
 
   async destroy () {
-    await this._changeListener.destroy()
+    await this._changeListeners.destroy()
     await this._replicator.destroy()
     await this._onChange.destroy()
     await this._slouch.db.destroy(this._dbName)
@@ -37,14 +37,14 @@ class Spiegel {
 
   async start () {
     await this._updateListener.start()
-    // await this._changeListener.start()
+    // await this._changeListeners.start()
     await this._onChange.start()
     // await this._replicator.start()
   }
 
   async stop () {
     await this._updateListener.stop()
-    // await this._changeListener.stop()
+    // await this._changeListeners.stop()
     await this._onChange.stop()
     // await this._replicator.stop()
   }
