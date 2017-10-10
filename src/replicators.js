@@ -52,7 +52,7 @@ class Replicators {
           map: [
             'function(doc) {',
             'if (doc.type === "replicator") {',
-            'emit(doc.dbName, null);',
+            'emit(doc.db_name, null);',
             '}',
             '}'
           ].join(' ')
