@@ -6,18 +6,32 @@ chai.should()
 
 const testUtils = require('../utils')
 const PouchDB = require('pouchdb')
+PouchDB.plugin(require('pouchdb-find'))
 const slouch = testUtils.spiegel._slouch
 const sporks = require('sporks')
 const utils = require('../../src/utils')
 
 // Question: What is the fastest way to look up a replicator in a local CouchDB instance?
+// Results:
+//
+// * N=10,000
+//     Test               1st Read    2nd Read
+//   * find w/o index:    807ms       810ms
+//   * find w/ index:     2.9s        3ms
+//   * query w/ view:     ?           ?
+//
+// * N=1,000,000
+//     Test               1st Read    2nd Read    Space
+//   * find w/o index:    ?           ?           ?
+//   * find w/ index:     ?           ?           ?
+//   * query w/ view:     ?           ?           ?
 
 describe('pouch-query', function () {
-  this.timeout(10000)
+  this.timeout(1000000)
 
   let db = null
   let from = null
-  const N = 2
+  const N = 10000
   const DB_NAME = 'test_replicators'
 
   const createDB = () => {
@@ -60,6 +74,15 @@ describe('pouch-query', function () {
     return chain
   }
 
+  const createPouchIndex = () => {
+    return db.createIndex({
+      index: {
+        fields: ['db_name'],
+        name: 'replicators_by_db_name_index'
+      }
+    })
+  }
+
   const startReplicating = () => {
     return new Promise(function (resolve, reject) {
       from = db.replicate
@@ -85,6 +108,7 @@ describe('pouch-query', function () {
 
   beforeEach(async () => {
     db = new PouchDB(utils.levelPath() + '/test_bm_replicators')
+    await createPouchIndex()
     await createDB()
     await createReplicatorsByDBNameView()
     await createDocs()
@@ -97,12 +121,27 @@ describe('pouch-query', function () {
     await destroyDB()
   })
 
-  it('should find', async () => {
-    let docs = await db.allDocs({ include_docs: true })
-    docs.rows.forEach(function (doc) {
-      console.log('doc=', doc)
+  const read = async () => {
+    let before = new Date()
+
+    let docs = await db.find({
+      selector: { db_name: 'test_db1' }
     })
+
+    let after = new Date()
+
+    console.log('docs=', docs.docs)
+    console.log('read took', after.getTime() - before.getTime(), 'ms')
+
+    docs.docs.length.should.eql(1)
+  }
+
+  it('should find', async () => {
+    // let indexes = await db.getIndexes()
+    // console.log('indexes=', indexes)
+    await read()
+    await read()
   })
 
-  // it('should query', () => {})
+  // it('should query with view', () => {})
 })
