@@ -11,8 +11,8 @@ const slouch = testUtils.spiegel._slouch
 const sporks = require('sporks')
 const utils = require('../../src/utils')
 
-// Question: What is the fastest way to look up a replicator in a local CouchDB instance?
-// Results:
+// Question: What is the fastest way to look up a replicator in a local CouchDB instance using the
+//           node leveldown adapter?
 //
 // * N=10,000
 //     Test               1st Read    2nd Read
@@ -20,22 +20,24 @@ const utils = require('../../src/utils')
 //   * find w/ index:       2900ms         3ms
 //   * query w/ view:      12955ms         3ms
 //
-// * N=1,000,000
+// * N=100,000 (158,624ms for initial PouchDB replicatation)
 //     Test               1st Read    2nd Read    Space
-//   * find w/o index:    ?           ?           ?
-//   * find w/ index:     ?           ?           ?
-//   * query w/ view:     ?           ?           ?
+//   * find w/o index:      6303ms      7615ms      15M
+//   * find w/ index:      27206ms        10ms      36M
+//   * query w/ view:     129035ms         3ms      36M
 
 describe('pouch-query', function () {
-  this.timeout(1000000)
+  this.timeout(100000000)
 
   let db = null
   let from = null
   const N = 10000
   const DB_NAME = 'test_replicators'
 
-  const createDB = () => {
-    return slouch.db.create(DB_NAME)
+  const createDB = async () => {
+    await slouch.db.create(DB_NAME)
+    await createReplicatorsByDBNameView()
+    await createDocs()
   }
 
   const destroyDB = () => {
@@ -56,10 +58,13 @@ describe('pouch-query', function () {
   }
 
   const createDocFactory = i => {
-    return slouch.doc.create(DB_NAME, {
-      _id: 'replicator_' + i,
-      db_name: 'test_db' + i
-    })
+    return function () {
+      console.log('creating doc for i=', i)
+      return slouch.doc.create(DB_NAME, {
+        _id: 'replicator_' + i,
+        db_name: 'test_db' + i
+      })
+    }
   }
 
   const createDocs = () => {
@@ -84,6 +89,8 @@ describe('pouch-query', function () {
   }
 
   const startReplicating = () => {
+    let i = 0
+    let before = new Date()
     return new Promise(function (resolve, reject) {
       from = db.replicate
         .from(utils.couchDBURL() + '/' + DB_NAME, {
@@ -92,6 +99,8 @@ describe('pouch-query', function () {
         })
         .once('paused', () => {
           // Alert that the data has been loaded and is ready to be used
+          let after = new Date()
+          console.log('took', after.getTime() - before.getTime(), 'ms to replicate')
           resolve()
         })
         .on('error', function (err) {
@@ -107,11 +116,9 @@ describe('pouch-query', function () {
   }
 
   beforeEach(async () => {
+    await createDB()
     db = new PouchDB(utils.levelPath() + '/test_bm_replicators')
     await createPouchIndex()
-    await createDB()
-    await createReplicatorsByDBNameView()
-    await createDocs()
     await startReplicating()
   })
 
@@ -125,7 +132,7 @@ describe('pouch-query', function () {
     let before = new Date()
 
     let docs = await db.find({
-      selector: { db_name: 'test_db1' }
+      selector: { db_name: 'test_db' + N }
     })
 
     let after = new Date()
@@ -147,7 +154,7 @@ describe('pouch-query', function () {
     let before = new Date()
 
     let docs = await db.query('replicators_by_db_name', {
-      key: 'test_db1'
+      key: 'test_db' + N
     })
 
     let after = new Date()
@@ -158,8 +165,8 @@ describe('pouch-query', function () {
     docs.rows.length.should.eql(1)
   }
 
-  it('should query with view', async () => {
-    await query()
-    await query()
-  })
+  // it('should query with view', async () => {
+  //   await query()
+  //   await query()
+  // })
 })
