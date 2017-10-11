@@ -16,9 +16,9 @@ const utils = require('../../src/utils')
 //
 // * N=10,000
 //     Test               1st Read    2nd Read
-//   * find w/o index:    807ms       810ms
-//   * find w/ index:     2.9s        3ms
-//   * query w/ view:     ?           ?
+//   * find w/o index:       807ms       810ms
+//   * find w/ index:       2900ms         3ms
+//   * query w/ view:      12955ms         3ms
 //
 // * N=1,000,000
 //     Test               1st Read    2nd Read    Space
@@ -121,7 +121,7 @@ describe('pouch-query', function () {
     await destroyDB()
   })
 
-  const read = async () => {
+  const find = async () => {
     let before = new Date()
 
     let docs = await db.find({
@@ -139,9 +139,27 @@ describe('pouch-query', function () {
   it('should find', async () => {
     // let indexes = await db.getIndexes()
     // console.log('indexes=', indexes)
-    await read()
-    await read()
+    await find()
+    await find()
   })
 
-  // it('should query with view', () => {})
+  const query = async () => {
+    let before = new Date()
+
+    let docs = await db.query('replicators_by_db_name', {
+      key: 'test_db1'
+    })
+
+    let after = new Date()
+
+    console.log('docs=', docs)
+    console.log('read took', after.getTime() - before.getTime(), 'ms')
+
+    docs.rows.length.should.eql(1)
+  }
+
+  it('should query with view', async () => {
+    await query()
+    await query()
+  })
 })
