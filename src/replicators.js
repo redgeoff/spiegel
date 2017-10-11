@@ -25,6 +25,26 @@ class Replicators {
     return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
   }
 
+  _createCleanOrLockedReplicatorsView () {
+    var doc = {
+      _id: '_design/clean_or_locked_replicators',
+      views: {
+        clean_replicators: {
+          map: [
+            'function(doc) {',
+            'if (doc.type === "replicator" && (!doc.dirty || doc.locked_at)) {',
+            'emit(doc._id, null);',
+            '}',
+            '}'
+          ].join(' ')
+        }
+      }
+    }
+
+    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
+  }
+
+  // TODO: still needed or does clean_or_locked_replicators replace need for this view?
   _createCleanReplicatorsView () {
     var doc = {
       _id: '_design/clean_replicators',
@@ -65,6 +85,7 @@ class Replicators {
 
   async _createViews () {
     await this._createDirtyReplicatorsView()
+    await this._createCleanOrLockedReplicatorsView()
     await this._createCleanReplicatorsView()
     return this._createReplicatorsByDBNameView()
   }
@@ -75,6 +96,10 @@ class Replicators {
 
   async _destroyViews () {
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_replicators')
+    await this._slouch.doc.getAndDestroy(
+      this._spiegel._dbName,
+      '_design/clean_or_locked_replicators'
+    )
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/clean_replicators')
     return this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/replicators_by_db_name')
   }
