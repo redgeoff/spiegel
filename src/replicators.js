@@ -25,15 +25,19 @@ class Replicators {
     return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
   }
 
-  _createCleanOrLockedReplicatorsView () {
+  _createCleanOrLockedReplicatorsByNameView () {
     var doc = {
-      _id: '_design/clean_or_locked_replicators',
+      _id: '_design/clean_or_locked_replicators_by_db_name',
       views: {
-        clean_replicators: {
+        clean_or_locked_replicators_by_db_name: {
+          // See _toDBName for how the DB name is extracted from the source
           map: [
             'function(doc) {',
-            'if (doc.type === "replicator" && (!doc.dirty || doc.locked_at)) {',
-            'emit(doc._id, null);',
+            'if (doc.type === "replicator" && doc.source && (!doc.dirty || doc.locked_at)) {',
+            'var i = doc.source.lastIndexOf("/")',
+            'if (i !== -1) {',
+            'emit(doc.source.substr(i + 1), null);',
+            '}',
             '}',
             '}'
           ].join(' ')
@@ -44,7 +48,7 @@ class Replicators {
     return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
   }
 
-  // TODO: still needed or does clean_or_locked_replicators replace need for this view?
+  // TODO: still needed or does clean_or_locked_replicators_by_db_name replace need for this view?
   _createCleanReplicatorsView () {
     var doc = {
       _id: '_design/clean_replicators',
@@ -85,7 +89,7 @@ class Replicators {
 
   async _createViews () {
     await this._createDirtyReplicatorsView()
-    await this._createCleanOrLockedReplicatorsView()
+    await this._createCleanOrLockedReplicatorsByNameView()
     await this._createCleanReplicatorsView()
     return this._createReplicatorsByDBNameView()
   }
@@ -98,7 +102,7 @@ class Replicators {
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_replicators')
     await this._slouch.doc.getAndDestroy(
       this._spiegel._dbName,
-      '_design/clean_or_locked_replicators'
+      '_design/clean_or_locked_replicators_by_db_name'
     )
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/clean_replicators')
     return this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/replicators_by_db_name')
@@ -106,6 +110,58 @@ class Replicators {
 
   destroy () {
     return this._destroyViews()
+  }
+
+  _getCleanOrLocked (dbNames) {
+    return this._slouch.db.viewArray(
+      this._spiegel._dbName,
+      '_design/clean_or_locked_replicators_by_db_name',
+      'clean_or_locked_replicators_by_db_name',
+      { include_docs: true }
+    )
+  }
+
+  _dirty (replicators) {
+    replicators.forEach(replicator => {
+      replicator.dirty = true
+    })
+
+    return this._slouch.doc.bulkCreateOrUpdate(this._spiegel._dbName, replicators)
+  }
+
+  // A test function used to flesh out the details of the index created by retrieving the DB name
+  // from the source URL
+  _toDBName (source) {
+    if (source) {
+      var i = source.lastIndexOf('/')
+      if (i !== -1) {
+        return source.substr(i + 1)
+      }
+    }
+  }
+
+  async _attemptTodirtyIfCleanOrLocked (dbNames) {
+    let replicators = await this._getCleanOrLocked(dbNames)
+    let response = await this._dirty(replicators)
+
+    // Get a list of all the dbNames where we have conflicts. This can occur because the replicator
+    // was dirtied, locked or otherwise updated between the _getCleanOrLocked() and _dirty() calls
+    // above.
+    var conflictedDBNames = []
+    response.forEach(doc => {
+      if (this._slouch.doc.isConflictError(doc)) {
+        conflictedDBNames.push(replicators.db_name)
+      }
+    })
+
+    return conflictedDBNames
+  }
+
+  async dirtyIfCleanOrLocked (dbNames) {
+    let conflictedDBNames = await this._attemptTodirtyIfCleanOrLocked(dbNames)
+    if (conflictedDBNames.length > 0) {
+      return this.dirtyIfCleanOrLocked(conflictedDBNames)
+    }
   }
 }
 
