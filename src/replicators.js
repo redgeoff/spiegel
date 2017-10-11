@@ -34,7 +34,7 @@ class Replicators {
           map: [
             'function(doc) {',
             'if (doc.type === "replicator" && doc.source && (!doc.dirty || doc.locked_at)) {',
-            'var i = doc.source.lastIndexOf("/")',
+            'var i = doc.source.lastIndexOf("/");',
             'if (i !== -1) {',
             'emit(doc.source.substr(i + 1), null);',
             '}',
@@ -117,7 +117,7 @@ class Replicators {
       this._spiegel._dbName,
       '_design/clean_or_locked_replicators_by_db_name',
       'clean_or_locked_replicators_by_db_name',
-      { include_docs: true }
+      { include_docs: true, keys: JSON.stringify(dbNames) }
     )
   }
 
