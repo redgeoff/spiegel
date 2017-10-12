@@ -4,6 +4,7 @@
 
 const Globals = require('./globals')
 const log = require('./log')
+const sporks = require('sporks')
 
 class UpdateListeners {
   constructor (spiegel, opts) {
@@ -21,6 +22,8 @@ class UpdateListeners {
     this._lastSeq = null
 
     this._stopped = false
+
+    this._replicators = this._spiegel._replicators
   }
 
   _onError (err) {
@@ -62,8 +65,14 @@ class UpdateListeners {
     })
   }
 
-  _processNextBatch () {
-    // TODO: use replicators and change-listeners
+  async _processNextBatch () {
+    let dbNames = sporks.keys(this._updatedDBs)
+
+    // We use bulk operations to get and then dirty replicators so that replication can be delegated
+    // to one of the replicator processes.
+    await this._replicators.dirtyIfCleanOrLocked(dbNames)
+
+    // TODO: also use change-listeners
   }
 
   // Separate out for easier unit testing

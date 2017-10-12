@@ -9,11 +9,13 @@ describe('update-listeners', () => {
   let batches = null
   let updates = null
   let changeOpts = null
+  let dirtyReplicators = null
 
   const spyOnProcessNextBatch = () => {
     batches = []
     listeners._processNextBatch = function () {
       batches.push(this._updatedDBs)
+      return UpdateListeners.prototype._processNextBatch.apply(this, arguments)
     }
   }
 
@@ -33,6 +35,15 @@ describe('update-listeners', () => {
     }
   }
 
+  const spyOnDirtyReplicators = () => {
+    dirtyReplicators = []
+    listeners._replicators = {
+      dirtyIfCleanOrLocked: function (dbNames) {
+        dirtyReplicators.push(dbNames)
+      }
+    }
+  }
+
   const createTestDBs = async () => {
     await testUtils.createTestDBs(['test_db1', 'test_db2', 'test_db3'])
   }
@@ -42,6 +53,7 @@ describe('update-listeners', () => {
     spyOnProcessNextBatch()
     spyOnUpdates()
     spyOnChanges()
+    spyOnDirtyReplicators()
     await listeners.start()
     await createTestDBs()
   }
@@ -66,7 +78,17 @@ describe('update-listeners', () => {
           test_db3: true
         }
       ])
+        ? true
+        : undefined
     })
+
+    // Make sure we dirtied the correct replicators
+    await sporks.waitFor(() => {
+      // We need to sort as the DBs can be in any order
+      return sporks.isEqual(dirtyReplicators.sort(), [['test_db1', 'test_db3']]) ? true : undefined
+    })
+
+    // TODO: make sure we dirty the correct change listeners
   })
 
   it('batch should complete based on batchSize', async () => {
@@ -77,6 +99,8 @@ describe('update-listeners', () => {
       return sporks.isEqual(batches[0], {
         test_db1: true
       })
+        ? true
+        : undefined
     })
   })
 
@@ -102,6 +126,8 @@ describe('update-listeners', () => {
           test_db1: true
         }
       ])
+        ? true
+        : undefined
     })
   })
 
