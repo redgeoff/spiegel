@@ -15,12 +15,19 @@ describe('update-listeners', () => {
     }
   }
 
-  beforeEach(async () => {
-    listeners = new UpdateListeners(testUtils.spiegel)
-    await testUtils.createSieve()
+  const createTestDBs = async () => {
+    await testUtils.createTestDBs(['test_db1', 'test_db2', 'test_db3'])
+  }
+
+  const createListeners = async opts => {
+    listeners = new UpdateListeners(testUtils.spiegel, opts)
     spyOnProcessNextBatch()
     await listeners.start()
-    await testUtils.createTestDBs(['test_db1', 'test_db2', 'test_db3'])
+    await createTestDBs()
+  }
+
+  beforeEach(async () => {
+    await testUtils.createSieve()
   })
 
   afterEach(async () => {
@@ -30,21 +37,44 @@ describe('update-listeners', () => {
   })
 
   it('should listen', async () => {
-    var expBatches = [
-      {
-        test_db1: true,
-        test_db3: true
-      }
-    ]
+    await createListeners()
 
     await sporks.waitFor(() => {
-      if (sporks.isEqual(batches, expBatches)) {
-        return true
-      }
+      return sporks.isEqual(batches, [
+        {
+          test_db1: true,
+          test_db3: true
+        }
+      ])
     })
   })
 
-  // TODO: make sure batch expires based on batchSize
-  // TODO: make sure batch expires based on batchTimeout
+  it('batch should complete based on batchSize', async () => {
+    await createListeners({ batchSize: 1 })
+
+    // The first batch should only be for a single DB
+    await sporks.waitFor(() => {
+      return sporks.isEqual(batches[0], {
+        test_db1: true
+      })
+    })
+  })
+
+  // it('batch should complete based on batchTimeout', async () => {
+  //   await createListeners({ batchTimeout: 1 })
+  //
+  //   // await waitForBatches([
+  //   //   {
+  //   //     test_db1: true
+  //   //   },
+  //   //   {
+  //   //     test_db3: true
+  //   //   }
+  //   // ])
+  //
+  //   await sporks.timeout(2000)
+  //   console.log(batches)
+  // })
+
   // TODO: check next batch and make sure resumes at lastSeq
 })
