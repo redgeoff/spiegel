@@ -7,11 +7,29 @@ const sporks = require('sporks')
 describe('update-listeners', () => {
   let listeners = null
   let batches = null
+  let updates = null
+  let changeOpts = null
 
   const spyOnProcessNextBatch = () => {
     batches = []
     listeners._processNextBatch = function () {
       batches.push(this._updatedDBs)
+    }
+  }
+
+  const spyOnUpdates = () => {
+    updates = []
+    listeners._addToUpdatedDBs = function (update) {
+      updates.push(update)
+      return UpdateListeners.prototype._addToUpdatedDBs.apply(this, arguments)
+    }
+  }
+
+  const spyOnChanges = () => {
+    changeOpts = []
+    listeners._changes = function (opts) {
+      changeOpts.push(opts)
+      return UpdateListeners.prototype._changes.apply(this, arguments)
     }
   }
 
@@ -22,6 +40,8 @@ describe('update-listeners', () => {
   const createListeners = async opts => {
     listeners = new UpdateListeners(testUtils.spiegel, opts)
     spyOnProcessNextBatch()
+    spyOnUpdates()
+    spyOnChanges()
     await listeners.start()
     await createTestDBs()
   }
@@ -85,5 +105,18 @@ describe('update-listeners', () => {
     })
   })
 
-  // TODO: check next batch and make sure resumes at lastSeq
+  it('should resume at lastSeq', async () => {
+    await createListeners({ batchSize: 1 })
+
+    // Wait for a couple updates
+    await sporks.waitFor(() => {
+      return updates.length === 2 ? true : undefined
+    })
+
+    // First call to changes should be missing a "since"
+    testUtils.shouldEqual(changeOpts[0].since, undefined)
+
+    // Second call should resume from lastSeq
+    changeOpts[1].since.should.eql(updates[0].seq)
+  })
 })

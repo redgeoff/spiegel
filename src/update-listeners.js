@@ -69,11 +69,16 @@ class UpdateListeners {
     // TODO: use replicators and change-listeners
   }
 
+  // Separate out for easier unit testing
+  _changes (opts) {
+    return this._slouch.db.changes('_global_changes', opts)
+  }
+
   async _listenToNextBatch () {
     // Clear any previous batch of updates
     this._updatedDBs = []
 
-    this._dbUpdatesIterator = this._slouch.db.changes('_global_changes', {
+    this._dbUpdatesIterator = this._changes({
       feed: 'continuous',
       heartbeat: true,
       since: this._lastSeq,
