@@ -23,9 +23,6 @@ class UpdateListeners {
     this._stopped = false
   }
 
-  // TODO: remove as no longer in design
-  _onUpdate (update) {}
-
   _onError (err) {
     log.error(err)
   }
