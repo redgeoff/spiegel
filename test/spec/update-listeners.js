@@ -60,21 +60,30 @@ describe('update-listeners', () => {
     })
   })
 
-  // it('batch should complete based on batchTimeout', async () => {
-  //   await createListeners({ batchTimeout: 1 })
-  //
-  //   // await waitForBatches([
-  //   //   {
-  //   //     test_db1: true
-  //   //   },
-  //   //   {
-  //   //     test_db3: true
-  //   //   }
-  //   // ])
-  //
-  //   await sporks.timeout(2000)
-  //   console.log(batches)
-  // })
+  it('batch should complete based on batchTimeout', async () => {
+    await createListeners({ batchSize: 1000, batchTimeout: 1000 })
+
+    // Wait until after the timeout expires, but the batch size has not been reached
+    await sporks.timeout(2000)
+
+    // Create a new update
+    await testUtils._slouch.doc.create('test_db1', {
+      foo: 'bar'
+    })
+
+    // All the initial updates should be in a batch and the next batch should contain the new update
+    await sporks.waitFor(() => {
+      return sporks.isEqual(batches, [
+        {
+          test_db1: true,
+          test_db3: true
+        },
+        {
+          test_db1: true
+        }
+      ])
+    })
+  })
 
   // TODO: check next batch and make sure resumes at lastSeq
 })
