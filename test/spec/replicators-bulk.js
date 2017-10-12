@@ -77,11 +77,35 @@ describe('replicators-bulk', () => {
       'test_db6',
       'test_db7'
     ])
-    let dbNames = docs.rows.map(doc => doc.key)
+    let dbNames = docs.map(doc => replicators._toDBName(doc.source))
     dbNames.should.eql(['test_db3', 'test_db4', 'test_db5', 'test_db6', 'test_db7'])
   })
 
-  // it('should dirty if cleaned or locked', async () => {
+  it('should dirty and get conflicted db names', async () => {
+    let reps = await replicators._getCleanOrLocked([
+      'test_db1',
+      'test_db2',
+      'test_db4',
+      'test_db5',
+      'test_db6',
+      'test_db7'
+    ])
+
+    // Simulate conflicts by updating the docs between the _getCleanOrLocked() and _dirty() calls
+    await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
+      _id: docs[4].id,
+      foo: 'bar'
+    })
+    await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
+      _id: docs[6].id,
+      foo: 'bar'
+    })
+
+    let conflictedDBNames = await replicators._dirtyAndGetConflictedDBNames(reps)
+    conflictedDBNames.should.eql(['test_db5', 'test_db7'])
+  })
+
+  // it('should dirty if clean or locked', async () => {
   //   await replicators.dirtyIfCleanOrLocked([
   //     'test_db1',
   //     'test_db2',
@@ -90,5 +114,8 @@ describe('replicators-bulk', () => {
   //     'test_db6',
   //     'test_db7'
   //   ])
+  //   // TODO: check replicators
   // })
+
+  // TODO: should dirty if clean or locked when nothing to dirty
 })

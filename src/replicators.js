@@ -112,13 +112,15 @@ class Replicators {
     return this._destroyViews()
   }
 
-  _getCleanOrLocked (dbNames) {
-    return this._slouch.db.viewArray(
+  async _getCleanOrLocked (dbNames) {
+    let response = await this._slouch.db.viewArray(
       this._spiegel._dbName,
       '_design/clean_or_locked_replicators_by_db_name',
       'clean_or_locked_replicators_by_db_name',
       { include_docs: true, keys: JSON.stringify(dbNames) }
     )
+
+    return response.rows.map(row => row.doc)
   }
 
   _dirty (replicators) {
@@ -129,8 +131,6 @@ class Replicators {
     return this._slouch.doc.bulkCreateOrUpdate(this._spiegel._dbName, replicators)
   }
 
-  // A test function used to flesh out the details of the index created by retrieving the DB name
-  // from the source URL
   _toDBName (source) {
     if (source) {
       var i = source.lastIndexOf('/')
@@ -140,21 +140,25 @@ class Replicators {
     }
   }
 
-  async _attemptTodirtyIfCleanOrLocked (dbNames) {
-    let replicators = await this._getCleanOrLocked(dbNames)
+  async _dirtyAndGetConflictedDBNames (replicators) {
     let response = await this._dirty(replicators)
 
     // Get a list of all the dbNames where we have conflicts. This can occur because the replicator
     // was dirtied, locked or otherwise updated between the _getCleanOrLocked() and _dirty() calls
     // above.
     var conflictedDBNames = []
-    response.forEach(doc => {
+    response.forEach((doc, i) => {
       if (this._slouch.doc.isConflictError(doc)) {
-        conflictedDBNames.push(replicators.db_name)
+        conflictedDBNames.push(this._toDBName(replicators[i].source))
       }
     })
 
     return conflictedDBNames
+  }
+
+  async _attemptTodirtyIfCleanOrLocked (dbNames) {
+    let replicators = await this._getCleanOrLocked(dbNames)
+    return this._dirtyAndGetConflictedDBNames(replicators)
   }
 
   async dirtyIfCleanOrLocked (dbNames) {
