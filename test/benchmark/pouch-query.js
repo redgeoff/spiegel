@@ -89,7 +89,6 @@ describe('pouch-query', function () {
   }
 
   const startReplicating = () => {
-    let i = 0
     let before = new Date()
     return new Promise(function (resolve, reject) {
       from = db.replicate
@@ -165,8 +164,8 @@ describe('pouch-query', function () {
     docs.rows.length.should.eql(1)
   }
 
-  // it('should query with view', async () => {
-  //   await query()
-  //   await query()
-  // })
+  it('should query with view', async () => {
+    await query()
+    await query()
+  })
 })
