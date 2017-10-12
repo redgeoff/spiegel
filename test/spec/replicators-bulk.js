@@ -5,8 +5,8 @@ const testUtils = require('../utils')
 
 describe('replicators-bulk', () => {
   let replicators = null
-  let docs = []
-  let dirties = []
+  let docs = null
+  let dirties = null
 
   const createReplicator = async replicator => {
     replicator.type = 'replicator'
@@ -15,6 +15,8 @@ describe('replicators-bulk', () => {
   }
 
   const createReplicators = async () => {
+    docs = []
+
     // Clean & unlocked
     await createReplicator({
       _id: '1',
@@ -122,6 +124,7 @@ describe('replicators-bulk', () => {
       'test_db6',
       'test_db7'
     ])
+
     let dbNames = docs.map(doc => replicators._toDBName(doc.source))
     dbNames.should.eql(['test_db3', 'test_db4', 'test_db5', 'test_db6', 'test_db7'])
   })
@@ -174,5 +177,9 @@ describe('replicators-bulk', () => {
     dbNames2.should.eql(['test_db5', 'test_db7'])
   })
 
-  // TODO: should dirty if clean or locked when nothing to dirty
+  it('should dirty if clean or locked when nothing to dirty', async () => {
+    await replicators.dirtyIfCleanOrLocked(['test_db2'])
+    // test_db2 is already dirty so nothing should be dirtied
+    dirties.should.eql([])
+  })
 })

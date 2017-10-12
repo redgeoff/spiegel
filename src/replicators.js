@@ -158,12 +158,16 @@ class Replicators {
 
   async _attemptTodirtyIfCleanOrLocked (dbNames) {
     let replicators = await this._getCleanOrLocked(dbNames)
-    return this._dirtyAndGetConflictedDBNames(replicators)
+
+    // length can be zero if there is nothing to dirty
+    if (replicators.length > 0) {
+      return this._dirtyAndGetConflictedDBNames(replicators)
+    }
   }
 
   async dirtyIfCleanOrLocked (dbNames) {
     let conflictedDBNames = await this._attemptTodirtyIfCleanOrLocked(dbNames)
-    if (conflictedDBNames.length > 0) {
+    if (conflictedDBNames && conflictedDBNames.length > 0) {
       return this.dirtyIfCleanOrLocked(conflictedDBNames)
     }
   }
