@@ -1,5 +1,7 @@
 'use strict'
 
+// TODO: need to save lastSeq after opts.saveLastSeqTimeout
+
 const Globals = require('./globals')
 const log = require('./log')
 
