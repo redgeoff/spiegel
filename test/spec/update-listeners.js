@@ -71,7 +71,7 @@ describe('update-listeners', () => {
   it('should listen', async () => {
     await createListeners()
 
-    await sporks.waitFor(() => {
+    await testUtils.waitFor(() => {
       return sporks.isEqual(batches, [
         {
           test_db1: true,
@@ -83,7 +83,7 @@ describe('update-listeners', () => {
     })
 
     // Make sure we dirtied the correct replicators
-    await sporks.waitFor(() => {
+    await testUtils.waitFor(() => {
       // We need to sort as the DBs can be in any order
       return sporks.isEqual(dirtyReplicators.sort(), [['test_db1', 'test_db3']]) ? true : undefined
     })
@@ -95,13 +95,18 @@ describe('update-listeners', () => {
     await createListeners({ batchSize: 1 })
 
     // The first batch should only be for a single DB
-    await sporks.waitFor(() => {
-      return sporks.isEqual(batches[0], {
-        test_db1: true
+    await testUtils
+      .waitFor(() => {
+        return sporks.isEqual(batches[0], {
+          test_db1: true
+        })
+          ? true
+          : undefined
       })
-        ? true
-        : undefined
-    })
+      .catch(function (err) {
+        console.log('batches[0]=', batches[0])
+        throw err
+      })
   })
 
   it('batch should complete based on batchTimeout', async () => {
@@ -116,7 +121,7 @@ describe('update-listeners', () => {
     })
 
     // All the initial updates should be in a batch and the next batch should contain the new update
-    await sporks.waitFor(() => {
+    await testUtils.waitFor(() => {
       return sporks.isEqual(batches, [
         {
           test_db1: true,
@@ -135,7 +140,7 @@ describe('update-listeners', () => {
     await createListeners({ batchSize: 1 })
 
     // Wait for a couple updates
-    await sporks.waitFor(() => {
+    await testUtils.waitFor(() => {
       return updates.length === 2 ? true : undefined
     })
 

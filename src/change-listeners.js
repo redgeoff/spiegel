@@ -11,6 +11,7 @@ class ChangeListeners {
     this._idPrefix = 'spiegel_cl_'
   }
 
+  // TODO: still needed?
   _createDirtyListenersView () {
     var doc = {
       _id: '_design/dirty_listeners',
@@ -30,12 +31,36 @@ class ChangeListeners {
     return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
   }
 
-  _createViews () {
-    return this._createDirtyListenersView()
+  _createCleanOrLockedListenersByNameView () {
+    var doc = {
+      _id: '_design/clean_or_locked_listeners_by_db_name',
+      views: {
+        clean_or_locked_listeners_by_db_name: {
+          map: [
+            'function(doc) {',
+            'if (doc.type === "listener" && (!doc.dirty || doc.locked_at)) {',
+            'emit(doc.db_name, null);',
+            '}',
+            '}'
+          ].join(' ')
+        }
+      }
+    }
+
+    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
   }
 
-  _destroyViews () {
-    return this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_listeners')
+  async _createViews () {
+    await this._createDirtyListenersView()
+    await this._createCleanOrLockedListenersByNameView()
+  }
+
+  async _destroyViews () {
+    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_listeners')
+    await this._slouch.doc.getAndDestroy(
+      this._spiegel._dbName,
+      '_design/clean_or_locked_listeners_by_db_name'
+    )
   }
 
   create () {

@@ -4,13 +4,14 @@
 // sharing the same DB
 
 const Spiegel = require('../src/spiegel')
+const sporks = require('sporks')
 
 class Utils {
   constructor () {
     this.spiegel = this._newSpiegel()
     this._slouch = this.spiegel._slouch
     this._dbNames = []
-    this.TIMEOUT = 10000
+    this.TIMEOUT = 20000
   }
 
   _newSpiegel () {
@@ -85,6 +86,10 @@ class Utils {
     // so this helper function will keep things clean
     let eq = var1 !== var2
     eq.should.eql(false)
+  }
+
+  waitFor (poll) {
+    return sporks.waitFor(poll, this.TIMEOUT)
   }
 }
 
