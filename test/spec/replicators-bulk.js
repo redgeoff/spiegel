@@ -149,7 +149,7 @@ describe('replicators-bulk', () => {
     // Simulate conflicts
     let simulated = false
     replicators._getCleanOrLocked = async function () {
-      let reps = Replicators.prototype._getCleanOrLocked.apply(this, arguments)
+      let reps = await Replicators.prototype._getCleanOrLocked.apply(this, arguments)
 
       if (!simulated) {
         await simulateConflicts()
