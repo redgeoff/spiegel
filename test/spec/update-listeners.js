@@ -95,6 +95,8 @@ describe('update-listeners', () => {
   }
 
   beforeEach(async () => {
+    // We need to define a suffix to append to the DB names so that they are unique across tests or
+    // else CouchDB will sometimes give us unexpected results in the _global_changes DB
     suffixId++
     suffix = '_' + suffixId
     await testUtils.createSieve(suffix)
