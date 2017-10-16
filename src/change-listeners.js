@@ -186,6 +186,29 @@ class ChangeListeners {
     return response.rows.map(row => row.doc)
   }
 
+  async _getCleanLockedOrMissing (dbNames) {
+    let listeners = await this._getByDBNames(dbNames)
+
+    // Index by dbName for quick retrieval
+    let missing = sporks.flip(dbNames)
+
+    let cleanOrLocked = []
+    listeners.map(listener => {
+      // Remove from missing
+      delete missing[listener.db_name]
+
+      // Clean or locked?
+      if (!listener.dirty || listener.locked_at) {
+        cleanOrLocked.push(listener)
+      }
+    })
+
+    return {
+      cleanOrLocked,
+      missing: sporks.keys(missing)
+    }
+  }
+
   _dirtyOrCreate (listeners) {
     // TODO: compare with dbNames passed in to see which ones are missing
     // listeners.forEach(listener => {

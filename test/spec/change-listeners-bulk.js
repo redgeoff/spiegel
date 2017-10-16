@@ -59,13 +59,13 @@ describe('change-listeners-bulk', () => {
   }
 
   // const getListeners = async () => {
-  //   let reps = []
+  //   let lists = []
   //   await Promise.all(
   //     docs.map(async (doc, i) => {
-  //       reps[i] = await testUtils.spiegel._slouch.doc.get(testUtils.spiegel._dbName, doc.id)
+  //       lists[i] = await testUtils.spiegel._slouch.doc.get(testUtils.spiegel._dbName, doc.id)
   //     })
   //   )
-  //   return reps
+  //   return lists
   // }
 
   const spyOnDirty = () => {
@@ -104,15 +104,15 @@ describe('change-listeners-bulk', () => {
   // }
 
   // it('should dirty', async () => {
-  //   let reps = await getReplicators()
-  //   testUtils.shouldEqual(reps[0].dirty, undefined)
-  //   testUtils.shouldEqual(reps[2].dirty, undefined)
+  //   let lists = await getListeners()
+  //   testUtils.shouldEqual(lists[0].dirty, undefined)
+  //   testUtils.shouldEqual(lists[2].dirty, undefined)
   //
-  //   await listeners._dirty([reps[0], reps[2]])
+  //   await listeners._dirty([lists[0], lists[2]])
   //
-  //   reps = await getReplicators()
-  //   reps[0].dirty.should.eql(true)
-  //   reps[2].dirty.should.eql(true)
+  //   lists = await getListeners()
+  //   lists[0].dirty.should.eql(true)
+  //   lists[2].dirty.should.eql(true)
   // })
 
   it('should get by DB names', async () => {
@@ -134,34 +134,55 @@ describe('change-listeners-bulk', () => {
     _docs[2].dirty.should.eql(true)
   })
 
+  it('should clean, locked or missing listeners', async () => {
+    let lists = await listeners._getCleanLockedOrMissing([
+      'test_db0',
+      'test_db1',
+      'test_db2',
+      'test_db4',
+      'test_db5',
+      'test_db6',
+      'test_db7',
+      'test_db8'
+    ])
+
+    // Check clean or locked listeners
+    let dbNames = lists.cleanOrLocked.map(listener => listener.db_name)
+    dbNames.should.eql(['test_db1', 'test_db4', 'test_db5', 'test_db6', 'test_db7'])
+
+    // Check missing listeners
+    lists.missing.should.eql(['test_db0', 'test_db8'])
+  })
+
   // it('should dirty and get conflicted db names', async () => {
-  //   let reps = await listeners._getCleanOrLocked([
+  //   let lists = await listeners._getByDBNames([
   //     'test_db1',
   //     'test_db2',
   //     'test_db4',
   //     'test_db5',
   //     'test_db6',
-  //     'test_db7'
+  //     'test_db7',
+  //     'test_db8'
   //   ])
   //
   //   await simulateConflicts()
   //
-  //   let conflictedDBNames = await listeners._dirtyAndGetConflictedDBNames(reps)
-  //   conflictedDBNames.should.eql(['test_db5', 'test_db7'])
+  //   // let conflictedDBNames = await listeners._dirtyAndGetConflictedDBNames(lists)
+  //   // conflictedDBNames.should.eql(['test_db5', 'test_db7'])
   // })
-  //
+
   // it('should dirty if clean or locked', async () => {
   //   // Simulate conflicts
   //   let simulated = false
   //   listeners._getCleanOrLocked = async function () {
-  //     let reps = await Replicators.prototype._getCleanOrLocked.apply(this, arguments)
+  //     let lists = await Listeners.prototype._getCleanOrLocked.apply(this, arguments)
   //
   //     if (!simulated) {
   //       await simulateConflicts()
   //       simulated = true // only simulate once
   //     }
   //
-  //     return reps
+  //     return lists
   //   }
   //
   //   await listeners.dirtyIfCleanOrLocked([
