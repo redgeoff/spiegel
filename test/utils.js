@@ -86,7 +86,7 @@ class Utils {
     // prettier appears to find fault with notation like `(myVar === undefined).should.eql(false)`
     // so this helper function will keep things clean
     let eq = var1 !== var2
-    eq.should.eql(false)
+    eq.should.eql(true)
   }
 
   waitFor (poll) {

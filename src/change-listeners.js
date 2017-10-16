@@ -183,7 +183,7 @@ class ChangeListeners {
       { include_docs: true, keys: JSON.stringify(dbNames) }
     )
 
-    return response.rows.map(row => row)
+    return response.rows.map(row => row.doc)
   }
 
   _dirtyOrCreate (listeners) {
@@ -214,12 +214,15 @@ class ChangeListeners {
   async _attemptToDirtyIfCleanOrLocked (dbNames) {
     let listeners = await this._getByDBNames(dbNames)
 
+    // let cleanOrLocked = []
+    console.log('listeners=', listeners)
     // TODO: how to handle missing because not clean or locked and simply doesn't exist? Probably
     // have to return no matter what and include dirty and locked_at
 
     // length can be zero if there is nothing to dirty
     if (listeners.length > 0) {
-      return this._dirtyAndGetConflictedDBNames(listeners)
+      // TODO
+      // return this._dirtyAndGetConflictedDBNames(listeners)
     }
   }
 
