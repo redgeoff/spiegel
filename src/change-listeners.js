@@ -214,38 +214,14 @@ class ChangeListeners {
   async _attemptToDirtyIfCleanOrLocked (dbNames) {
     let listeners = await this._getByDBNames(dbNames)
 
-    // TODO: how to handle missing because not clean or locked and simply doesn't exist? Probably have to return no matter what and include dirty and locked_at
+    // TODO: how to handle missing because not clean or locked and simply doesn't exist? Probably
+    // have to return no matter what and include dirty and locked_at
 
     // length can be zero if there is nothing to dirty
     if (listeners.length > 0) {
       return this._dirtyAndGetConflictedDBNames(listeners)
     }
   }
-
-  // // We need to dirty replicators so that the replication can be delegated to the replicator
-  // // process.
-  // //
-  // // We use bulk operations as this is far faster than processing each replicator individually. With
-  // // bulk operations we can take a batch of updates and in just a few requests to CouchDB schedule
-  // // the delegation and then move on to the next set of updates. In addition, processing updates in
-  // // a batch allows us to remove duplicates in that batch that often occur due to back-to-back
-  // // writes to a particular DB.
-  // //
-  // // When dirtying the replicators we first get a list of all the clean or locked replicators. We
-  // // need to include the locked replicators as we may already be performing a replication, hence the
-  // // lock, and we want to make sure to re-dirty the replicator so that the revision number changes.
-  // // This will then result in the replication being retried later.
-  // //
-  // // Between the time the clean or locked replicators are retrieved and then dirtied, it is possible
-  // // that another UpdateListener dirties the same replicator. In this event, we'll detect the
-  // // conflicts. We'll then retry the get and dirty for these conflicted replicators. We'll repeat
-  // // this process until there are no more conflicts.
-  // async dirtyIfCleanOrLocked (dbNames) {
-  //   let conflictedDBNames = await this._attemptToDirtyIfCleanOrLocked(dbNames)
-  //   if (conflictedDBNames && conflictedDBNames.length > 0) {
-  //     return this.dirtyIfCleanOrLocked(conflictedDBNames)
-  //   }
-  // }
 
   // TODO:
   // onChanges () {}
