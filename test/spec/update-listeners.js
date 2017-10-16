@@ -19,9 +19,6 @@ describe('update-listeners', () => {
   const spyOnProcessNextBatch = () => {
     batches = []
     listeners._processNextBatch = function () {
-      if (!this._updatedDBs) {
-        console.error('!this._updatedDBs')
-      }
       batches.push(this._updatedDBs)
       return UpdateListeners.prototype._processNextBatch.apply(this, arguments)
     }
