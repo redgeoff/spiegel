@@ -3,7 +3,7 @@
 const UpdateListeners = require('../../src/update-listeners')
 const testUtils = require('../utils')
 const sporks = require('sporks')
-const Globals = require('../../src/globals')
+// const Globals = require('../../src/globals')
 
 describe('update-listeners', () => {
   let listeners = null
@@ -11,7 +11,7 @@ describe('update-listeners', () => {
   let updates = null
   let changeOpts = null
   let dirtyReplicators = null
-  let lastSeq
+  // let lastSeq
   let suffixId = 0
   let suffix = null
 
