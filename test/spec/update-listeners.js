@@ -13,9 +13,15 @@ describe('update-listeners', () => {
   let dirtyReplicators = null
   let lastSeq
 
+  // Specify a large batchTimeout so that time is not a factor
+  const BATCH_TIMEOUT = 5000
+
   const spyOnProcessNextBatch = () => {
     batches = []
     listeners._processNextBatch = function () {
+      if (!this._updatedDBs) {
+        console.error('!this._updatedDBs')
+      }
       batches.push(this._updatedDBs)
       return UpdateListeners.prototype._processNextBatch.apply(this, arguments)
     }
@@ -135,7 +141,7 @@ describe('update-listeners', () => {
   })
 
   it('batch should complete based on batchSize', async () => {
-    await createListeners({ batchSize: 1 })
+    await createListeners({ batchSize: 1, batchTimeout: BATCH_TIMEOUT })
 
     // The first batch should only be for a single DB
     await testUtils
@@ -180,12 +186,17 @@ describe('update-listeners', () => {
   })
 
   it('should resume at lastSeq', async () => {
-    await createListeners({ batchSize: 1 }, false)
+    await createListeners({ batchSize: 1, batchTimeout: BATCH_TIMEOUT }, false)
 
     // Wait for a couple updates
-    await testUtils.waitFor(() => {
-      return updates.length === 2 ? true : undefined
-    })
+    await testUtils
+      .waitFor(() => {
+        return updates.length >= 2 ? true : undefined
+      })
+      .catch(function (err) {
+        console.log('updates=', updates)
+        throw err
+      })
 
     // First call to changes should be missing a "since"
     testUtils.shouldEqual(changeOpts[0].since, undefined)

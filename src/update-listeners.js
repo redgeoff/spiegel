@@ -53,15 +53,19 @@ class UpdateListeners {
 
       this._lastSeq = update.seq
 
-      if (i++ === 0) {
+      if (i === 0) {
         // The 1st update can take any amount of time, but after it is read, we want to start a
         // timer. If the timer expires then we want to close the stream and consider the batch
         // collected. We pass in the iterator as by the time the timeout completes we have already
         // created a new _dbUpdatesIterator
         this._startBatchTimeout(this._dbUpdatesIterator)
-      } else if (i === this._batchSize) {
+      }
+
+      if (i === this._batchSize - 1) {
         this._dbUpdatesIterator.abort()
       }
+
+      i++
     })
   }
 
