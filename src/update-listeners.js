@@ -49,6 +49,8 @@ class UpdateListeners {
     let i = 0
 
     return this._dbUpdatesIterator.each(update => {
+      console.log('update=', update)
+
       this._addToUpdatedDBs(update)
 
       this._lastSeq = update.seq
