@@ -3,6 +3,7 @@
 const UpdateListeners = require('../../src/update-listeners')
 const testUtils = require('../utils')
 const sporks = require('sporks')
+const Globals = require('../../src/globals')
 
 describe('update-listeners', () => {
   let listeners = null
@@ -10,6 +11,7 @@ describe('update-listeners', () => {
   let updates = null
   let changeOpts = null
   let dirtyReplicators = null
+  let lastSeq
 
   const spyOnProcessNextBatch = () => {
     batches = []
@@ -36,24 +38,53 @@ describe('update-listeners', () => {
   }
 
   const spyOnDirtyReplicators = () => {
-    dirtyReplicators = []
+    dirtyReplicators = {}
     listeners._replicators = {
       dirtyIfCleanOrLocked: function (dbNames) {
-        dirtyReplicators.push(dbNames)
+        dbNames.forEach(dbName => {
+          dirtyReplicators[dbName] = true
+        })
       }
     }
+  }
+
+  const fakeGlobals = async () => {
+    listeners._globals.get = function (name) {
+      if (name === 'lastSeq') {
+        return Promise.resolve(lastSeq)
+      } else {
+        return Globals.prototype.get.apply(this, arguments)
+      }
+    }
+  }
+
+  // Get the lastSeq as changes in _global_changes and run over from test to test and we want to
+  // minimize the noise
+  const getLastSeq = async () => {
+    await testUtils.spiegel._slouch.db
+      .changes(testUtils.spiegel._dbName, {
+        limit: 1,
+        descending: true
+      })
+      .each(change => {
+        lastSeq = change.seq
+      })
   }
 
   const createTestDBs = async () => {
     await testUtils.createTestDBs(['test_db1', 'test_db2', 'test_db3'])
   }
 
-  const createListeners = async opts => {
+  const createListeners = async (opts, fakeLastSeq = true) => {
     listeners = new UpdateListeners(testUtils.spiegel, opts)
     spyOnProcessNextBatch()
     spyOnUpdates()
     spyOnChanges()
     spyOnDirtyReplicators()
+    if (fakeLastSeq) {
+      fakeGlobals()
+    }
+    await getLastSeq()
     await listeners.start()
     await createTestDBs()
   }
@@ -71,22 +102,34 @@ describe('update-listeners', () => {
   it('should listen', async () => {
     await createListeners()
 
-    await testUtils.waitFor(() => {
-      return sporks.isEqual(batches, [
-        {
-          test_db1: true,
-          test_db3: true
-        }
-      ])
-        ? true
-        : undefined
-    })
+    await testUtils
+      .waitFor(() => {
+        return sporks.isEqual(batches, [
+          {
+            test_db1: true,
+            test_db3: true
+          }
+        ])
+          ? true
+          : undefined
+      })
+      .catch(function (err) {
+        console.log('batches=', batches)
+        throw err
+      })
 
     // Make sure we dirtied the correct replicators
-    await testUtils.waitFor(() => {
-      // We need to sort as the DBs can be in any order
-      return sporks.isEqual(dirtyReplicators.sort(), [['test_db1', 'test_db3']]) ? true : undefined
-    })
+    await testUtils
+      .waitFor(() => {
+        // We need to sort as the DBs can be in any order
+        return sporks.isEqual(dirtyReplicators, { test_db1: true, test_db3: true })
+          ? true
+          : undefined
+      })
+      .catch(function (err) {
+        console.log('dirtyReplicators=', dirtyReplicators)
+        throw err
+      })
 
     // TODO: make sure we dirty the correct change listeners
   })
@@ -137,7 +180,7 @@ describe('update-listeners', () => {
   })
 
   it('should resume at lastSeq', async () => {
-    await createListeners({ batchSize: 1 })
+    await createListeners({ batchSize: 1 }, false)
 
     // Wait for a couple updates
     await testUtils.waitFor(() => {
