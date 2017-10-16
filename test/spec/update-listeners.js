@@ -143,11 +143,7 @@ describe('update-listeners', () => {
     // The first batch should only be for a single DB
     await testUtils
       .waitFor(() => {
-        return sporks.isEqual(batches[0], {
-          test_db1: true
-        })
-          ? true
-          : undefined
+        return sporks.length(batches[0]) === 1 ? true : undefined
       })
       .catch(function (err) {
         console.log('batches[0]=', batches[0])

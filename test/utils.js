@@ -90,7 +90,7 @@ class Utils {
   }
 
   waitFor (poll) {
-    return sporks.waitFor(poll, this.TIMEOUT)
+    return sporks.waitFor(poll, this.TIMEOUT - 2000)
   }
 }
 
