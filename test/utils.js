@@ -11,21 +11,21 @@ class Utils {
     this.spiegel = this._newSpiegel()
     this._slouch = this.spiegel._slouch
     this._dbNames = []
-    this.TIMEOUT = 120000
+    this.TIMEOUT = 30000
   }
 
   _newSpiegel () {
     return new Spiegel({ dbName: 'test_spiegel', namespace: 'test_' })
   }
 
-  createSieve () {
+  createSieve (suffix) {
     return this._slouch.doc.create('_global_changes', {
       _id: '_design/' + this.spiegel._namespace + 'sieve',
       views: {
         sieve: {
           map: [
             'function (doc) {',
-            'if (/test_db1|test_db3/.test(doc._id)) {',
+            'if (/test_db1' + suffix + '|test_db3' + suffix + '/.test(doc._id)) {',
             'emit(/:(.*)$/.exec(doc._id)[1]);',
             '}',
             '}'

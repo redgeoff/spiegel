@@ -12,6 +12,8 @@ describe('update-listeners', () => {
   let changeOpts = null
   let dirtyReplicators = null
   let lastSeq
+  let suffixId = 0
+  let suffix = null
 
   // Specify a large batchTimeout so that time is not a factor
   const BATCH_TIMEOUT = 5000
@@ -51,31 +53,31 @@ describe('update-listeners', () => {
     }
   }
 
-  const fakeGlobals = async () => {
-    listeners._globals.get = function (name) {
-      if (name === 'lastSeq') {
-        return Promise.resolve(lastSeq)
-      } else {
-        return Globals.prototype.get.apply(this, arguments)
-      }
-    }
-  }
+  // const fakeGlobals = async () => {
+  //   listeners._globals.get = function (name) {
+  //     if (name === 'lastSeq') {
+  //       return Promise.resolve(lastSeq)
+  //     } else {
+  //       return Globals.prototype.get.apply(this, arguments)
+  //     }
+  //   }
+  // }
 
-  // Get the lastSeq as changes in _global_changes and run over from test to test and we want to
-  // minimize the noise
-  const getLastSeq = async () => {
-    await testUtils.spiegel._slouch.db
-      .changes(testUtils.spiegel._dbName, {
-        limit: 1,
-        descending: true
-      })
-      .each(change => {
-        lastSeq = change.seq
-      })
-  }
+  // // Get the lastSeq as changes in _global_changes and run over from test to test and we want to
+  // // minimize the noise
+  // const getLastSeq = async () => {
+  //   await testUtils.spiegel._slouch.db
+  //     .changes(testUtils.spiegel._dbName, {
+  //       limit: 1,
+  //       descending: true
+  //     })
+  //     .each(change => {
+  //       lastSeq = change.seq
+  //     })
+  // }
 
   const createTestDBs = async () => {
-    await testUtils.createTestDBs(['test_db1', 'test_db2', 'test_db3'])
+    await testUtils.createTestDBs(['test_db1' + suffix, 'test_db2' + suffix, 'test_db3' + suffix])
   }
 
   const createListeners = async (opts, fakeLastSeq = true) => {
@@ -85,15 +87,17 @@ describe('update-listeners', () => {
     spyOnChanges()
     spyOnDirtyReplicators()
     if (fakeLastSeq) {
-      fakeGlobals()
+      // fakeGlobals()
     }
-    await getLastSeq()
+    // await getLastSeq()
     await listeners.start()
     await createTestDBs()
   }
 
   beforeEach(async () => {
-    await testUtils.createSieve()
+    suffixId++
+    suffix = '_' + suffixId
+    await testUtils.createSieve(suffix)
   })
 
   afterEach(async () => {
@@ -109,8 +113,8 @@ describe('update-listeners', () => {
       .waitFor(() => {
         return sporks.isEqual(batches, [
           {
-            test_db1: true,
-            test_db3: true
+            ['test_db1' + suffix]: true,
+            ['test_db3' + suffix]: true
           }
         ])
           ? true
@@ -125,7 +129,10 @@ describe('update-listeners', () => {
     await testUtils
       .waitFor(() => {
         // We need to sort as the DBs can be in any order
-        return sporks.isEqual(dirtyReplicators, { test_db1: true, test_db3: true })
+        return sporks.isEqual(dirtyReplicators, {
+          ['test_db1' + suffix]: true,
+          ['test_db3' + suffix]: true
+        })
           ? true
           : undefined
       })
@@ -158,7 +165,7 @@ describe('update-listeners', () => {
     await sporks.timeout(2000)
 
     // Create a new update
-    await testUtils._slouch.doc.create('test_db1', {
+    await testUtils._slouch.doc.create('test_db1' + suffix, {
       foo: 'bar'
     })
 
@@ -167,11 +174,11 @@ describe('update-listeners', () => {
       .waitFor(() => {
         return sporks.isEqual(batches, [
           {
-            test_db1: true,
-            test_db3: true
+            ['test_db1' + suffix]: true,
+            ['test_db3' + suffix]: true
           },
           {
-            test_db1: true
+            ['test_db1' + suffix]: true
           }
         ])
           ? true
