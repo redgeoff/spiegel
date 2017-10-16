@@ -163,19 +163,24 @@ describe('update-listeners', () => {
     })
 
     // All the initial updates should be in a batch and the next batch should contain the new update
-    await testUtils.waitFor(() => {
-      return sporks.isEqual(batches, [
-        {
-          test_db1: true,
-          test_db3: true
-        },
-        {
-          test_db1: true
-        }
-      ])
-        ? true
-        : undefined
-    })
+    await testUtils
+      .waitFor(() => {
+        return sporks.isEqual(batches, [
+          {
+            test_db1: true,
+            test_db3: true
+          },
+          {
+            test_db1: true
+          }
+        ])
+          ? true
+          : undefined
+      })
+      .catch(function (err) {
+        console.log('batches=', batches)
+        throw err
+      })
   })
 
   it('should resume at lastSeq', async () => {
