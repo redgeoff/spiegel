@@ -72,6 +72,7 @@ class Utils {
         await this._slouch.db.destroy(dbName)
       })
     )
+    this._dbNames = []
   }
 
   shouldEqual (var1, var2) {
