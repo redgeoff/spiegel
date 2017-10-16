@@ -1,4 +1,7 @@
 # spiegel
+
+[![Circle CI](https://circleci.com/gh/redgeoff/slouch.svg?style=svg&circle-token=71ef4a94aae37c96dde8268b3ed094f5fb73dd7f)](https://circleci.com/gh/redgeoff/slouch)
+
 Scalable replication and change listening for CouchDB
 
 Status
@@ -45,11 +48,8 @@ Spiegel User Defined Docs
       views: {
         sieve: {
           map: ['function (doc) {',
-            'if (!doc.key) {',
-              'return;',
-            '}',
-            'if (/dbname1|dbname2/.test(doc.key)) {',
-              'emit(/:(.*)$/.exec(doc.key)[1]);',
+            'if (/dbname1|dbname2/.test(doc._id)) {',
+              'emit(/:(.*)$/.exec(doc._id)[1]);',
             '}',
           '}'].join(' ')
         }

@@ -7,55 +7,51 @@
     "type": "git",
     "url": "git://github.com/redgeoff/spiegel"
   },
-  "keywords": [
-    "js",
-    "stream",
-    "iterator"
-  ],
+  "keywords": ["couchdb", "scalable", "replication", "change listening"],
   "author": "Geoffrey Cox",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/redgeoff/spiegel/issues"
   },
   "scripts": {
-    "assert-beautified": "beautify-proj -i test -c beautify.json && beautify-proj -i scripts -c beautify.json",
-    "beautify": "beautify-proj -i test -o . -c beautify.json && beautify-proj -i scripts -o . -c beautify.json",
-    "jshint": "jshint -c .jshintrc test scripts",
-    "node-test": "istanbul test --dir cache/coverage/node node_modules/mocha/bin/_mocha test/node.js",
-    "node-full-test": "npm run node-test --coverage && istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100",
-    "browser-server": "node_modules/gofur/scripts/browser/serve.js -c cache -t test/browser.js",
-    "browser-test": "node_modules/gofur/scripts/browser/test.js -c cache -t test/browser.js",
-    "browser-test-firefox": "node_modules/gofur/scripts/browser/test.js -c cache -t test/browser.js -b selenium:firefox",
-    "browser-test-chrome": "node_modules/gofur/scripts/browser/test.js -c cache -t test/browser.js -b selenium:chrome",
-    "browser-test-phantomjs": "node_modules/gofur/scripts/browser/test.js -c cache -t test/browser.js -b selenium:phantomjs",
-    "browser-coverage-server": "node_modules/gofur/scripts/browser-coverage/serve.js -c cache -t test/browser.js",
-    "browser-coverage-test": "node_modules/gofur/scripts/browser-coverage/test.js -c cache -t test/browser.js",
-    "browser-coverage-report": "istanbul report --dir cache/coverage/browser --root cache/coverage/browser lcov",
-    "browser-coverage-check": "istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100 cache/coverage/browser/coverage.json",
-    "browser-coverage-full-test": "npm run browser-coverage-test && npm run browser-coverage-report && npm run browser-coverage-check",
-    "test": "npm run assert-beautified && npm run jshint && npm run node-full-test && npm run browser-coverage-full-test",
+    "beautify": "prettier-eslint --write \"src/**/*.js\" \"test/**/*.js\"",
+    "lint": "eslint test src",
+    "node-test":
+      "istanbul test --dir cache/coverage/node node_modules/mocha/bin/_mocha test/index.js",
+    "node-full-test":
+      "npm run node-test --coverage && istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100",
+    "test": "npm run lint && npm run node-full-test",
+    "reset-db": "./scripts/reset-db.js",
+    "benchmark-pouch-query": "node_modules/mocha/bin/_mocha test/benchmark/pouch-query.js",
     "TODO-build": "",
     "TODO-test-in-sauce": ""
   },
-  "dependencies": {
-    "bluebird": "^3.5.0",
-    "events": "^1.1.1",
-    "inherits": "^2.0.3"
-  },
   "devDependencies": {
-    "beautify-proj": "^1.0.0",
-    "browserify": "^14.4.0",
-    "chai": "^4.0.2",
+    "babel-eslint": "^7.2.3",
+    "chai": "^4.1.0",
     "chai-as-promised": "^6.0.0",
-    "gofur": "0.0.6",
+    "eslint": "^4.8.0",
+    "eslint-config-standard": "^10.2.1",
+    "eslint-plugin-import": "^2.7.0",
+    "eslint-plugin-node": "^5.2.0",
+    "eslint-plugin-promise": "^3.5.0",
+    "eslint-plugin-standard": "^3.0.1",
+    "gofur": "^0.0.8",
     "istanbul": "^0.4.5",
     "jshint": "^2.9.4",
-    "mocha": "^3.4.2",
+    "mocha": "^4.0.0",
+    "pouchdb-find": "^6.3.4",
+    "prettier-eslint-cli": "^4.4.0",
     "request": "^2.81.0"
   },
   "greenkeeper": {
-    "ignore": [
-      "chai-as-promised"
-    ]
+    "ignore": ["chai-as-promised"]
+  },
+  "dependencies": {
+    "bunyan": "^1.8.12",
+    "couch-slouch": "^0.1.3",
+    "pouchdb": "^6.3.4",
+    "pouchdb-adapter-memory": "^6.3.4",
+    "sporks": "0.0.3"
   }
 }
