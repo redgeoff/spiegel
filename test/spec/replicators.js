@@ -5,10 +5,40 @@ const testUtils = require('../utils')
 
 describe('replicators', () => {
   let replicators = null
+  let replicatorIds = null
+  let upserts = null
+
+  const spy = () => {
+    replicators._upsert = function (replicator) {
+      upserts.push(replicator)
+      return Replicators.prototype._upsert.apply(this, arguments)
+    }
+  }
 
   beforeEach(async () => {
     replicators = new Replicators(testUtils.spiegel)
+    replicatorIds = []
+    upserts = []
+    spy()
   })
+
+  afterEach(async () => {
+    await Promise.all(
+      replicatorIds.map(async id => {
+        await testUtils.spiegel._slouch.doc.getAndDestroy(testUtils.spiegel._dbName, id)
+      })
+    )
+  })
+
+  const createReplicator = async replicator => {
+    replicator.type = 'replicator'
+    let doc = await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, replicator)
+    replicatorIds.push(doc.id)
+    return {
+      _id: doc.id,
+      _rev: doc.rev
+    }
+  }
 
   it('should extract db name', function () {
     replicators._toDBName('http://example.com:5984/mydb').should.eql('mydb')
@@ -19,5 +49,28 @@ describe('replicators', () => {
     testUtils.shouldEqual(replicators._toDBName(''), undefined)
 
     testUtils.shouldEqual(replicators._toDBName(), undefined)
+  })
+
+  it('lock replicator', async () => {
+    // Create replicator
+    let replicator = await createReplicator({
+      source: 'https://example.com/test_db1'
+    })
+
+    // Lock replicator
+    let lockedReplicator = await replicators.lock(replicator)
+
+    // Get the saved replicator and compare
+    let savedReplicator = await replicators._get(replicator._id)
+    savedReplicator.should.eql(lockedReplicator)
+
+    // The rev should have changed
+    lockedReplicator._rev.should.not.eql(replicator._rev)
+
+    // The locked_at value should have been populated
+    lockedReplicator.locked_at.should.not.eql(undefined)
+
+    // The updated_at value should have been populated
+    lockedReplicator.updated_at.should.not.eql(undefined)
   })
 })

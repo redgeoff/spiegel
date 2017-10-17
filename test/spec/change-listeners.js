@@ -96,6 +96,9 @@ describe('change-listeners', () => {
 
     // The locked_at value should have been populated
     lockedListener.locked_at.should.not.eql(undefined)
+
+    // The updated_at value should have been populated
+    lockedListener.updated_at.should.not.eql(undefined)
   })
 
   it('should clean and unlock listener', async () => {

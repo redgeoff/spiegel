@@ -172,6 +172,7 @@ class ChangeListeners {
     // to hold the lock at any given time
     let lockedListener = sporks.clone(listener)
     lockedListener.locked_at = new Date().toISOString()
+    this._setUpdatedAt(lockedListener)
     let response = await this._update(lockedListener)
     lockedListener._rev = response._rev
     return lockedListener

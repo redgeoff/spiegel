@@ -2,6 +2,7 @@
 
 const Throttler = require('squadron').Throttler
 const log = require('./log')
+const sporks = require('sporks')
 
 class Replicators {
   constructor (spiegel, opts) {
@@ -140,6 +141,10 @@ class Replicators {
     return this._destroyViews()
   }
 
+  _get (id) {
+    return this._slouch.doc.get(this._spiegel._dbName, id)
+  }
+
   async _getCleanOrLocked (dbNames) {
     let response = await this._slouch.db.viewArray(
       this._spiegel._dbName,
@@ -236,6 +241,21 @@ class Replicators {
         lastSeq = change.seq
       })
     return lastSeq
+  }
+
+  _update (replicator) {
+    return this._slouch.doc.update(this._spiegel._dbName, replicator)
+  }
+
+  async lock (replicator) {
+    // We use an update instead of an upsert as we want there to be a conflict as we only want one
+    // process to hold the lock at any given time
+    let lockedReplicator = sporks.clone(replicator)
+    lockedReplicator.locked_at = new Date().toISOString()
+    this._setUpdatedAt(lockedReplicator)
+    let response = await this._update(lockedReplicator)
+    lockedReplicator._rev = response._rev
+    return lockedReplicator
   }
 
   async _replicate (replicator) {
