@@ -199,41 +199,42 @@ describe('change-listeners-bulk', () => {
     conflictedDBNames.should.eql(['test_db5', 'test_db7', 'test_db8'])
   })
 
-  // it('should dirty if clean or locked', async () => {
-  //   // Simulate conflicts
-  //   let simulated = false
-  //   listeners._getCleanOrLocked = async function () {
-  //     let lists = await Listeners.prototype._getCleanOrLocked.apply(this, arguments)
-  //
-  //     if (!simulated) {
-  //       await simulateConflicts()
-  //       simulated = true // only simulate once
-  //     }
-  //
-  //     return lists
-  //   }
-  //
-  //   await listeners.dirtyIfCleanOrLocked([
-  //     'test_db1',
-  //     'test_db2',
-  //     'test_db4',
-  //     'test_db5',
-  //     'test_db6',
-  //     'test_db7'
-  //   ])
-  //
-  //   // 1st group of dirties
-  //   let dbNames1 = dirties[0].map(doc => listeners._toDBName(doc.source))
-  //   dbNames1.should.eql(['test_db1', 'test_db4', 'test_db5', 'test_db6', 'test_db7'])
-  //
-  //   // 2nd group of dirties as there were conflicts
-  //   let dbNames2 = dirties[1].map(doc => listeners._toDBName(doc.source))
-  //   dbNames2.should.eql(['test_db5', 'test_db7'])
-  // })
-  //
-  // it('should dirty if clean or locked when nothing to dirty', async () => {
-  //   await listeners.dirtyIfCleanOrLocked(['test_db2'])
-  //   // test_db2 is already dirty so nothing should be dirtied
-  //   dirties.should.eql([])
-  // })
+  it('should dirty if clean or locked', async () => {
+    // Simulate conflicts
+    let simulated = false
+    listeners._getCleanLockedOrMissing = async function () {
+      let lists = await ChangeListeners.prototype._getCleanLockedOrMissing.apply(this, arguments)
+
+      if (!simulated) {
+        await simulateConflicts()
+        simulated = true // only simulate once
+      }
+
+      return lists
+    }
+
+    await listeners.dirtyIfCleanOrLocked([
+      'test_db1',
+      'test_db2',
+      'test_db4',
+      'test_db5',
+      'test_db6',
+      'test_db7',
+      'test_db8'
+    ])
+
+    // 1st group of dirties
+    let dbNames1 = dirties[0].map(doc => doc.db_name)
+    dbNames1.should.eql(['test_db1', 'test_db4', 'test_db5', 'test_db6', 'test_db7', 'test_db8'])
+
+    // 2nd group of dirties as there were conflicts
+    let dbNames2 = dirties[1].map(doc => doc.db_name)
+    dbNames2.should.eql(['test_db5', 'test_db7', 'test_db8'])
+  })
+
+  it('should dirty if clean or locked when nothing to dirty', async () => {
+    await listeners.dirtyIfCleanOrLocked(['test_db2'])
+    // test_db2 is already dirty so nothing should be dirtied
+    dirties.should.eql([])
+  })
 })

@@ -165,8 +165,7 @@ class Replicators {
     }
   }
 
-  // We need to dirty replicators so that the replication can be delegated to the replicator
-  // process.
+  // We need to dirty replicators so that the replication can be delegated to a replicator process.
   //
   // We use bulk operations as this is far faster than processing each replicator individually. With
   // bulk operations we can take a batch of updates and in just a few requests to CouchDB schedule

@@ -254,17 +254,39 @@ class ChangeListeners {
   }
 
   async _attemptToDirtyIfCleanOrLocked (dbNames) {
-    let listeners = await this._getByDBNames(dbNames)
-
-    // let cleanOrLocked = []
-    console.log('listeners=', listeners)
-    // TODO: how to handle missing because not clean or locked and simply doesn't exist? Probably
-    // have to return no matter what and include dirty and locked_at
+    let listeners = await this._getCleanLockedOrMissing(dbNames)
 
     // length can be zero if there is nothing to dirty
     if (listeners.length > 0) {
-      // TODO
-      // return this._dirtyAndGetConflictedDBNames(listeners)
+      return this._dirtyAndGetConflictedDBNames(listeners)
+    }
+  }
+
+  // We need to dirty ChangeListeners so that the listening can be delegated to a listener process.
+  //
+  // We use bulk operations as this is far faster than processing each ChangeListener individually.
+  // With bulk operations we can take a batch of updates and in just a few requests to CouchDB
+  // schedule the delegation and then move on to the next set of updates. In addition, processing
+  // updates in a batch allows us to remove duplicates in that batch that often occur due to
+  // back-to-back writes to a particular DB.
+  //
+  // When dirtying the ChangeListener we first get a list of all the ChangeListeners with matching
+  // DB names. We then iterate through the results identifying clean or locked ChangeListeners and
+  // any missing ChangeListeners. We need to include the locked ChangeListeners as we may already be
+  // listening to a _changes feed, hence the lock, and we want to make sure to re-dirty the listener
+  // so that the revision number changes. This will then result in the listener being retried later.
+  // ChangeListeners are created when they are missing. A ChangeListeners's id is unique to the DB
+  // name and this therefore prevents two UpdateListener processes from creating duplicate
+  // ChangeListeners.
+  //
+  // Between the time the clean or locked ChangeListeners are retrieved and then dirtied, it is
+  // possible that another UpdateListener dirties the same ChangeListener. In this event, we'll
+  // detect the conflicts. We'll then retry the get and dirty for these conflicted ChangeListeners.
+  // We'll repeat this process until there are no more conflicts.
+  async dirtyIfCleanOrLocked (dbNames) {
+    let conflictedDBNames = await this._attemptToDirtyIfCleanOrLocked(dbNames)
+    if (conflictedDBNames && conflictedDBNames.length > 0) {
+      return this.dirtyIfCleanOrLocked(conflictedDBNames)
     }
   }
 
