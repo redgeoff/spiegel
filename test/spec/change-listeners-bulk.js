@@ -115,22 +115,27 @@ describe('change-listeners-bulk', () => {
     testUtils.shouldEqual(lists[2].dirty, undefined)
 
     let newListener = { db_name: 'test_db8' }
+    let list0 = sporks.clone(lists[0])
+    let list2 = sporks.clone(lists[2])
 
-    await listeners._dirtyOrCreate([lists[0], lists[2], newListener])
+    await listeners._dirtyOrCreate([list0, list2, newListener])
 
     // Manually add DB name as it was created by _dirtyOrCreate() and not createListener()
     docs.push({ id: listeners._toId(newListener.db_name) })
 
-    lists = await getListeners()
+    let updatedLists = await getListeners()
 
-    // Checked the dirtied listeners
-    lists[0].dirty.should.eql(true)
-    lists[2].dirty.should.eql(true)
+    // Check the dirtied listeners
+    updatedLists[0].dirty.should.eql(true)
+    updatedLists[0].updated_at.should.not.eql(lists[0].updated_at)
+    updatedLists[2].dirty.should.eql(true)
+    updatedLists[2].updated_at.should.not.eql(lists[2].updated_at)
 
     // Check the new listener
-    lists[7]._id.should.eql(listeners._toId(newListener.db_name))
-    lists[7].db_name.should.eql('test_db8')
-    lists[7].dirty.should.eql(true)
+    updatedLists[7]._id.should.eql(listeners._toId(newListener.db_name))
+    updatedLists[7].db_name.should.eql('test_db8')
+    updatedLists[7].dirty.should.eql(true)
+    testUtils.shouldNotEqual(updatedLists[7].updated_at, undefined)
   })
 
   it('should get by DB names', async () => {
