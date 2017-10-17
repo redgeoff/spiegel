@@ -42,7 +42,7 @@ describe('change-listeners', () => {
     let listener = await dirtyListener()
     listener._id.should.eql(listeners._idPrefix + 'test_db1')
     listener.db_name.should.eql('test_db1')
-    listener.type.should.eql('change-listener')
+    listener.type.should.eql('listener')
     listener.dirty.should.eql(true)
   })
 

@@ -101,10 +101,12 @@ class ChangeListeners {
     return this._slouch.doc.getIgnoreMissing(this._spiegel._dbName, this._toId(dbName))
   }
 
+  // TODO: still needed?
   _upsert (listener) {
     return this._slouch.doc.upsert(this._spiegel._dbName, listener)
   }
 
+  // TODO: remove as now handled by dirtyIfCleanOrLocked?
   async dirtyIfClean (dbName) {
     let listener = await this._get(dbName)
 
@@ -115,7 +117,7 @@ class ChangeListeners {
         _id: this._toId(dbName),
 
         db_name: dbName,
-        type: 'change-listener'
+        type: 'listener'
       }
     }
 
@@ -192,30 +194,54 @@ class ChangeListeners {
     // Index by dbName for quick retrieval
     let missing = sporks.flip(dbNames)
 
-    let cleanOrLocked = []
+    let lists = []
     listeners.map(listener => {
       // Remove from missing
       delete missing[listener.db_name]
 
       // Clean or locked?
       if (!listener.dirty || listener.locked_at) {
-        cleanOrLocked.push(listener)
+        lists.push(listener)
       }
     })
 
-    return {
-      cleanOrLocked,
-      missing: sporks.keys(missing)
-    }
+    sporks.each(missing, (val, dbName) => {
+      lists.push({
+        db_name: dbName
+      })
+    })
+
+    return lists
   }
 
-  _dirtyOrCreate (listeners) {
-    // TODO: compare with dbNames passed in to see which ones are missing
-    // listeners.forEach(listener => {
-    //   replicator.dirty = true
+  // Useful for determining the last time a listener was used
+  _setUpdatedAt (listener) {
+    listener.updated_at = new Date().toISOString()
+  }
+
+  _dirtyOrCreate (cleanOrLocked, missing) {
+    let listeners = []
+
+    // // Build a list that will dirty existing listeners
+    // cleanOrLocked.map(listener => {
+    //   listener.dirty = true
+    //   this._setUpdatedAt(listener)
+    //   listeners.push(listener)
     // })
     //
-    // return this._slouch.doc.bulkCreateOrUpdate(this._spiegel._dbName, replicators)
+    // // Build a list of new listeners
+    // missing.map(dbName => {
+    //   let listener = {
+    //     // Prefix so that we can create a listener even when the id is reserved, e.g. _users
+    //     _id: this._toId(dbName),
+    //     db_name: dbName,
+    //     type: 'listener'
+    //   }
+    //   this._setUpdatedAt(listener)
+    //   listeners.push(listener)
+    // })
+
+    return this._slouch.doc.bulkCreateOrUpdate(this._spiegel._dbName, listeners)
   }
 
   async _dirtyAndGetConflictedDBNames (listeners) {

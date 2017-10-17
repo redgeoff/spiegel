@@ -2,6 +2,7 @@
 
 const ChangeListeners = require('../../src/change-listeners')
 const testUtils = require('../utils')
+const sporks = require('sporks')
 
 describe('change-listeners-bulk', () => {
   let listeners = null
@@ -146,16 +147,26 @@ describe('change-listeners-bulk', () => {
       'test_db8'
     ])
 
+    let cleanOrLockedDBNames = []
+    let missingDBNames = []
+
+    sporks.each(lists, listener => {
+      if (listener._id) {
+        cleanOrLockedDBNames.push(listener.db_name)
+      } else {
+        missingDBNames.push(listener.db_name)
+      }
+    })
+
     // Check clean or locked listeners
-    let dbNames = lists.cleanOrLocked.map(listener => listener.db_name)
-    dbNames.should.eql(['test_db1', 'test_db4', 'test_db5', 'test_db6', 'test_db7'])
+    cleanOrLockedDBNames.should.eql(['test_db1', 'test_db4', 'test_db5', 'test_db6', 'test_db7'])
 
     // Check missing listeners
-    lists.missing.should.eql(['test_db0', 'test_db8'])
+    missingDBNames.should.eql(['test_db0', 'test_db8'])
   })
 
   // it('should dirty and get conflicted db names', async () => {
-  //   let lists = await listeners._getByDBNames([
+  //   let lists = await listeners._getCleanLockedOrMissing([
   //     'test_db1',
   //     'test_db2',
   //     'test_db4',
@@ -165,10 +176,15 @@ describe('change-listeners-bulk', () => {
   //     'test_db8'
   //   ])
   //
+  //   // TODO: need conflict on create as well
   //   await simulateConflicts()
   //
-  //   // let conflictedDBNames = await listeners._dirtyAndGetConflictedDBNames(lists)
-  //   // conflictedDBNames.should.eql(['test_db5', 'test_db7'])
+  //   let conflictedDBNames = await listeners._dirtyAndGetConflictedDBNames(
+  //     lists.cleanOrLocked,
+  //     lists.missing
+  //   )
+  //   console.log('conflictedDBNames=', conflictedDBNames);
+  //   conflictedDBNames.should.eql(['test_db5', 'test_db7'])
   // })
 
   // it('should dirty if clean or locked', async () => {
