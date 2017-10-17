@@ -97,4 +97,29 @@ describe('replicators', () => {
     let savedReplicator2 = await replicators._get(replicator._id)
     savedReplicator2.should.eql(savedReplicator1)
   })
+
+  it('should convert to CouchDB replication params', async () => {
+    // Sanity test some params
+    let params = {
+      cancel: true,
+      continuous: true,
+      create_target: true,
+      doc_ids: true,
+      filter: true,
+      proxy: true,
+      source: true,
+      target: true
+    }
+
+    replicators._toCouchDBReplicationParams(params)
+
+    params.should.eql({
+      create_target: true,
+      doc_ids: true,
+      filter: true,
+      proxy: true,
+      source: true,
+      target: true
+    })
+  })
 })

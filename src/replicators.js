@@ -19,6 +19,18 @@ class Replicators {
     // replication or else there can be concurrent replications for the same DB that will backup the
     // replication queue and continuously run
     this._retryAfterSeconds = opts && opts.retryAfterSeconds ? opts.retryAfterSeconds : 10800
+
+    // "continuous" is added here as we do not want the continuous parameter to be passed to CouchDB
+    // or else the replication will block indefinitely. "cancel" is needed as it does not apply and
+    // would lead to unintended behavior
+    this._spiegelReplicationParams = [
+      'type',
+      'dirty',
+      'locked_at',
+      'updated_at',
+      'continuous',
+      'cancel'
+    ]
   }
 
   _createDirtyReplicatorsView () {
@@ -258,12 +270,47 @@ class Replicators {
     return lockedReplicator
   }
 
+  async _lockAndThrowIfErrorAndNotConflict (replicator) {
+    try {
+      await this._lock(replicator)
+    } catch (err) {
+      if (this._slouch.doc.isConflictError(err)) {
+        log.trace('Ignoring common conflict', err)
+        return true
+      } else {
+        throw err
+      }
+    }
+  }
+
+  _toCouchDBReplicationParams (params) {
+    // We choose to blacklist as oppossed to whitelist so that any future CouchDB replication
+    // parameters will work without Spiegel being updated
+    sporks.each(params, (value, name) => {
+      // Is the param only for Spiegel?
+      if (this._spiegelReplicationParams.indexOf(name) !== -1) {
+        delete params[name]
+      }
+    })
+  }
+
   async _replicate (replicator) {
-    // TODO:
-    // 1. Lock - if conflict then bail
-    // 2. Replicate
-    // 3. Unlock & set clean
-    //   - if conflict then don't change dirty status and just unlock - upsert
+    // TODO
+  }
+
+  async _lockReplicateUnlock (replicator) {
+    // Lock and if conflict then ignore error as conflicts are expected when another replicator
+    // process locks the same replicator
+
+    let conflict = await this._lockAndThrowIfErrorAndNotConflict(replicator)
+
+    if (!conflict) {
+      await this._replicate(replicator)
+
+      // TODO:
+      // 3. Unlock & set clean
+      //   - if conflict then don't change dirty status and just unlock - upsert
+    }
   }
 
   async _replicateAllDirtyAndUnlocked () {
@@ -272,7 +319,7 @@ class Replicators {
       view: 'dirty_and_unlocked_replicators'
     })
     await iterator.each(replicator => {
-      return this._replicate(replicator)
+      return this._lockReplicateUnlock(replicator)
     }, this._throttler)
   }
 
@@ -292,7 +339,7 @@ class Replicators {
     })
 
     this._iterator.each(replicator => {
-      return this._replicate(replicator)
+      return this._lockReplicateUnlock(replicator)
     }, this._throttler)
   }
 
