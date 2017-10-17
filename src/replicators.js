@@ -3,6 +3,7 @@
 const Throttler = require('squadron').Throttler
 const log = require('./log')
 const sporks = require('sporks')
+const url = require('url')
 
 class Replicators {
   constructor (spiegel, opts) {
@@ -14,6 +15,8 @@ class Replicators {
         ? opts.maxConcurrentReplicatorProcesses
         : undefined
     )
+
+    this._passwords = opts && opts.replicatorPasswords ? opts.replicatorPasswords : {}
 
     // WARNING: retryAfterSeconds must be less than the maximum time it takes to perform the
     // replication or else there can be concurrent replications for the same DB that will backup the
@@ -296,7 +299,36 @@ class Replicators {
     return couchParams
   }
 
-  async _replicate (replicator) {}
+  _addPassword (urlString) {
+    if (this._passwords) {
+      let parts = url.parse(urlString)
+
+      // Was a password defined?
+      if (this._passwords[parts.hostname] && this._passwords[parts.hostname][parts.auth]) {
+        let password = this._passwords[parts.hostname][parts.auth]
+        return (
+          parts.protocol + '//' + parts.auth + ':' + password + '@' + parts.host + parts.pathname
+        )
+      }
+    }
+
+    return urlString
+  }
+
+  async _replicate (replicator) {
+    let couchParams = this._toCouchDBReplicationParams(replicator)
+
+    log.info('Beginning replication from', replicator.source, 'to', replicator.target)
+
+    // Add passwords to URLs based on hostname and username so that passwords are not embedded in
+    // the replicator docs
+    couchParams.source = this._addPassword(couchParams.source)
+    couchParams.target = this._addPassword(couchParams.target)
+
+    await this._slouch.db.replicate(couchParams)
+
+    log.info('Finished replication from', replicator.source, 'to', replicator.target)
+  }
 
   async _lockReplicateUnlock (replicator) {
     // Lock and if conflict then ignore error as conflicts are expected when another replicator
@@ -305,6 +337,8 @@ class Replicators {
     let conflict = await this._lockAndThrowIfErrorAndNotConflict(replicator)
 
     if (!conflict) {
+      // TODO: if an error is encountered when replicating then leave the replicator dirty, but
+      // unlock it so that the replication can be tried again
       await this._replicate(replicator)
 
       // TODO:

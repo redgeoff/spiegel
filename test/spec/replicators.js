@@ -122,4 +122,45 @@ describe('replicators', () => {
       target: true
     })
   })
+
+  it('should add passwords', function () {
+    // Clear any passwords
+    replicators._passwords = null
+
+    // Should be unchanged as there is no passwords mapping
+    replicators
+      ._addPassword('http://user1@example.com/mydb')
+      .should.eql('http://user1@example.com/mydb')
+
+    // Fake passwords
+    replicators._passwords = {
+      'example.com': {
+        user1: 'password1',
+        user2: 'password2'
+      },
+      'google.com': {
+        user1: 'password'
+      }
+    }
+
+    replicators
+      ._addPassword('http://user1@example.com/mydb')
+      .should.eql('http://user1:password1@example.com/mydb')
+
+    replicators
+      ._addPassword('https://user2@example.com/mydb')
+      .should.eql('https://user2:password2@example.com/mydb')
+
+    replicators
+      ._addPassword('https://user1@google.com/mydb')
+      .should.eql('https://user1:password@google.com/mydb')
+
+    replicators
+      ._addPassword('https://usermissing@example.com/mydb')
+      .should.eql('https://usermissing@example.com/mydb')
+
+    replicators
+      ._addPassword('https://usermissing@missing.com/mydb')
+      .should.eql('https://usermissing@missing.com/mydb')
+  })
 })
