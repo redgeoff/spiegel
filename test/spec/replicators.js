@@ -51,7 +51,7 @@ describe('replicators', () => {
     testUtils.shouldEqual(replicators._toDBName(), undefined)
   })
 
-  it('lock replicator', async () => {
+  it('should lock replicator', async () => {
     // Create replicator
     let replicator = await createReplicator({
       source: 'https://example.com/test_db1'
@@ -72,5 +72,29 @@ describe('replicators', () => {
 
     // The updated_at value should have been populated
     lockedReplicator.updated_at.should.not.eql(undefined)
+  })
+
+  it('lock should throw when conflict', async () => {
+    // Create replicator
+    let replicator = await createReplicator({
+      source: 'https://example.com/test_db1'
+    })
+
+    // Modify replicator to simulate a conflict later
+    replicator.dirty = true
+    await testUtils.spiegel._slouch.doc.update(testUtils.spiegel._dbName, replicator)
+
+    let savedReplicator1 = await replicators._get(replicator._id)
+
+    try {
+      // Lock replicator
+      await replicators.lock(replicator)
+    } catch (err) {
+      testUtils.spiegel._slouch.doc.isConflictError(err).should.eql(true)
+    }
+
+    // Get the saved replicator and make sure nothing changed
+    let savedReplicator2 = await replicators._get(replicator._id)
+    savedReplicator2.should.eql(savedReplicator1)
   })
 })
