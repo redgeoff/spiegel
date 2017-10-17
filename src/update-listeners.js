@@ -24,6 +24,7 @@ class UpdateListeners {
     this._stopped = false
 
     this._replicators = this._spiegel._replicators
+    this._changeListeners = this._spiegel._changeListeners
   }
 
   _onError (err) {
@@ -76,7 +77,11 @@ class UpdateListeners {
     // to one of the replicator processes.
     await this._replicators.dirtyIfCleanOrLocked(dbNames)
 
-    // TODO: also use change-listeners
+    // We use bulk operations to get and then dirty/create ChangeListeners so that the listening can
+    // be delegated to one of the ChangeListener processes. We do this without regard to the
+    // on_change docs as we expect the sieve to define when to create a listener as the sieve is
+    // most efficient construct for this filtering.
+    await this._changeListeners.dirtyIfCleanOrLocked(dbNames)
   }
 
   // Separate out for easier unit testing

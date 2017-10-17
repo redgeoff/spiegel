@@ -11,6 +11,7 @@ describe('update-listeners', () => {
   let updates = null
   let changeOpts = null
   let dirtyReplicators = null
+  let dirtyChangeListeners = null
   // let lastSeq
   let suffixId = 0
   let suffix = null
@@ -53,6 +54,17 @@ describe('update-listeners', () => {
     }
   }
 
+  const spyOnDirtyChangeListeners = () => {
+    dirtyChangeListeners = {}
+    listeners._changeListeners = {
+      dirtyIfCleanOrLocked: function (dbNames) {
+        dbNames.forEach(dbName => {
+          dirtyChangeListeners[dbName] = true
+        })
+      }
+    }
+  }
+
   // const fakeGlobals = async () => {
   //   listeners._globals.get = function (name) {
   //     if (name === 'lastSeq') {
@@ -86,6 +98,7 @@ describe('update-listeners', () => {
     spyOnUpdates()
     spyOnChanges()
     spyOnDirtyReplicators()
+    spyOnDirtyChangeListeners()
     if (fakeLastSeq) {
       // fakeGlobals()
     }
@@ -130,7 +143,6 @@ describe('update-listeners', () => {
     // Make sure we dirtied the correct replicators
     await testUtils
       .waitFor(() => {
-        // We need to sort as the DBs can be in any order
         return sporks.isEqual(dirtyReplicators, {
           ['test_db1' + suffix]: true,
           ['test_db3' + suffix]: true
@@ -143,7 +155,20 @@ describe('update-listeners', () => {
         throw err
       })
 
-    // TODO: make sure we dirty the correct change listeners
+    // Make sure we dirtied the correct ChangeListeners
+    await testUtils
+      .waitFor(() => {
+        return sporks.isEqual(dirtyChangeListeners, {
+          ['test_db1' + suffix]: true,
+          ['test_db3' + suffix]: true
+        })
+          ? true
+          : undefined
+      })
+      .catch(function (err) {
+        console.log('dirtyChangeListeners=', dirtyChangeListeners)
+        throw err
+      })
   })
 
   it('batch should complete based on batchSize', async () => {

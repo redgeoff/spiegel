@@ -19,7 +19,7 @@ class ChangeListeners {
         dirty_listeners: {
           map: [
             'function(doc) {',
-            'if (doc.type === "listener" && doc.dirty) {',
+            'if (doc.type === "change_listener" && doc.dirty) {',
             'emit(doc._id, null);',
             '}',
             '}'
@@ -39,7 +39,7 @@ class ChangeListeners {
         clean_or_locked_listeners_by_db_name: {
           map: [
             'function(doc) {',
-            'if (doc.type === "listener" && (!doc.dirty || doc.locked_at)) {',
+            'if (doc.type === "change_listener" && (!doc.dirty || doc.locked_at)) {',
             'emit(doc.db_name, null);',
             '}',
             '}'
@@ -58,7 +58,7 @@ class ChangeListeners {
         listeners_by_db_name: {
           map: [
             'function(doc) {',
-            'if (doc.type === "listener") {',
+            'if (doc.type === "change_listener") {',
             'emit(doc.db_name, null);',
             '}',
             '}'
@@ -117,7 +117,7 @@ class ChangeListeners {
         _id: this._toId(dbName),
 
         db_name: dbName,
-        type: 'listener'
+        type: 'change_listener'
       }
     }
 
@@ -228,7 +228,7 @@ class ChangeListeners {
       } else {
         // Prefix so that we can create a listener even when the id is reserved, e.g. _users
         listener._id = this._toId(listener.db_name)
-        listener.type = 'listener'
+        listener.type = 'change_listener'
         listener.dirty = true
         this._setUpdatedAt(listener)
       }

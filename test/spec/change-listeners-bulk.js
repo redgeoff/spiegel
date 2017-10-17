@@ -11,7 +11,7 @@ describe('change-listeners-bulk', () => {
 
   const createListener = async listener => {
     listener._id = listeners._toId(listener.db_name)
-    listener.type = 'listener'
+    listener.type = 'change_listener'
     let doc = await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, listener)
     docs.push(doc)
   }
