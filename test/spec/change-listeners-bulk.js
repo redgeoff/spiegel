@@ -59,15 +59,15 @@ describe('change-listeners-bulk', () => {
     })
   }
 
-  // const getListeners = async () => {
-  //   let lists = []
-  //   await Promise.all(
-  //     docs.map(async (doc, i) => {
-  //       lists[i] = await testUtils.spiegel._slouch.doc.get(testUtils.spiegel._dbName, doc.id)
-  //     })
-  //   )
-  //   return lists
-  // }
+  const getListeners = async () => {
+    let lists = []
+    await Promise.all(
+      docs.map(async (doc, i) => {
+        lists[i] = await testUtils.spiegel._slouch.doc.get(testUtils.spiegel._dbName, doc.id)
+      })
+    )
+    return lists
+  }
 
   const spyOnDirty = () => {
     dirties = []
@@ -109,17 +109,29 @@ describe('change-listeners-bulk', () => {
     })
   }
 
-  // it('should dirty', async () => {
-  //   let lists = await getListeners()
-  //   testUtils.shouldEqual(lists[0].dirty, undefined)
-  //   testUtils.shouldEqual(lists[2].dirty, undefined)
-  //
-  //   await listeners._dirty([lists[0], lists[2]])
-  //
-  //   lists = await getListeners()
-  //   lists[0].dirty.should.eql(true)
-  //   lists[2].dirty.should.eql(true)
-  // })
+  it('should dirty or create', async () => {
+    let lists = await getListeners()
+    testUtils.shouldEqual(lists[0].dirty, undefined)
+    testUtils.shouldEqual(lists[2].dirty, undefined)
+
+    let newListener = { db_name: 'test_db8' }
+
+    await listeners._dirtyOrCreate([lists[0], lists[2], newListener])
+
+    // Manually add DB name as it was created by _dirtyOrCreate() and not createListener()
+    docs.push({ id: listeners._toId(newListener.db_name) })
+
+    lists = await getListeners()
+
+    // Checked the dirtied listeners
+    lists[0].dirty.should.eql(true)
+    lists[2].dirty.should.eql(true)
+
+    // Check the new listener
+    lists[7]._id.should.eql(listeners._toId(newListener.db_name))
+    lists[7].db_name.should.eql('test_db8')
+    lists[7].dirty.should.eql(true)
+  })
 
   it('should get by DB names', async () => {
     let _docs = await listeners._getByDBNames([

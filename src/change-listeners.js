@@ -229,6 +229,7 @@ class ChangeListeners {
         // Prefix so that we can create a listener even when the id is reserved, e.g. _users
         listener._id = this._toId(listener.db_name)
         listener.type = 'listener'
+        listener.dirty = true
         this._setUpdatedAt(listener)
       }
     })
