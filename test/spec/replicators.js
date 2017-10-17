@@ -58,7 +58,7 @@ describe('replicators', () => {
     })
 
     // Lock replicator
-    let lockedReplicator = await replicators.lock(replicator)
+    let lockedReplicator = await replicators._lock(replicator)
 
     // Get the saved replicator and compare
     let savedReplicator = await replicators._get(replicator._id)
@@ -88,7 +88,7 @@ describe('replicators', () => {
 
     try {
       // Lock replicator
-      await replicators.lock(replicator)
+      await replicators._lock(replicator)
     } catch (err) {
       testUtils.spiegel._slouch.doc.isConflictError(err).should.eql(true)
     }
@@ -163,4 +163,10 @@ describe('replicators', () => {
       ._addPassword('https://usermissing@missing.com/mydb')
       .should.eql('https://usermissing@missing.com/mydb')
   })
+
+  // TODO: _upsertUnlock
+
+  // TODO: _unlockAndSetClean
+
+  // TODO: test all branches in _lockReplicateUnlock
 })

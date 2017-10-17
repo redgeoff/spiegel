@@ -258,19 +258,48 @@ class Replicators {
     return lastSeq
   }
 
+  _getMergeUpsert (replicator) {
+    return this._slouch.doc.getMergeUpsert(this._spiegel._dbName, replicator)
+  }
+
   _update (replicator) {
     return this._slouch.doc.update(this._spiegel._dbName, replicator)
   }
 
-  async lock (replicator) {
-    // We use an update instead of an upsert as we want there to be a conflict as we only want one
-    // process to hold the lock at any given time
+  async _updateReplicator (replicator, getMergeUpsert) {
     let lockedReplicator = sporks.clone(replicator)
+
     lockedReplicator.locked_at = new Date().toISOString()
     this._setUpdatedAt(lockedReplicator)
-    let response = await this._update(lockedReplicator)
+
+    let response = null
+
+    if (getMergeUpsert) {
+      response = await this._getMergeUpsert(lockedReplicator)
+    } else {
+      response = await this._update(lockedReplicator)
+    }
+
     lockedReplicator._rev = response._rev
     return lockedReplicator
+  }
+
+  async _lock (replicator) {
+    // We use an update instead of an upsert as we want there to be a conflict as we only want one
+    // process to hold the lock at any given time
+    return this._updateReplicator(replicator, false)
+  }
+
+  async _upsertUnlock (replicator) {
+    // Use new doc with just the locked_at cleared as we only want to change the locked status
+    let rep = { _id: replicator._id, locked_at: null }
+    return this._updateReplicator(rep, true)
+  }
+
+  async _unlockAndSetClean (replicator) {
+    // We do not upsert as we want the clean to fail if the replicator has been updated
+    replicator.dirty = false
+    return this._updateReplicator(replicator, false)
   }
 
   async _lockAndThrowIfErrorAndNotConflict (replicator) {
