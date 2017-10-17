@@ -16,7 +16,7 @@ class Spiegel {
 
     this._updateListeners = new UpdateListeners(this, opts)
     this._changeListeners = new ChangeListeners(this)
-    this._replicators = new Replicators(this)
+    this._replicators = new Replicators(this, opts)
     this._onChanges = new OnChanges(this)
   }
 

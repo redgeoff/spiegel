@@ -1,13 +1,27 @@
 'use strict'
 
+const Throttler = require('squadron').Throttler
+const log = require('./log')
+
 class Replicators {
-  constructor (spiegel) {
+  constructor (spiegel, opts) {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
+
+    this._throttler = new Throttler(
+      opts && opts.maxConcurrentReplicatorProcesses
+        ? opts.maxConcurrentReplicatorProcesses
+        : undefined
+    )
+
+    // WARNING: retryAfterSeconds must be less than the maximum time it takes to perform the
+    // replication or else there can be concurrent replications for the same DB that will backup the
+    // replication queue and continuously run
+    this._retryAfterSeconds = opts && opts.retryAfterSeconds ? opts.retryAfterSeconds : 10800
   }
 
   _createDirtyReplicatorsView () {
-    var doc = {
+    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
       _id: '_design/dirty_replicators',
       views: {
         dirty_replicators: {
@@ -20,13 +34,11 @@ class Replicators {
           ].join(' ')
         }
       }
-    }
-
-    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
+    })
   }
 
-  _createCleanOrLockedReplicatorsByNameView () {
-    var doc = {
+  _createCleanOrLockedReplicatorsByDBNameView () {
+    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
       _id: '_design/clean_or_locked_replicators_by_db_name',
       views: {
         clean_or_locked_replicators_by_db_name: {
@@ -43,14 +55,29 @@ class Replicators {
           ].join(' ')
         }
       }
-    }
+    })
+  }
 
-    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
+  _createDirtyAndUnLockedReplicatorsView () {
+    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
+      _id: '_design/dirty_and_unlocked_replicators',
+      views: {
+        dirty_and_unlocked_replicators: {
+          map: [
+            'function(doc) {',
+            'if (doc.type === "replicator" && doc.dirty && !doc.locked_at)) {',
+            'emit(doc._id, null);',
+            '}',
+            '}'
+          ].join(' ')
+        }
+      }
+    })
   }
 
   // TODO: still needed or does clean_or_locked_replicators_by_db_name replace need for this view?
   _createCleanReplicatorsView () {
-    var doc = {
+    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
       _id: '_design/clean_replicators',
       views: {
         clean_replicators: {
@@ -63,13 +90,11 @@ class Replicators {
           ].join(' ')
         }
       }
-    }
-
-    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
+    })
   }
 
   _createReplicatorsByDBNameView () {
-    var doc = {
+    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
       _id: '_design/replicators_by_db_name',
       views: {
         replicators_by_db_name: {
@@ -82,16 +107,15 @@ class Replicators {
           ].join(' ')
         }
       }
-    }
-
-    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
+    })
   }
 
   async _createViews () {
     await this._createDirtyReplicatorsView()
-    await this._createCleanOrLockedReplicatorsByNameView()
+    await this._createCleanOrLockedReplicatorsByDBNameView()
+    await this._createDirtyAndUnLockedReplicatorsView()
     await this._createCleanReplicatorsView()
-    return this._createReplicatorsByDBNameView()
+    await this._createReplicatorsByDBNameView()
   }
 
   create () {
@@ -104,8 +128,12 @@ class Replicators {
       this._spiegel._dbName,
       '_design/clean_or_locked_replicators_by_db_name'
     )
+    await this._slouch.doc.getAndDestroy(
+      this._spiegel._dbName,
+      '_design/dirty_and_unlocked_replicators'
+    )
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/clean_replicators')
-    return this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/replicators_by_db_name')
+    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/replicators_by_db_name')
   }
 
   destroy () {
@@ -192,6 +220,77 @@ class Replicators {
     let conflictedDBNames = await this._attemptToDirtyIfCleanOrLocked(dbNames)
     if (conflictedDBNames && conflictedDBNames.length > 0) {
       return this.dirtyIfCleanOrLocked(conflictedDBNames)
+    }
+  }
+
+  async _getLastSeq () {
+    let lastSeq = null
+    await this._spiegel._slouch.db
+      .changes(this._spiegel._dbName, {
+        limit: 1,
+        descending: true,
+        filter: '_view',
+        view: 'dirty_and_unlocked_replicators'
+      })
+      .each(change => {
+        lastSeq = change.seq
+      })
+    return lastSeq
+  }
+
+  async _replicate (replicator) {
+    // TODO:
+    // 1. Lock - if conflict then bail
+    // 2. Replicate
+    // 3. Unlock & set clean
+    //   - if conflict then don't change dirty status and just unlock - upsert
+  }
+
+  async _replicateAllDirtyAndUnlocked () {
+    let iterator = this._changes({
+      filter: '_view',
+      view: 'dirty_and_unlocked_replicators'
+    })
+    await iterator.each(replicator => {
+      return this._replicate(replicator)
+    }, this._throttler)
+  }
+
+  async _listen (lastSeq) {
+    this._iterator = this._changes({
+      feed: 'continuous',
+      heartbeat: true,
+      since: lastSeq,
+      filter: '_view',
+      view: 'dirty_and_unlocked_replicators'
+    })
+
+    this._iterator.on('error', err => {
+      // Unexpected error. Errors should be handled at the Slouch layer and connections should be
+      // persistent
+      log.error(err)
+    })
+
+    this._iterator.each(replicator => {
+      return this._replicate(replicator)
+    }, this._throttler)
+  }
+
+  async start () {
+    // Get the last seq so that we can use this as the starting point when listening for changes
+    let lastSeq = await this._getLastSeq
+
+    // Get all dirty replicators and then perform the replications concurrently
+    await this._replicateAllDirtyAndUnlocked()
+
+    // Listen for changes. We don't await here as the listening is a continuous operation
+    this._listen(lastSeq)
+  }
+
+  async stop () {
+    this._stopped = true
+    if (this._iterator) {
+      await this._iterator.allDone()
     }
   }
 }
