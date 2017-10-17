@@ -219,27 +219,19 @@ class ChangeListeners {
     listener.updated_at = new Date().toISOString()
   }
 
-  _dirtyOrCreate (cleanOrLocked, missing) {
-    let listeners = []
-
-    // // Build a list that will dirty existing listeners
-    // cleanOrLocked.map(listener => {
-    //   listener.dirty = true
-    //   this._setUpdatedAt(listener)
-    //   listeners.push(listener)
-    // })
-    //
-    // // Build a list of new listeners
-    // missing.map(dbName => {
-    //   let listener = {
-    //     // Prefix so that we can create a listener even when the id is reserved, e.g. _users
-    //     _id: this._toId(dbName),
-    //     db_name: dbName,
-    //     type: 'listener'
-    //   }
-    //   this._setUpdatedAt(listener)
-    //   listeners.push(listener)
-    // })
+  _dirtyOrCreate (listeners) {
+    listeners.forEach(listener => {
+      // Existing listener?
+      if (listener._id) {
+        listener.dirty = true
+        this._setUpdatedAt(listener)
+      } else {
+        // Prefix so that we can create a listener even when the id is reserved, e.g. _users
+        listener._id = this._toId(listener.db_name)
+        listener.type = 'listener'
+        this._setUpdatedAt(listener)
+      }
+    })
 
     return this._slouch.doc.bulkCreateOrUpdate(this._spiegel._dbName, listeners)
   }

@@ -10,6 +10,7 @@ describe('change-listeners-bulk', () => {
   let dirties = null
 
   const createListener = async listener => {
+    listener._id = listeners._toId(listener.db_name)
     listener.type = 'listener'
     let doc = await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, listener)
     docs.push(doc)
@@ -20,7 +21,6 @@ describe('change-listeners-bulk', () => {
 
     // Clean & unlocked
     await createListener({
-      _id: '1',
       db_name: 'test_db1'
     })
 
@@ -91,18 +91,23 @@ describe('change-listeners-bulk', () => {
     )
   })
 
-  // // Simulate conflicts by updating the docs between the _getCleanOrLocked() and _dirty() calls
-  // const simulateConflicts = async () => {
-  //   await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
-  //     _id: docs[4].id,
-  //     foo: 'test_db5' // ensure something is changed
-  //   })
-  //
-  //   await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
-  //     _id: docs[6].id,
-  //     foo: 'test_db7' // ensure something is changed
-  //   })
-  // }
+  // Simulate conflicts by updating the docs between the _getCleanOrLocked() and _dirty() calls
+  const simulateConflicts = async () => {
+    await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
+      _id: docs[4].id,
+      foo: 'test_db5' // ensure something is changed
+    })
+
+    await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
+      _id: docs[6].id,
+      foo: 'test_db7' // ensure something is changed
+    })
+
+    // Used to simulate race condition when a listener is created by another process after the get
+    await createListener({
+      db_name: 'test_db8'
+    })
+  }
 
   // it('should dirty', async () => {
   //   let lists = await getListeners()
@@ -165,27 +170,22 @@ describe('change-listeners-bulk', () => {
     missingDBNames.should.eql(['test_db0', 'test_db8'])
   })
 
-  // it('should dirty and get conflicted db names', async () => {
-  //   let lists = await listeners._getCleanLockedOrMissing([
-  //     'test_db1',
-  //     'test_db2',
-  //     'test_db4',
-  //     'test_db5',
-  //     'test_db6',
-  //     'test_db7',
-  //     'test_db8'
-  //   ])
-  //
-  //   // TODO: need conflict on create as well
-  //   await simulateConflicts()
-  //
-  //   let conflictedDBNames = await listeners._dirtyAndGetConflictedDBNames(
-  //     lists.cleanOrLocked,
-  //     lists.missing
-  //   )
-  //   console.log('conflictedDBNames=', conflictedDBNames);
-  //   conflictedDBNames.should.eql(['test_db5', 'test_db7'])
-  // })
+  it('should dirty and get conflicted db names', async () => {
+    let lists = await listeners._getCleanLockedOrMissing([
+      'test_db1',
+      'test_db2',
+      'test_db4',
+      'test_db5',
+      'test_db6',
+      'test_db7',
+      'test_db8'
+    ])
+
+    await simulateConflicts()
+
+    let conflictedDBNames = await listeners._dirtyAndGetConflictedDBNames(lists)
+    conflictedDBNames.should.eql(['test_db5', 'test_db7', 'test_db8'])
+  })
 
   // it('should dirty if clean or locked', async () => {
   //   // Simulate conflicts
