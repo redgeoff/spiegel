@@ -123,9 +123,15 @@ class Replicators {
     return response.rows.map(row => row.doc)
   }
 
+  // Useful for determining the last time a replicator was used
+  _setUpdatedAt (listener) {
+    listener.updated_at = new Date().toISOString()
+  }
+
   _dirty (replicators) {
     replicators.forEach(replicator => {
       replicator.dirty = true
+      this._setUpdatedAt(replicator)
     })
 
     return this._slouch.doc.bulkCreateOrUpdate(this._spiegel._dbName, replicators)
