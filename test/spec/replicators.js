@@ -111,9 +111,9 @@ describe('replicators', () => {
       target: true
     }
 
-    replicators._toCouchDBReplicationParams(params)
+    let couchParams = replicators._toCouchDBReplicationParams(params)
 
-    params.should.eql({
+    couchParams.should.eql({
       create_target: true,
       doc_ids: true,
       filter: true,

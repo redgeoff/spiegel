@@ -286,17 +286,17 @@ class Replicators {
   _toCouchDBReplicationParams (params) {
     // We choose to blacklist as oppossed to whitelist so that any future CouchDB replication
     // parameters will work without Spiegel being updated
+    let couchParams = {}
     sporks.each(params, (value, name) => {
-      // Is the param only for Spiegel?
-      if (this._spiegelReplicationParams.indexOf(name) !== -1) {
-        delete params[name]
+      // Is the param for CouchDB?
+      if (this._spiegelReplicationParams.indexOf(name) === -1) {
+        couchParams[name] = value
       }
     })
+    return couchParams
   }
 
-  async _replicate (replicator) {
-    // TODO
-  }
+  async _replicate (replicator) {}
 
   async _lockReplicateUnlock (replicator) {
     // Lock and if conflict then ignore error as conflicts are expected when another replicator
