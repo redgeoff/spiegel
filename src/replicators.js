@@ -393,19 +393,23 @@ class Replicators {
     // process locks the same replicator
     let conflict = await this._lockAndThrowIfErrorAndNotConflict(replicator)
     if (!conflict) {
-      try {
-        // Attempt to replicate and if there is an error then it is thrown and logged below
-        await this._replicateAndUnlockIfError(replicator)
+      // Attempt to replicate and if there is an error then it is thrown and logged below
+      await this._replicateAndUnlockIfError(replicator)
 
-        // Attempt to unlock and clean the replicator. If there is a conflict, which can occur when
-        // an UpdateListener re-dirties the replicator then just unlock the replicator so that it
-        // can be retried
-        await this._unlockAndCleanIfConflictJustUnlock(replicator)
-      } catch (err) {
-        // Swallow the error as the replication will be retried. We want to just log the error and
-        // then swallow it so that the caller continues processing the replications
-        log.error(err)
-      }
+      // Attempt to unlock and clean the replicator. If there is a conflict, which can occur when
+      // an UpdateListener re-dirties the replicator then just unlock the replicator so that it
+      // can be retried
+      await this._unlockAndCleanIfConflictJustUnlock(replicator)
+    }
+  }
+
+  async _lockReplicateUnlockLogError (replicator) {
+    try {
+      this._lockReplicateUnlock(replicator)
+    } catch (err) {
+      // Swallow the error as the replication will be retried. We want to just log the error and
+      // then swallow it so that the caller continues processing the replications
+      log.error(err)
     }
   }
 
@@ -415,7 +419,7 @@ class Replicators {
       view: 'dirty_and_unlocked_replicators'
     })
     await iterator.each(replicator => {
-      return this._lockReplicateUnlock(replicator)
+      return this._lockReplicateUnlockLogError(replicator)
     }, this._throttler)
   }
 
@@ -439,7 +443,7 @@ class Replicators {
     })
 
     this._iterator.each(replicator => {
-      return this._lockReplicateUnlock(replicator)
+      return this._lockReplicateUnlockLogError(replicator)
     }, this._throttler)
   }
 

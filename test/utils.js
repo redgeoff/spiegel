@@ -92,6 +92,20 @@ class Utils {
   waitFor (poll) {
     return sporks.waitFor(poll, this.TIMEOUT - 2000)
   }
+
+  // TODO: move to sporks?
+  spy (obj, funs, calls) {
+    funs.forEach(fun => {
+      let origFun = obj[fun]
+
+      calls[fun] = []
+
+      obj[fun] = function () {
+        calls[fun].push(arguments)
+        return origFun.apply(this, arguments)
+      }
+    })
+  }
 }
 
 module.exports = new Utils()

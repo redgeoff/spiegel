@@ -2,23 +2,30 @@
 
 const Replicators = require('../../src/replicators')
 const testUtils = require('../utils')
+const sporks = require('sporks')
 
 describe('replicators', () => {
   let replicators = null
   let replicatorIds = null
-  let upserts = null
+  let calls = null
 
   const spy = () => {
-    replicators._upsert = function (replicator) {
-      upserts.push(replicator)
-      return Replicators.prototype._upsert.apply(this, arguments)
-    }
+    calls = []
+    testUtils.spy(
+      replicators,
+      [
+        '_lockReplicateUnlock',
+        '_replicateAndUnlockIfError',
+        '_unlockAndCleanIfConflictJustUnlock',
+        '_upsertUnlock'
+      ],
+      calls
+    )
   }
 
   beforeEach(async () => {
     replicators = new Replicators(testUtils.spiegel)
     replicatorIds = []
-    upserts = []
     spy()
   })
 
@@ -38,6 +45,13 @@ describe('replicators', () => {
       _id: doc.id,
       _rev: doc.rev
     }
+  }
+
+  const createTestReplicator = async () => {
+    let rep = await createReplicator({
+      source: 'https://example.com/test_db1'
+    })
+    return replicators._get(rep._id)
   }
 
   it('should extract db name', function () {
@@ -278,7 +292,31 @@ describe('replicators', () => {
     await shouldUnlockAndClean(true)
   })
 
-  // TODO: test all branches in _lockReplicateUnlock
+  it('_lockReplicateUnlock should handle non-conflict error when locking', async () => {
+    let replicator = createTestReplicator()
+
+    // Fake non-conflict error
+    let err = new Error()
+    replicators._lock = sporks.promiseErrorFactory(err)
+
+    await sporks.shouldThrow(() => {
+      return replicators._lockReplicateUnlock(replicator)
+    }, err)
+
+    // Make sure other calls are then skipped
+    calls._replicateAndUnlockIfError.length.should.eql(0)
+    calls._unlockAndCleanIfConflictJustUnlock.length.should.eql(0)
+  })
+
+  it('_lockReplicateUnlock should handle conflict when locking', async () => {})
+
+  it('_lockReplicateUnlock should handle error when replicating', async () => {})
+
+  it('_lockReplicateUnlock should handle non-conflict error when cleaning', async () => {})
+
+  it('_lockReplicateUnlock should handle conflict error when cleaning', async () => {})
+
+  it('should _lockReplicateUnlock without errors', async () => {})
 
   // TODO: test listen loop
   // - start with replicators already being dirty
