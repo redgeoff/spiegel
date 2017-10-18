@@ -306,7 +306,10 @@ class Replicators {
 
   async _lockAndThrowIfErrorAndNotConflict (replicator) {
     try {
-      await this._lock(replicator)
+      let rep = await this._lock(replicator)
+
+      // Set the updated rev as we need to be able to unlock the replicator later
+      replicator._rev = rep._rev
     } catch (err) {
       if (this._slouch.doc.isConflictError(err)) {
         log.trace('Ignoring common conflict', err)

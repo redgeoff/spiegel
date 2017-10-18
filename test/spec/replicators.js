@@ -373,7 +373,7 @@ describe('replicators', () => {
     // Fake conflict error
     replicators._unlockAndClean = sporks.promiseErrorFactory(conflictError)
 
-    return replicators._lockReplicateUnlock(replicator)
+    await replicators._lockReplicateUnlock(replicator)
 
     // Check calls
     calls._lockAndThrowIfErrorAndNotConflict.length.should.eql(1)
@@ -388,7 +388,7 @@ describe('replicators', () => {
     // Fake successful replication
     replicators._replicate = sporks.resolveFactory()
 
-    return replicators._lockReplicateUnlock(replicator)
+    await replicators._lockReplicateUnlock(replicator)
 
     // Check calls
     calls._lockAndThrowIfErrorAndNotConflict.length.should.eql(1)
