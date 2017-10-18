@@ -9,12 +9,17 @@ describe('replicators', () => {
   let replicatorIds = null
   let calls = null
 
+  let conflictError = new Error()
+  conflictError.error = 'conflict'
+
+  let nonConflictError = new Error()
+
   const spy = () => {
     calls = []
     testUtils.spy(
       replicators,
       [
-        '_lockReplicateUnlock',
+        '_lockAndThrowIfErrorAndNotConflict',
         '_replicateAndUnlockIfError',
         '_unlockAndCleanIfConflictJustUnlock',
         '_upsertUnlock'
@@ -296,14 +301,14 @@ describe('replicators', () => {
     let replicator = createTestReplicator()
 
     // Fake non-conflict error
-    let err = new Error()
-    replicators._lock = sporks.promiseErrorFactory(err)
+    replicators._lock = sporks.promiseErrorFactory(nonConflictError)
 
     await sporks.shouldThrow(() => {
       return replicators._lockReplicateUnlock(replicator)
-    }, err)
+    }, nonConflictError)
 
     // Make sure other calls are then skipped
+    calls._lockAndThrowIfErrorAndNotConflict.length.should.eql(1)
     calls._replicateAndUnlockIfError.length.should.eql(0)
     calls._unlockAndCleanIfConflictJustUnlock.length.should.eql(0)
   })
@@ -312,18 +317,32 @@ describe('replicators', () => {
     let replicator = createTestReplicator()
 
     // Fake conflict error
-    let err = new Error()
-    err.error = 'conflict'
-    replicators._lock = sporks.promiseErrorFactory(err)
+    replicators._lock = sporks.promiseErrorFactory(conflictError)
 
     await replicators._lockReplicateUnlock(replicator)
 
     // Make sure other calls are then skipped
+    calls._lockAndThrowIfErrorAndNotConflict.length.should.eql(1)
     calls._replicateAndUnlockIfError.length.should.eql(0)
     calls._unlockAndCleanIfConflictJustUnlock.length.should.eql(0)
   })
 
-  it('_lockReplicateUnlock should handle error when replicating', async () => {})
+  it('_lockReplicateUnlock should handle error when replicating', async () => {
+    let replicator = createTestReplicator()
+
+    // Fake conflict error
+    replicators._replicate = sporks.promiseErrorFactory(conflictError)
+
+    await sporks.shouldThrow(() => {
+      return replicators._lockReplicateUnlock(replicator)
+    }, conflictError)
+
+    // Check calls
+    calls._lockAndThrowIfErrorAndNotConflict.length.should.eql(1)
+    calls._replicateAndUnlockIfError.length.should.eql(1)
+    calls._upsertUnlock.length.should.eql(1)
+    calls._unlockAndCleanIfConflictJustUnlock.length.should.eql(0)
+  })
 
   it('_lockReplicateUnlock should handle non-conflict error when cleaning', async () => {})
 
