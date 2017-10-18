@@ -169,4 +169,8 @@ describe('replicators', () => {
   // TODO: _unlockAndSetClean
 
   // TODO: test all branches in _lockReplicateUnlock
+
+  // TODO: test listen loop
+  // - start with replicators already being dirty
+  // - start with no replicators dirty
 })

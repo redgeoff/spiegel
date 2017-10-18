@@ -269,7 +269,6 @@ class Replicators {
   async _updateReplicator (replicator, getMergeUpsert) {
     let lockedReplicator = sporks.clone(replicator)
 
-    lockedReplicator.locked_at = new Date().toISOString()
     this._setUpdatedAt(lockedReplicator)
 
     let response = null
@@ -287,7 +286,9 @@ class Replicators {
   async _lock (replicator) {
     // We use an update instead of an upsert as we want there to be a conflict as we only want one
     // process to hold the lock at any given time
-    return this._updateReplicator(replicator, false)
+    let lockedReplicator = sporks.clone(replicator)
+    lockedReplicator.locked_at = new Date().toISOString()
+    return this._updateReplicator(lockedReplicator, false)
   }
 
   async _upsertUnlock (replicator) {
@@ -299,6 +300,7 @@ class Replicators {
   async _unlockAndSetClean (replicator) {
     // We do not upsert as we want the clean to fail if the replicator has been updated
     replicator.dirty = false
+    replicator.locked_at = null
     return this._updateReplicator(replicator, false)
   }
 
