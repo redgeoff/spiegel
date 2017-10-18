@@ -111,12 +111,14 @@ describe('change-listeners', () => {
 
     let savedListener1 = await listeners._get(listener.db_name)
 
+    let err = null
     try {
       // Lock listener
       await listeners.lock(listener)
-    } catch (err) {
-      testUtils.spiegel._slouch.doc.isConflictError(err).should.eql(true)
+    } catch (_err) {
+      err = _err
     }
+    testUtils.spiegel._slouch.doc.isConflictError(err).should.eql(true)
 
     // Get the saved listener and make sure nothing changed
     let savedListener2 = await listeners._get(listener.db_name)

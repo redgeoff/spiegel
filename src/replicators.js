@@ -297,7 +297,7 @@ class Replicators {
     return this._updateReplicator(rep, true)
   }
 
-  async _unlockAndSetClean (replicator) {
+  async _unlockAndClean (replicator) {
     // We do not upsert as we want the clean to fail if the replicator has been updated
     replicator.dirty = false
     replicator.locked_at = null
@@ -361,16 +361,24 @@ class Replicators {
     log.info('Finished replication from', replicator.source, 'to', replicator.target)
   }
 
+  async _replicateAndUnlockIfError (replicator) {
+    try {
+      await this._replicate(replicator)
+    } catch (err) {
+      // If an error is encountered when replicating then leave the replicator dirty, but unlock it
+      // so that the replication can be tried again
+      log.error(err)
+      await this._upsertUnlock(replicator)
+      throw err
+    }
+  }
+
   async _lockReplicateUnlock (replicator) {
     // Lock and if conflict then ignore error as conflicts are expected when another replicator
     // process locks the same replicator
-
     let conflict = await this._lockAndThrowIfErrorAndNotConflict(replicator)
-
     if (!conflict) {
-      // TODO: if an error is encountered when replicating then leave the replicator dirty, but
-      // unlock it so that the replication can be tried again
-      await this._replicate(replicator)
+      await this._replicateAndUnlockIfError(replicator)
 
       // TODO:
       // 3. Unlock & set clean

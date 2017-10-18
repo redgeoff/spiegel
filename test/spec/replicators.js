@@ -86,12 +86,14 @@ describe('replicators', () => {
 
     let savedReplicator1 = await replicators._get(replicator._id)
 
+    let err = null
     try {
       // Lock replicator
       await replicators._lock(replicator)
-    } catch (err) {
-      testUtils.spiegel._slouch.doc.isConflictError(err).should.eql(true)
+    } catch (_err) {
+      err = _err
     }
+    testUtils.spiegel._slouch.doc.isConflictError(err).should.eql(true)
 
     // Get the saved replicator and make sure nothing changed
     let savedReplicator2 = await replicators._get(replicator._id)
@@ -209,7 +211,72 @@ describe('replicators', () => {
     await shouldUpsertUnlock(true)
   })
 
-  // TODO: _unlockAndSetClean
+  const shouldUnlockAndClean = async simulateConflict => {
+    // Create replicator
+    let replicator = await createReplicator({
+      source: 'https://example.com/test_db1',
+      locked_at: new Date().toISOString(),
+      dirty: true
+    })
+
+    // Get saved replicator
+    let savedReplicator1 = await replicators._get(replicator._id)
+
+    let savedReplicator1a = null
+    if (simulateConflict) {
+      // Simulate conflict
+      await replicators._updateReplicator(savedReplicator1)
+      savedReplicator1a = await replicators._get(replicator._id)
+      savedReplicator1a._rev.should.not.eql(savedReplicator1._rev)
+    }
+
+    let err = null
+    try {
+      // Unlock and clean
+      await replicators._unlockAndClean(replicator)
+    } catch (_err) {
+      err = _err
+    }
+
+    // Get saved replicator
+    let savedReplicator2 = await replicators._get(replicator._id)
+
+    if (simulateConflict) {
+      testUtils.spiegel._slouch.doc.isConflictError(err).should.eql(true)
+
+      // It should remain locked
+      savedReplicator2.locked_at.should.eql(savedReplicator2.locked_at)
+
+      // Should remain dirty
+      savedReplicator2.dirty.should.eql(true)
+
+      // updated_at should not have changed
+      savedReplicator2.updated_at.should.eql(savedReplicator1a.updated_at)
+
+      // rev should not be different
+      savedReplicator2._rev.should.eql(savedReplicator1a._rev)
+    } else {
+      // It should be unlocked
+      testUtils.shouldEqual(savedReplicator2.locked_at, null)
+
+      // Should be clean
+      savedReplicator2.dirty.should.eql(false)
+
+      // updated_at should have changed
+      savedReplicator2.updated_at.should.not.eql(savedReplicator1.updated_at)
+
+      // rev should be different
+      savedReplicator2._rev.should.not.eql(savedReplicator1._rev)
+    }
+  }
+
+  it('should unlock and clean', async () => {
+    await shouldUnlockAndClean()
+  })
+
+  it('should not unlock and clean when conflict', async () => {
+    await shouldUnlockAndClean(true)
+  })
 
   // TODO: test all branches in _lockReplicateUnlock
 
