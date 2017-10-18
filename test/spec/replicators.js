@@ -164,7 +164,50 @@ describe('replicators', () => {
       .should.eql('https://usermissing@missing.com/mydb')
   })
 
-  // TODO: _upsertUnlock
+  const shouldUpsertUnlock = async simulateConflict => {
+    // Create replicator
+    let replicator = await createReplicator({
+      source: 'https://example.com/test_db1',
+      locked_at: new Date().toISOString(),
+      dirty: true
+    })
+
+    // Get saved replicator
+    let savedReplicator1 = await replicators._get(replicator._id)
+
+    if (simulateConflict) {
+      // Simulate conflict
+      await replicators._updateReplicator(savedReplicator1)
+      let savedReplicator1a = await replicators._get(replicator._id)
+      savedReplicator1a._rev.should.not.eql(savedReplicator1._rev)
+    }
+
+    // Upsert unlock
+    await replicators._upsertUnlock(replicator)
+
+    // Get saved replicator
+    let savedReplicator2 = await replicators._get(replicator._id)
+
+    // It should be unlocked
+    testUtils.shouldEqual(savedReplicator2.locked_at, null)
+
+    // Other attrs like dirty should not have changed
+    savedReplicator2.dirty.should.eql(true)
+
+    // updated_at should have changed
+    savedReplicator2.updated_at.should.not.eql(savedReplicator1.updated_at)
+
+    // rev should be different
+    savedReplicator2._rev.should.not.eql(savedReplicator1._rev)
+  }
+
+  it('should upsert unlock', async () => {
+    await shouldUpsertUnlock()
+  })
+
+  it('should upsert unlock when conflict', async () => {
+    await shouldUpsertUnlock(true)
+  })
 
   // TODO: _unlockAndSetClean
 
