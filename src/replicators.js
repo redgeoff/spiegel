@@ -81,7 +81,7 @@ class Replicators {
         dirty_and_unlocked_replicators: {
           map: [
             'function(doc) {',
-            'if (doc.type === "replicator" && doc.dirty && !doc.locked_at)) {',
+            'if (doc.type === "replicator" && doc.dirty && !doc.locked_at) {',
             'emit(doc._id, null);',
             '}',
             '}'
