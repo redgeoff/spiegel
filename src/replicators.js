@@ -367,9 +367,24 @@ class Replicators {
     } catch (err) {
       // If an error is encountered when replicating then leave the replicator dirty, but unlock it
       // so that the replication can be tried again
-      log.error(err)
       await this._upsertUnlock(replicator)
       throw err
+    }
+  }
+
+  async _unlockAndCleanIfConflictJustUnlock (replicator) {
+    try {
+      await this._unlockAndClean(replicator)
+    } catch (err) {
+      if (this._slouch.doc.isConflictError(err)) {
+        // A conflict can occur because an UpdateListener may have re-dirtied this replicator. When
+        // this happens we need to leave the replicator dirty and unlock it so that the replication
+        // can be retried
+        log.trace('Ignoring common conflict', err)
+        await this._upsertUnlock(replicator)
+      } else {
+        throw err
+      }
     }
   }
 
@@ -378,11 +393,19 @@ class Replicators {
     // process locks the same replicator
     let conflict = await this._lockAndThrowIfErrorAndNotConflict(replicator)
     if (!conflict) {
-      await this._replicateAndUnlockIfError(replicator)
+      try {
+        // Attempt to replicate and if there is an error then it is thrown and logged below
+        await this._replicateAndUnlockIfError(replicator)
 
-      // TODO:
-      // 3. Unlock & set clean
-      //   - if conflict then don't change dirty status and just unlock - upsert
+        // Attempt to unlock and clean the replicator. If there is a conflict, which can occur when
+        // an UpdateListener re-dirties the replicator then just unlock the replicator so that it
+        // can be retried
+        await this._unlockAndCleanIfConflictJustUnlock(replicator)
+      } catch (err) {
+        // Swallow the error as the replication will be retried. We want to just log the error and
+        // then swallow it so that the caller continues processing the replications
+        log.error(err)
+      }
     }
   }
 
