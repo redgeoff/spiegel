@@ -298,7 +298,7 @@ describe('replicators', () => {
   })
 
   it('_lockReplicateUnlock should handle non-conflict error when locking', async () => {
-    let replicator = createTestReplicator()
+    let replicator = await createTestReplicator()
 
     // Fake non-conflict error
     replicators._lock = sporks.promiseErrorFactory(nonConflictError)
@@ -314,7 +314,7 @@ describe('replicators', () => {
   })
 
   it('_lockReplicateUnlock should handle conflict when locking', async () => {
-    let replicator = createTestReplicator()
+    let replicator = await createTestReplicator()
 
     // Fake conflict error
     replicators._lock = sporks.promiseErrorFactory(conflictError)
@@ -328,7 +328,7 @@ describe('replicators', () => {
   })
 
   it('_lockReplicateUnlock should handle error when replicating', async () => {
-    let replicator = createTestReplicator()
+    let replicator = await createTestReplicator()
 
     // Fake conflict error
     replicators._replicate = sporks.promiseErrorFactory(conflictError)
@@ -344,7 +344,25 @@ describe('replicators', () => {
     calls._unlockAndCleanIfConflictJustUnlock.length.should.eql(0)
   })
 
-  it('_lockReplicateUnlock should handle non-conflict error when cleaning', async () => {})
+  it('_lockReplicateUnlock should handle non-conflict error when cleaning', async () => {
+    let replicator = await createTestReplicator()
+
+    // Fake successful replication
+    replicators._replicate = sporks.resolveFactory()
+
+    // Fake non-conflict error
+    replicators._unlockAndClean = sporks.promiseErrorFactory(nonConflictError)
+
+    await sporks.shouldThrow(() => {
+      return replicators._lockReplicateUnlock(replicator)
+    }, nonConflictError)
+
+    // Check calls
+    calls._lockAndThrowIfErrorAndNotConflict.length.should.eql(1)
+    calls._replicateAndUnlockIfError.length.should.eql(1)
+    calls._unlockAndCleanIfConflictJustUnlock.length.should.eql(1)
+    calls._upsertUnlock.length.should.eql(0)
+  })
 
   it('_lockReplicateUnlock should handle conflict error when cleaning', async () => {})
 
