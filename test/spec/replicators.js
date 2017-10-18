@@ -364,7 +364,23 @@ describe('replicators', () => {
     calls._upsertUnlock.length.should.eql(0)
   })
 
-  it('_lockReplicateUnlock should handle conflict error when cleaning', async () => {})
+  it('_lockReplicateUnlock should handle conflict error when cleaning', async () => {
+    let replicator = await createTestReplicator()
+
+    // Fake successful replication
+    replicators._replicate = sporks.resolveFactory()
+
+    // Fake conflict error
+    replicators._unlockAndClean = sporks.promiseErrorFactory(conflictError)
+
+    return replicators._lockReplicateUnlock(replicator)
+
+    // Check calls
+    calls._lockAndThrowIfErrorAndNotConflict.length.should.eql(1)
+    calls._replicateAndUnlockIfError.length.should.eql(1)
+    calls._unlockAndCleanIfConflictJustUnlock.length.should.eql(1)
+    calls._upsertUnlock.length.should.eql(1)
+  })
 
   it('should _lockReplicateUnlock without errors', async () => {})
 
