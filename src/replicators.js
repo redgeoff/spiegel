@@ -419,6 +419,10 @@ class Replicators {
     }, this._throttler)
   }
 
+  // Note: the changes feed with respect to the dirty_and_unlocked_replicators view will only get
+  // changes for unlocked replicators. i.e. a replicator can be re-dirtied many times while it is
+  // replicating, but it will only be scheduled for replication (and scheduled once) when the
+  // replicator is unlocked
   async _listen (lastSeq) {
     this._iterator = this._changes({
       feed: 'continuous',
