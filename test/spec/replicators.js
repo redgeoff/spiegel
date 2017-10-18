@@ -382,7 +382,20 @@ describe('replicators', () => {
     calls._upsertUnlock.length.should.eql(1)
   })
 
-  it('should _lockReplicateUnlock without errors', async () => {})
+  it('should _lockReplicateUnlock without errors', async () => {
+    let replicator = await createTestReplicator()
+
+    // Fake successful replication
+    replicators._replicate = sporks.resolveFactory()
+
+    return replicators._lockReplicateUnlock(replicator)
+
+    // Check calls
+    calls._lockAndThrowIfErrorAndNotConflict.length.should.eql(1)
+    calls._replicateAndUnlockIfError.length.should.eql(1)
+    calls._unlockAndCleanIfConflictJustUnlock.length.should.eql(1)
+    calls._upsertUnlock.length.should.eql(0)
+  })
 
   // TODO: test listen loop
   // - start with replicators already being dirty
