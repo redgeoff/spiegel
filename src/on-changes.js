@@ -7,6 +7,11 @@ const utils = require('./utils')
 const sporks = require('sporks')
 const log = require('./log')
 
+// Note: during the benchmark tests, it was determined that it is 10 times faster to iterate through
+// 2 docs in a simple array than via the PouchDB memory adapter. Therefore, we will use PouchDB to
+// sync the data, but will store the docs in a simple array as we want our UpdateListener to be able
+// to iterate through all OnChanges as fast as possible
+
 class OnChanges extends events.EventEmitter {
   constructor (spiegel) {
     super()
@@ -14,9 +19,9 @@ class OnChanges extends events.EventEmitter {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
 
-    // We use a memory adapter as we want to be able to read the changes from memory very quickly as
-    // they will be read many times over
     this._db = new PouchDB(this._spiegel._namespace + 'on_changes', { adapter: 'memory' })
+
+    this._docs = {}
   }
 
   _createOnChangesView () {
@@ -54,6 +59,30 @@ class OnChanges extends events.EventEmitter {
     return this._destroyViews()
   }
 
+  _setDoc (doc) {
+    this._docs[doc._id] = doc
+  }
+
+  async _loadAllDocs () {
+    let docs = await this._db.allDocs({ include_docs: true })
+    docs.rows.forEach(doc => {
+      this._setDoc(doc.doc)
+    })
+  }
+
+  async _onPaused () {
+    await this._loadAllDocs()
+
+    // Alert that the data has been loaded and is ready to be used
+    this.emit('load')
+  }
+
+  _setDocs (docs) {
+    docs.forEach(doc => {
+      this._setDoc(doc)
+    })
+  }
+
   start () {
     // A promise that resolves once the PouchDB has loaded
     let loaded = sporks.once(this, 'load')
@@ -66,11 +95,13 @@ class OnChanges extends events.EventEmitter {
         view: 'on_changes'
       })
       .once('paused', () => {
-        // Alert that the data has been loaded and is ready to be used
-        this.emit('load')
+        this._onPaused()
       })
-      .on('error', function (err) {
+      .on('error', err => {
         log.error(err)
+      })
+      .on('change', change => {
+        this._setDocs(change.docs)
       })
 
     return loaded
@@ -83,12 +114,9 @@ class OnChanges extends events.EventEmitter {
   }
 
   async all () {
-    let docs = await this._db.allDocs({ include_docs: true })
-
-    // Convert to simple array of docs so that we can easily modify the OnChanges model without
-    // regard to whether the data is coming from PouchDB or some other source, e.g. in the future we
-    // may want the data to be stored in a simple array so that it is faster to access
-    return docs.rows.map(doc => doc.doc)
+    // all() is a promise so that we have the freedom to change up the storage mechanism in the
+    // future, e.g. our future storage mechanism may require IO
+    return this._docs
   }
 }
 

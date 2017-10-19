@@ -2,6 +2,7 @@
 
 const OnChanges = require('../../src/on-changes')
 const testUtils = require('../utils')
+const sporks = require('sporks')
 
 describe('on-changes', () => {
   let onChanges = null
@@ -53,9 +54,9 @@ describe('on-changes', () => {
     // let after = new Date()
     // console.log('took', after.getTime() - before.getTime(), 'ms')
 
-    docs.length.should.eql(2)
-    docs[0]._id.should.eql('1')
-    docs[1]._id.should.eql('2')
+    sporks.length(docs).should.eql(2)
+    docs['1']._id.should.eql('1')
+    docs['2']._id.should.eql('2')
   })
 
   // // This is a benchmark to see how much faster it would be to store the on-changes in a simple
