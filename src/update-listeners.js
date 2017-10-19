@@ -10,6 +10,7 @@ class UpdateListeners {
   constructor (spiegel, opts) {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
+    this._onChanges = this._spiegel._onChanges
     this._globals = new Globals(spiegel)
 
     // The maximum number of updates that will be processed in this batch
@@ -119,13 +120,15 @@ class UpdateListeners {
     // to one of the replicator processes.
     await this._replicators.dirtyIfCleanOrLocked(dbNames)
 
-    // TODO: details about sieve no longer true so need to filter with on_changes
-    //
-    // We use bulk operations to get and then dirty/create ChangeListeners so that the listening can
-    // be delegated to one of the ChangeListener processes. We do this without regard to the
-    // on_change docs as we expect the sieve to define when to create a listener as the sieve is
-    // most efficient construct for this filtering.
-    await this._changeListeners.dirtyIfCleanOrLocked(dbNames)
+    // Filter dbNames by OnChanges and then only dirty the corresponding ChangeListeners
+    let filteredDBNames = await this._onChanges.matchWithDBNames(dbNames)
+
+    // Are there ChangeListeners to dirty?
+    if (filteredDBNames.length > 0) {
+      // We use bulk operations to get and then dirty/create ChangeListeners so that the listening
+      // can be delegated to one of the ChangeListener processes.
+      await this._changeListeners.dirtyIfCleanOrLocked(dbNames)
+    }
   }
 
   // Separate out for easier unit testing

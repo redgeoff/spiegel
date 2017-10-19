@@ -22,6 +22,9 @@ class OnChanges extends events.EventEmitter {
     this._db = new PouchDB(this._spiegel._namespace + 'on_changes', { adapter: 'memory' })
 
     this._docs = {}
+
+    // A promise that resolves once the PouchDB data has loaded
+    this._loaded = sporks.once(this, 'load')
   }
 
   _createOnChangesView () {
@@ -84,9 +87,6 @@ class OnChanges extends events.EventEmitter {
   }
 
   start () {
-    // A promise that resolves once the PouchDB has loaded
-    let loaded = sporks.once(this, 'load')
-
     this._from = this._db.replicate
       .from(utils.couchDBURL() + '/' + this._spiegel._dbName, {
         live: true,
@@ -102,9 +102,10 @@ class OnChanges extends events.EventEmitter {
       })
       .on('change', change => {
         this._setDocs(change.docs)
+        this.emit('change')
       })
 
-    return loaded
+    return this._loaded
   }
 
   stop () {
@@ -116,11 +117,13 @@ class OnChanges extends events.EventEmitter {
   async all () {
     // all() is a promise so that we have the freedom to change up the storage mechanism in the
     // future, e.g. our future storage mechanism may require IO
+    await this._loaded
     return this._docs
   }
 
   async matchWithDBNames (dbNames) {
     let docs = await this.all()
+
     let matchingDBNames = {}
 
     sporks.each(docs, doc => {

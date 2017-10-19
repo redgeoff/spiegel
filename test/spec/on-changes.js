@@ -59,6 +59,8 @@ describe('on-changes', () => {
     docs['2']._id.should.eql('2')
   })
 
+  // TODO: listen for delete and check here
+
   it('should match with DB names', async () => {
     let dbNames = await onChanges.matchWithDBNames([
       '_test_db0',
@@ -68,6 +70,9 @@ describe('on-changes', () => {
       'test_db_4'
     ])
     dbNames.should.eql(['test_db1', 'test_db_3', 'test_db_4'])
+
+    dbNames = await onChanges.matchWithDBNames(['_test_db0'])
+    dbNames.should.eql([])
   })
 
   // // This is a benchmark to see how much faster it would be to store the on-changes in a simple

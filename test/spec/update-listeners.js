@@ -91,7 +91,15 @@ describe('update-listeners', () => {
     await testUtils.createTestDBs(['test_db1' + suffix, 'test_db3' + suffix])
   }
 
-  const createListeners = async (opts, fakeLastSeq = true) => {
+  const fakeOnChanges = async () => {
+    listeners._onChanges = {
+      matchWithDBNames: function (dbNames) {
+        return Promise.resolve(dbNames)
+      }
+    }
+  }
+
+  const createListeners = async (opts, fakeLastSeq = true, fakeOnChange = true) => {
     listeners = new UpdateListeners(testUtils.spiegel, opts)
     spyOnProcessNextBatch()
     spyOnUpdates()
@@ -102,6 +110,9 @@ describe('update-listeners', () => {
       // fakeGlobals()
     }
     // await getLastSeq()
+    if (fakeOnChange) {
+      fakeOnChanges()
+    }
     await listeners.start()
     await createTestDBs()
   }
