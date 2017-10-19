@@ -426,6 +426,10 @@ class Replicators {
     }, this._throttler)
   }
 
+  _changes (params) {
+    return this._slouch.db.changes(this._spiegel._dbName, params)
+  }
+
   // Note: the changes feed with respect to the dirty_and_unlocked_replicators view will only get
   // changes for unlocked replicators. i.e. a replicator can be re-dirtied many times while it is
   // replicating, but it will only be scheduled for replication (and scheduled once) when the
@@ -452,7 +456,7 @@ class Replicators {
 
   async start () {
     // Get the last seq so that we can use this as the starting point when listening for changes
-    let lastSeq = await this._getLastSeq
+    let lastSeq = await this._getLastSeq()
 
     // Get all dirty replicators and then perform the replications concurrently
     await this._replicateAllDirtyAndUnlocked()

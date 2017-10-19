@@ -22,7 +22,8 @@ describe('replicators', () => {
         '_lockAndThrowIfErrorAndNotConflict',
         '_replicateAndUnlockIfError',
         '_unlockAndCleanIfConflictJustUnlock',
-        '_upsertUnlock'
+        '_upsertUnlock',
+        '_lockReplicateUnlockLogError'
       ],
       calls
     )
@@ -397,7 +398,31 @@ describe('replicators', () => {
     calls._upsertUnlock.length.should.eql(0)
   })
 
-  // TODO: test listen loop
-  // - start with replicators already being dirty
-  // - start with no replicators dirty
+  // // TODO: need to restore and finish once sieve construct removed
+  // it('should start when replicators already dirty', async () => {
+  //   let replicator1 = await await createReplicator({
+  //     source: 'https://example.com/test_db1' + testUtils.nextSuffix(),
+  //     dirty: true
+  //   })
+  //
+  //   let replicator2 = await await createReplicator({
+  //     source: 'https://example.com/test_db1' + testUtils.nextSuffix(),
+  //     dirty: true
+  //   })
+  //
+  //   // TODO: create test_db1 and test_db2
+  //
+  //   // TODO: start with lastSeq
+  //
+  //   await replicators.start()
+  //
+  //   console.log(
+  //     'replicators._lockReplicateUnlockLogError=',
+  //     replicators._lockReplicateUnlockLogError
+  //   )
+  //
+  //   await replicators.stop()
+  // })
+
+  // TODO: start with no replicators dirty
 })

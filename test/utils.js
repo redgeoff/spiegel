@@ -12,6 +12,8 @@ class Utils {
     this._slouch = this.spiegel._slouch
     this._dbNames = []
     this.TIMEOUT = 20000
+    this._suffixId = 0
+    this._suffix = null
   }
 
   _newSpiegel () {
@@ -105,6 +107,14 @@ class Utils {
         return origFun.apply(this, arguments)
       }
     })
+  }
+
+  nextSuffix () {
+    // We need to define a suffix to append to the DB names so that they are unique across tests or
+    // else CouchDB will sometimes give us unexpected results in the _global_changes DB
+    this._suffixId++
+    this._suffix = '_' + this._suffixId
+    return this._suffix
   }
 }
 

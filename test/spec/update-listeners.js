@@ -13,7 +13,6 @@ describe('update-listeners', () => {
   let dirtyReplicators = null
   let dirtyChangeListeners = null
   // let lastSeq
-  let suffixId = 0
   let suffix = null
 
   // Specify a large batchTimeout so that time is not a factor
@@ -108,10 +107,7 @@ describe('update-listeners', () => {
   }
 
   beforeEach(async () => {
-    // We need to define a suffix to append to the DB names so that they are unique across tests or
-    // else CouchDB will sometimes give us unexpected results in the _global_changes DB
-    suffixId++
-    suffix = '_' + suffixId
+    suffix = testUtils.nextSuffix()
     await testUtils.createSieve(suffix)
   })
 
