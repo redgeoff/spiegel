@@ -83,8 +83,12 @@ class OnChanges extends events.EventEmitter {
   }
 
   async all () {
-    // Make sure the data has been loaded before querying for all docs
-    return this._db.allDocs({ include_docs: true })
+    let docs = await this._db.allDocs({ include_docs: true })
+
+    // Convert to simple array of docs so that we can easily modify the OnChanges model without
+    // regard to whether the data is coming from PouchDB or some other source, e.g. in the future we
+    // may want the data to be stored in a simple array so that it is faster to access
+    return docs.rows.map(doc => doc.doc)
   }
 }
 

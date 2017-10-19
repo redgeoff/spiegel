@@ -53,9 +53,9 @@ describe('on-changes', () => {
     // let after = new Date()
     // console.log('took', after.getTime() - before.getTime(), 'ms')
 
-    docs.rows.length.should.eql(2)
-    docs.rows[0].id.should.eql('1')
-    docs.rows[1].id.should.eql('2')
+    docs.length.should.eql(2)
+    docs[0]._id.should.eql('1')
+    docs[1]._id.should.eql('2')
   })
 
   // // This is a benchmark to see how much faster it would be to store the on-changes in a simple
