@@ -12,14 +12,14 @@ describe('on-changes', () => {
     await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
       _id: '1',
       type: 'on_change',
-      regex: 'test_db1'
+      reg_ex: '^test_db1$'
     })
     docIds.push('1')
 
     await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
       _id: '2',
       type: 'on_change',
-      regex: 'test_db3'
+      reg_ex: 'test_db_([^_])*'
     })
     docIds.push('2')
   }
@@ -59,6 +59,17 @@ describe('on-changes', () => {
     docs['2']._id.should.eql('2')
   })
 
+  it('should match with DB names', async () => {
+    let dbNames = await onChanges.matchWithDBNames([
+      '_test_db0',
+      'test_db1',
+      'test_db2',
+      'test_db_3',
+      'test_db_4'
+    ])
+    dbNames.should.eql(['test_db1', 'test_db_3', 'test_db_4'])
+  })
+
   // // This is a benchmark to see how much faster it would be to store the on-changes in a simple
   // // array than in the memory adapter. It turns out that it takes 10ms to read 2 docs with the
   // // PouchDB mem adapter and just 1 ms (or under) to read 2 docs in mem. The 10ms is probably
@@ -68,12 +79,12 @@ describe('on-changes', () => {
   //     {
   //       _id: '1',
   //       type: 'on_change',
-  //       regex: 'test_db1'
+  //       reg_ex: 'test_db1'
   //     },
   //     {
   //       _id: '1',
   //       type: 'on_change',
-  //       regex: 'test_db1'
+  //       reg_ex: 'test_db1'
   //     }
   //   ]
   //   let before = new Date()

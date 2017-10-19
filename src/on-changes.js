@@ -118,6 +118,24 @@ class OnChanges extends events.EventEmitter {
     // future, e.g. our future storage mechanism may require IO
     return this._docs
   }
+
+  async matchWithDBNames (dbNames) {
+    let docs = await this.all()
+    let matchingDBNames = {}
+
+    sporks.each(docs, doc => {
+      let re = new RegExp(doc.reg_ex)
+      dbNames.forEach(dbName => {
+        // Does the name match the regular expression?
+        if (re.test(dbName)) {
+          // Index by name to prevent duplicates
+          matchingDBNames[dbName] = true
+        }
+      })
+    })
+
+    return sporks.keys(matchingDBNames)
+  }
 }
 
 module.exports = OnChanges
