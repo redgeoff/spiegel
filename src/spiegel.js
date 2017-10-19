@@ -23,6 +23,7 @@ class Spiegel {
   async create () {
     await this._slouch.db.create(this._dbName)
     await this._slouch.security.onlyAdminCanView(this._dbName)
+    await this._updateListeners.create()
     await this._changeListeners.create()
     await this._onChanges.create()
     await this._replicators.create()
@@ -30,6 +31,7 @@ class Spiegel {
 
   async destroy () {
     await this._changeListeners.destroy()
+    await this._updateListeners.destroy()
     await this._replicators.destroy()
     await this._onChanges.destroy()
     await this._slouch.db.destroy(this._dbName)

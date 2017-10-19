@@ -27,6 +27,48 @@ class UpdateListeners {
     this._changeListeners = this._spiegel._changeListeners
   }
 
+  // The sieve is primarily used to filter out:
+  //   1. Any updates that are not for DB changes
+  //   2. Any updates to the spiegel DB
+  //
+  // This filtering out allows our UpdateListener to process updates faster and requires that less
+  // data is sent from CouchDB to our UpdateListener.
+  //
+  // The sieve can also be used to further speed up the processing of updates by filtering on just
+  // specific DBs. Be careful when doing this as your sieve could block replications and change
+  // listening if it is not configured properly.
+  _createSieve () {
+    return this._slouch.doc.create('_global_changes', {
+      _id: '_design/' + this._spiegel._namespace + 'sieve',
+      views: {
+        sieve: {
+          map: [
+            'function (doc) {',
+            'if (/:(.*)$/.test(doc._id) && !/:' + this._spiegel._dbName + '$/.test(doc._id)) {',
+            'emit(/:(.*)$/.exec(doc._id)[1]);',
+            '}',
+            '}'
+          ].join(' ')
+        }
+      }
+    })
+  }
+
+  _destroySieve () {
+    return this._slouch.doc.getAndDestroy(
+      '_global_changes',
+      '_design/' + this._spiegel._namespace + 'sieve'
+    )
+  }
+
+  create () {
+    return this._createSieve()
+  }
+
+  destroy () {
+    return this._destroySieve()
+  }
+
   _onError (err) {
     log.error(err)
   }
@@ -77,6 +119,8 @@ class UpdateListeners {
     // to one of the replicator processes.
     await this._replicators.dirtyIfCleanOrLocked(dbNames)
 
+    // TODO: details about sieve no longer true so need to filter with on_changes
+    //
     // We use bulk operations to get and then dirty/create ChangeListeners so that the listening can
     // be delegated to one of the ChangeListener processes. We do this without regard to the
     // on_change docs as we expect the sieve to define when to create a listener as the sieve is
@@ -97,6 +141,7 @@ class UpdateListeners {
       feed: 'continuous',
       heartbeat: true,
       since: this._lastSeq,
+
       filter: '_view',
       view: this._spiegel._namespace + 'sieve/sieve',
 

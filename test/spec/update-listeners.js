@@ -88,7 +88,7 @@ describe('update-listeners', () => {
   // }
 
   const createTestDBs = async () => {
-    await testUtils.createTestDBs(['test_db1' + suffix, 'test_db2' + suffix, 'test_db3' + suffix])
+    await testUtils.createTestDBs(['test_db1' + suffix, 'test_db3' + suffix])
   }
 
   const createListeners = async (opts, fakeLastSeq = true) => {
@@ -105,6 +105,19 @@ describe('update-listeners', () => {
     await listeners.start()
     await createTestDBs()
   }
+
+  before(async () => {
+    // Destroy default sieve as we want a custom sieve so that our tests can filter out changes to
+    // _global_changes that are from other tests
+    let lists = new UpdateListeners(testUtils.spiegel)
+    await lists._destroySieve()
+  })
+
+  after(async () => {
+    // Restore default sieve
+    let lists = new UpdateListeners(testUtils.spiegel)
+    await lists._createSieve()
+  })
 
   beforeEach(async () => {
     suffix = testUtils.nextSuffix()
