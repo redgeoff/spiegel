@@ -63,7 +63,11 @@ class OnChanges extends events.EventEmitter {
   }
 
   _setDoc (doc) {
-    this._docs[doc._id] = doc
+    if (doc._deleted) {
+      delete this._docs[doc._id]
+    } else {
+      this._docs[doc._id] = doc
+    }
   }
 
   async _loadAllDocs () {
