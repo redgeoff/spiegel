@@ -5,6 +5,7 @@
 
 const Spiegel = require('../src/spiegel')
 const sporks = require('sporks')
+const log = require('../src/log')
 
 class Utils {
   constructor () {
@@ -115,6 +116,13 @@ class Utils {
     this._suffixId++
     this._suffix = '_' + this._suffixId
     return this._suffix
+  }
+
+  silenceLog () {
+    let funs = ['error', 'warn', 'info', 'debug', 'trace']
+    funs.forEach(fun => {
+      log[fun] = () => {}
+    })
   }
 }
 

@@ -469,7 +469,6 @@ class Replicators extends events.EventEmitter {
   async start () {
     // Get the last seq so that we can use this as the starting point when listening for changes
     let lastSeq = await this._getLastSeq()
-    console.log('start, lastSeq=', lastSeq)
 
     // Get all dirty replicators and then perform the replications concurrently
     await this._replicateAllDirtyAndUnlocked()
