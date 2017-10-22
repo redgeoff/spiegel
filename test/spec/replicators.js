@@ -3,11 +3,13 @@
 const Replicators = require('../../src/replicators')
 const testUtils = require('../utils')
 const sporks = require('sporks')
+const utils = require('../../src/utils')
 
 describe('replicators', () => {
   let replicators = null
   let replicatorIds = null
   let calls = null
+  let globalError = false
 
   let conflictError = new Error()
   conflictError.error = 'conflict'
@@ -23,16 +25,24 @@ describe('replicators', () => {
         '_replicateAndUnlockIfError',
         '_unlockAndCleanIfConflictJustUnlock',
         '_upsertUnlock',
-        '_lockReplicateUnlockLogError'
+        '_lockReplicateUnlockLogError',
+        '_changes'
       ],
       calls
     )
+  }
+
+  const listenForErrors = () => {
+    replicators.once('err', function (err) {
+      globalError = err
+    })
   }
 
   beforeEach(async () => {
     replicators = new Replicators(testUtils.spiegel)
     replicatorIds = []
     spy()
+    listenForErrors()
   })
 
   afterEach(async () => {
@@ -41,6 +51,12 @@ describe('replicators', () => {
         await testUtils.spiegel._slouch.doc.getAndDestroy(testUtils.spiegel._dbName, id)
       })
     )
+    await testUtils.destroyTestDBs()
+
+    // Was there an error?
+    if (globalError) {
+      throw globalError
+    }
   })
 
   const createReplicator = async replicator => {
@@ -58,6 +74,10 @@ describe('replicators', () => {
       source: 'https://example.com/test_db1'
     })
     return replicators._get(rep._id)
+  }
+
+  const fakeSuccessfulReplication = () => {
+    replicators._replicate = sporks.resolveFactory()
   }
 
   it('should extract db name', function () {
@@ -348,8 +368,7 @@ describe('replicators', () => {
   it('_lockReplicateUnlock should handle non-conflict error when cleaning', async () => {
     let replicator = await createTestReplicator()
 
-    // Fake successful replication
-    replicators._replicate = sporks.resolveFactory()
+    fakeSuccessfulReplication()
 
     // Fake non-conflict error
     replicators._unlockAndClean = sporks.promiseErrorFactory(nonConflictError)
@@ -368,8 +387,7 @@ describe('replicators', () => {
   it('_lockReplicateUnlock should handle conflict error when cleaning', async () => {
     let replicator = await createTestReplicator()
 
-    // Fake successful replication
-    replicators._replicate = sporks.resolveFactory()
+    fakeSuccessfulReplication()
 
     // Fake conflict error
     replicators._unlockAndClean = sporks.promiseErrorFactory(conflictError)
@@ -386,8 +404,7 @@ describe('replicators', () => {
   it('should _lockReplicateUnlock without errors', async () => {
     let replicator = await createTestReplicator()
 
-    // Fake successful replication
-    replicators._replicate = sporks.resolveFactory()
+    fakeSuccessfulReplication()
 
     await replicators._lockReplicateUnlock(replicator)
 
@@ -398,31 +415,54 @@ describe('replicators', () => {
     calls._upsertUnlock.length.should.eql(0)
   })
 
-  // // TODO: need to restore and finish once sieve construct removed
-  // it('should start when replicators already dirty', async () => {
-  //   let replicator1 = await await createReplicator({
-  //     source: 'https://example.com/test_db1' + testUtils.nextSuffix(),
-  //     dirty: true
-  //   })
-  //
-  //   let replicator2 = await await createReplicator({
-  //     source: 'https://example.com/test_db1' + testUtils.nextSuffix(),
-  //     dirty: true
-  //   })
-  //
-  //   // TODO: create test_db1 and test_db2
-  //
-  //   // TODO: start with lastSeq
-  //
-  //   await replicators.start()
-  //
-  //   console.log(
-  //     'replicators._lockReplicateUnlockLogError=',
-  //     replicators._lockReplicateUnlockLogError
-  //   )
-  //
-  //   await replicators.stop()
-  // })
+  it('should start when replicators already dirty', async () => {
+    let dbNames = ['test_db1' + testUtils.nextSuffix(), 'test_db2' + testUtils.nextSuffix()]
+
+    await createReplicator({
+      source: utils.couchDBURL() + '/' + dbNames[0],
+      target: utils.couchDBURL() + '/' + dbNames[0],
+      dirty: true
+    })
+
+    await createReplicator({
+      source: utils.couchDBURL() + '/' + dbNames[1],
+      target: utils.couchDBURL() + '/' + dbNames[1],
+      dirty: true
+    })
+
+    await testUtils.createTestDBs(dbNames)
+
+    await replicators.start()
+
+    // Verify start with lastSeq. 1st entry is the _getLastSeq() called by _start() and then finally
+    // the call by _listen()
+    testUtils.shouldNotEqual(calls._changes[1][0].since, undefined)
+
+    calls._lockReplicateUnlockLogError.length.should.eql(2)
+
+    // Order is not guaranteed so we index by source
+    let indexedReplicators = {}
+    calls._lockReplicateUnlockLogError.forEach(args => {
+      indexedReplicators[args[0].source] = { source: args[0].source, target: args[0].target }
+    })
+    indexedReplicators[utils.couchDBURL() + '/' + dbNames[0]].source.should.eql(
+      utils.couchDBURL() + '/' + dbNames[0]
+    )
+    indexedReplicators[utils.couchDBURL() + '/' + dbNames[0]].target.should.eql(
+      utils.couchDBURL() + '/' + dbNames[0]
+    )
+    indexedReplicators[utils.couchDBURL() + '/' + dbNames[1]].source.should.eql(
+      utils.couchDBURL() + '/' + dbNames[1]
+    )
+    indexedReplicators[utils.couchDBURL() + '/' + dbNames[1]].target.should.eql(
+      utils.couchDBURL() + '/' + dbNames[1]
+    )
+
+    await replicators.stop()
+  })
+
+  // TODO: appears to be race condition with missing DB. Has to do with replicators processing after
+  // stopped?
 
   // TODO: start with no replicators dirty
 })

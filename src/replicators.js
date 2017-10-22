@@ -4,9 +4,12 @@ const Throttler = require('squadron').Throttler
 const log = require('./log')
 const sporks = require('sporks')
 const url = require('url')
+const events = require('events')
 
-class Replicators {
+class Replicators extends events.EventEmitter {
   constructor (spiegel, opts) {
+    super()
+
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
 
@@ -243,18 +246,17 @@ class Replicators {
     }
   }
 
+  // TODO: refactor and move to Slouch?
   async _getLastSeq () {
     let lastSeq = null
-    await this._spiegel._slouch.db
-      .changes(this._spiegel._dbName, {
-        limit: 1,
-        descending: true,
-        filter: '_view',
-        view: 'dirty_and_unlocked_replicators'
-      })
-      .each(change => {
-        lastSeq = change.seq
-      })
+    await this._changes({
+      limit: 1,
+      descending: true,
+      filter: '_view',
+      view: 'dirty_and_unlocked_replicators/dirty_and_unlocked_replicators'
+    }).each(change => {
+      lastSeq = change.seq
+    })
     return lastSeq
   }
 
@@ -406,23 +408,33 @@ class Replicators {
     }
   }
 
+  async _onError (err) {
+    log.error(err)
+
+    // The event name cannot be "error" or else it will conflict with other error handler logic
+    this.emit('err', err)
+  }
+
   async _lockReplicateUnlockLogError (replicator) {
     try {
-      this._lockReplicateUnlock(replicator)
+      await this._lockReplicateUnlock(replicator)
     } catch (err) {
       // Swallow the error as the replication will be retried. We want to just log the error and
       // then swallow it so that the caller continues processing the replications
-      log.error(err)
+      this._onError(err)
     }
   }
 
   async _replicateAllDirtyAndUnlocked () {
-    let iterator = this._changes({
-      filter: '_view',
-      view: 'dirty_and_unlocked_replicators'
-    })
-    await iterator.each(replicator => {
-      return this._lockReplicateUnlockLogError(replicator)
+    let iterator = this._slouch.db.view(
+      this._spiegel._dbName,
+      '_design/dirty_and_unlocked_replicators',
+      'dirty_and_unlocked_replicators',
+      { include_docs: true }
+    )
+
+    await iterator.each(item => {
+      return this._lockReplicateUnlockLogError(item.doc)
     }, this._throttler)
   }
 
@@ -440,13 +452,13 @@ class Replicators {
       heartbeat: true,
       since: lastSeq,
       filter: '_view',
-      view: 'dirty_and_unlocked_replicators'
+      view: 'dirty_and_unlocked_replicators/dirty_and_unlocked_replicators'
     })
 
     this._iterator.on('error', err => {
       // Unexpected error. Errors should be handled at the Slouch layer and connections should be
       // persistent
-      log.error(err)
+      this._onError(err)
     })
 
     this._iterator.each(replicator => {
@@ -457,6 +469,7 @@ class Replicators {
   async start () {
     // Get the last seq so that we can use this as the starting point when listening for changes
     let lastSeq = await this._getLastSeq()
+    console.log('start, lastSeq=', lastSeq)
 
     // Get all dirty replicators and then perform the replications concurrently
     await this._replicateAllDirtyAndUnlocked()
@@ -466,9 +479,12 @@ class Replicators {
   }
 
   async stop () {
-    this._stopped = true
+    // this._stopped = true // TODO: remove?
     if (this._iterator) {
-      await this._iterator.allDone()
+      this._iterator.abort()
+    }
+    if (this._throttler) {
+      await this._throttler.allDone()
     }
   }
 }
