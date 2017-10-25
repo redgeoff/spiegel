@@ -42,7 +42,7 @@ describe('change-listeners', () => {
     let listener = await dirtyListener()
     listener._id.should.eql(listeners._idPrefix + 'test_db1')
     listener.db_name.should.eql('test_db1')
-    listener.type.should.eql('change-listener')
+    listener.type.should.eql('change_listener')
     listener.dirty.should.eql(true)
   })
 
@@ -96,6 +96,33 @@ describe('change-listeners', () => {
 
     // The locked_at value should have been populated
     lockedListener.locked_at.should.not.eql(undefined)
+
+    // The updated_at value should have been populated
+    lockedListener.updated_at.should.not.eql(undefined)
+  })
+
+  it('lock should throw when conflict', async () => {
+    // Create listener
+    let listener = await dirtyListener()
+
+    // Modify listener to simulate a conflict later
+    listener.dirty = true
+    await testUtils.spiegel._slouch.doc.update(testUtils.spiegel._dbName, listener)
+
+    let savedListener1 = await listeners._get(listener.db_name)
+
+    let err = null
+    try {
+      // Lock listener
+      await listeners.lock(listener)
+    } catch (_err) {
+      err = _err
+    }
+    testUtils.spiegel._slouch.doc.isConflictError(err).should.eql(true)
+
+    // Get the saved listener and make sure nothing changed
+    let savedListener2 = await listeners._get(listener.db_name)
+    savedListener2.should.eql(savedListener1)
   })
 
   it('should clean and unlock listener', async () => {

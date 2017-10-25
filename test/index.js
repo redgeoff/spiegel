@@ -10,6 +10,8 @@ describe('spiegel', function () {
   // Extend the timeout as the DB needs more time to process changes
   this.timeout(testUtils.TIMEOUT)
 
+  testUtils.silenceLog()
+
   before(() => {
     return testUtils.spiegel.create()
   })

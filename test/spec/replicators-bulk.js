@@ -2,6 +2,7 @@
 
 const Replicators = require('../../src/replicators')
 const testUtils = require('../utils')
+const sporks = require('sporks')
 
 describe('replicators-bulk', () => {
   let replicators = null
@@ -108,11 +109,16 @@ describe('replicators-bulk', () => {
     testUtils.shouldEqual(reps[0].dirty, undefined)
     testUtils.shouldEqual(reps[2].dirty, undefined)
 
-    await replicators._dirty([reps[0], reps[2]])
+    let rep0 = sporks.clone(reps[0])
+    let rep2 = sporks.clone(reps[2])
 
-    reps = await getReplicators()
-    reps[0].dirty.should.eql(true)
-    reps[2].dirty.should.eql(true)
+    await replicators._dirty([rep0, rep2])
+
+    let updatedReps = await getReplicators()
+    updatedReps[0].dirty.should.eql(true)
+    updatedReps[0].updated_at.should.not.eql(reps[0].updated_at)
+    updatedReps[2].dirty.should.eql(true)
+    updatedReps[0].updated_at.should.not.eql(reps[0].updated_at)
   })
 
   it('should get clean or locked', async () => {

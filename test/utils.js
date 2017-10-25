@@ -5,6 +5,7 @@
 
 const Spiegel = require('../src/spiegel')
 const sporks = require('sporks')
+const log = require('../src/log')
 
 class Utils {
   constructor () {
@@ -12,6 +13,8 @@ class Utils {
     this._slouch = this.spiegel._slouch
     this._dbNames = []
     this.TIMEOUT = 20000
+    this._suffixId = 0
+    this._suffix = null
   }
 
   _newSpiegel () {
@@ -86,11 +89,40 @@ class Utils {
     // prettier appears to find fault with notation like `(myVar === undefined).should.eql(false)`
     // so this helper function will keep things clean
     let eq = var1 !== var2
-    eq.should.eql(false)
+    eq.should.eql(true)
   }
 
   waitFor (poll) {
     return sporks.waitFor(poll, this.TIMEOUT - 2000)
+  }
+
+  // TODO: move to sporks?
+  spy (obj, funs, calls) {
+    funs.forEach(fun => {
+      let origFun = obj[fun]
+
+      calls[fun] = []
+
+      obj[fun] = function () {
+        calls[fun].push(arguments)
+        return origFun.apply(this, arguments)
+      }
+    })
+  }
+
+  nextSuffix () {
+    // We need to define a suffix to append to the DB names so that they are unique across tests or
+    // else CouchDB will sometimes give us unexpected results in the _global_changes DB
+    this._suffixId++
+    this._suffix = '_' + this._suffixId
+    return this._suffix
+  }
+
+  silenceLog () {
+    let funs = ['error', 'warn', 'info', 'debug', 'trace']
+    funs.forEach(fun => {
+      log[fun] = () => {}
+    })
   }
 }
 

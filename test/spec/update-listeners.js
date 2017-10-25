@@ -11,8 +11,8 @@ describe('update-listeners', () => {
   let updates = null
   let changeOpts = null
   let dirtyReplicators = null
+  let dirtyChangeListeners = null
   // let lastSeq
-  let suffixId = 0
   let suffix = null
 
   // Specify a large batchTimeout so that time is not a factor
@@ -53,6 +53,17 @@ describe('update-listeners', () => {
     }
   }
 
+  const spyOnDirtyChangeListeners = () => {
+    dirtyChangeListeners = {}
+    listeners._changeListeners = {
+      dirtyIfCleanOrLocked: function (dbNames) {
+        dbNames.forEach(dbName => {
+          dirtyChangeListeners[dbName] = true
+        })
+      }
+    }
+  }
+
   // const fakeGlobals = async () => {
   //   listeners._globals.get = function (name) {
   //     if (name === 'lastSeq') {
@@ -77,28 +88,50 @@ describe('update-listeners', () => {
   // }
 
   const createTestDBs = async () => {
-    await testUtils.createTestDBs(['test_db1' + suffix, 'test_db2' + suffix, 'test_db3' + suffix])
+    await testUtils.createTestDBs(['test_db1' + suffix, 'test_db3' + suffix])
   }
 
-  const createListeners = async (opts, fakeLastSeq = true) => {
+  const fakeOnChanges = async () => {
+    listeners._onChanges = {
+      matchWithDBNames: function (dbNames) {
+        return Promise.resolve(dbNames)
+      }
+    }
+  }
+
+  const createListeners = async (opts, fakeLastSeq = true, fakeOnChange = true) => {
     listeners = new UpdateListeners(testUtils.spiegel, opts)
     spyOnProcessNextBatch()
     spyOnUpdates()
     spyOnChanges()
     spyOnDirtyReplicators()
+    spyOnDirtyChangeListeners()
     if (fakeLastSeq) {
       // fakeGlobals()
     }
     // await getLastSeq()
+    if (fakeOnChange) {
+      fakeOnChanges()
+    }
     await listeners.start()
     await createTestDBs()
   }
 
+  before(async () => {
+    // Destroy default sieve as we want a custom sieve so that our tests can filter out changes to
+    // _global_changes that are from other tests
+    let lists = new UpdateListeners(testUtils.spiegel)
+    await lists._destroySieve()
+  })
+
+  after(async () => {
+    // Restore default sieve
+    let lists = new UpdateListeners(testUtils.spiegel)
+    await lists._createSieve()
+  })
+
   beforeEach(async () => {
-    // We need to define a suffix to append to the DB names so that they are unique across tests or
-    // else CouchDB will sometimes give us unexpected results in the _global_changes DB
-    suffixId++
-    suffix = '_' + suffixId
+    suffix = testUtils.nextSuffix()
     await testUtils.createSieve(suffix)
   })
 
@@ -130,7 +163,6 @@ describe('update-listeners', () => {
     // Make sure we dirtied the correct replicators
     await testUtils
       .waitFor(() => {
-        // We need to sort as the DBs can be in any order
         return sporks.isEqual(dirtyReplicators, {
           ['test_db1' + suffix]: true,
           ['test_db3' + suffix]: true
@@ -143,7 +175,20 @@ describe('update-listeners', () => {
         throw err
       })
 
-    // TODO: make sure we dirty the correct change listeners
+    // Make sure we dirtied the correct ChangeListeners
+    await testUtils
+      .waitFor(() => {
+        return sporks.isEqual(dirtyChangeListeners, {
+          ['test_db1' + suffix]: true,
+          ['test_db3' + suffix]: true
+        })
+          ? true
+          : undefined
+      })
+      .catch(function (err) {
+        console.log('dirtyChangeListeners=', dirtyChangeListeners)
+        throw err
+      })
   })
 
   it('batch should complete based on batchSize', async () => {

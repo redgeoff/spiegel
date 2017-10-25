@@ -2,6 +2,7 @@
 
 const OnChanges = require('../../src/on-changes')
 const testUtils = require('../utils')
+const sporks = require('sporks')
 
 describe('on-changes', () => {
   let onChanges = null
@@ -11,16 +12,23 @@ describe('on-changes', () => {
     await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
       _id: '1',
       type: 'on_change',
-      regex: 'test_db1'
+      reg_ex: 'foo'
     })
     docIds.push('1')
 
     await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
       _id: '2',
       type: 'on_change',
-      regex: 'test_db3'
+      reg_ex: '^test_db1$'
     })
     docIds.push('2')
+
+    await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
+      _id: '3',
+      type: 'on_change',
+      reg_ex: 'test_db_([^_])*'
+    })
+    docIds.push('3')
   }
 
   before(async () => {
@@ -53,9 +61,41 @@ describe('on-changes', () => {
     // let after = new Date()
     // console.log('took', after.getTime() - before.getTime(), 'ms')
 
-    docs.rows.length.should.eql(2)
-    docs.rows[0].id.should.eql('1')
-    docs.rows[1].id.should.eql('2')
+    sporks.length(docs).should.eql(3)
+    docs['1']._id.should.eql('1')
+    docs['2']._id.should.eql('2')
+    docs['3']._id.should.eql('3')
+  })
+
+  it('should sync destruction', async () => {
+    let docs = await onChanges.all()
+
+    // Set up promise that resolve when change is received
+    let changed = sporks.once(onChanges, 'change')
+
+    // Destroy the first OnChange by setting the _deleted attribute and make sure this propagates
+    let firstId = docIds.shift()
+    await testUtils.spiegel._slouch.doc.markAsDestroyed(testUtils.spiegel._dbName, firstId)
+
+    await changed
+
+    sporks.length(docs).should.eql(2)
+    docs['2']._id.should.eql('2')
+    docs['3']._id.should.eql('3')
+  })
+
+  it('should match with DB names', async () => {
+    let dbNames = await onChanges.matchWithDBNames([
+      '_test_db0',
+      'test_db1',
+      'test_db2',
+      'test_db_3',
+      'test_db_4'
+    ])
+    dbNames.should.eql(['test_db1', 'test_db_3', 'test_db_4'])
+
+    dbNames = await onChanges.matchWithDBNames(['_test_db0'])
+    dbNames.should.eql([])
   })
 
   // // This is a benchmark to see how much faster it would be to store the on-changes in a simple
@@ -67,12 +107,12 @@ describe('on-changes', () => {
   //     {
   //       _id: '1',
   //       type: 'on_change',
-  //       regex: 'test_db1'
+  //       reg_ex: 'test_db1'
   //     },
   //     {
   //       _id: '1',
   //       type: 'on_change',
-  //       regex: 'test_db1'
+  //       reg_ex: 'test_db1'
   //     }
   //   ]
   //   let before = new Date()

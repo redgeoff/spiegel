@@ -7,6 +7,11 @@ const utils = require('./utils')
 const sporks = require('sporks')
 const log = require('./log')
 
+// Note: during the benchmark tests, it was determined that it is 10 times faster to iterate through
+// 2 docs in a simple array than via the PouchDB memory adapter. Therefore, we will use PouchDB to
+// sync the data, but will store the docs in a simple array as we want our UpdateListener to be able
+// to iterate through all OnChanges as fast as possible
+
 class OnChanges extends events.EventEmitter {
   constructor (spiegel) {
     super()
@@ -14,9 +19,12 @@ class OnChanges extends events.EventEmitter {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
 
-    // We use a memory adapter as we want to be able to read the changes from memory very quickly as
-    // they will be read many times over
     this._db = new PouchDB(this._spiegel._namespace + 'on_changes', { adapter: 'memory' })
+
+    this._docs = {}
+
+    // A promise that resolves once the PouchDB data has loaded
+    this._loaded = sporks.once(this, 'load')
   }
 
   _createOnChangesView () {
@@ -54,10 +62,35 @@ class OnChanges extends events.EventEmitter {
     return this._destroyViews()
   }
 
-  start () {
-    // A promise that resolves once the PouchDB has loaded
-    let loaded = sporks.once(this, 'load')
+  _setDoc (doc) {
+    if (doc._deleted) {
+      delete this._docs[doc._id]
+    } else {
+      this._docs[doc._id] = doc
+    }
+  }
 
+  async _loadAllDocs () {
+    let docs = await this._db.allDocs({ include_docs: true })
+    docs.rows.forEach(doc => {
+      this._setDoc(doc.doc)
+    })
+  }
+
+  async _onPaused () {
+    await this._loadAllDocs()
+
+    // Alert that the data has been loaded and is ready to be used
+    this.emit('load')
+  }
+
+  _setDocs (docs) {
+    docs.forEach(doc => {
+      this._setDoc(doc)
+    })
+  }
+
+  start () {
     this._from = this._db.replicate
       .from(utils.couchDBURL() + '/' + this._spiegel._dbName, {
         live: true,
@@ -66,14 +99,17 @@ class OnChanges extends events.EventEmitter {
         view: 'on_changes'
       })
       .once('paused', () => {
-        // Alert that the data has been loaded and is ready to be used
-        this.emit('load')
+        this._onPaused()
       })
-      .on('error', function (err) {
+      .on('error', err => {
         log.error(err)
       })
+      .on('change', change => {
+        this._setDocs(change.docs)
+        this.emit('change')
+      })
 
-    return loaded
+    return this._loaded
   }
 
   stop () {
@@ -83,8 +119,35 @@ class OnChanges extends events.EventEmitter {
   }
 
   async all () {
-    // Make sure the data has been loaded before querying for all docs
-    return this._db.allDocs({ include_docs: true })
+    // all() is a promise so that we have the freedom to change up the storage mechanism in the
+    // future, e.g. our future storage mechanism may require IO
+    await this._loaded
+    return this._docs
+  }
+
+  async matchWithDBNames (dbNames) {
+    // TODO: if we want to speed up this function even more, we can instead build a single reg ex,
+    // e.g. /(on-change-reg-ex-1)|(on-change-reg-ex-1)|(...)/ and do a single comparison. This most
+    // likely will have little impact on the performance of the UpdateListener however as the main
+    // bottleneck will probably be in the UpdateListener communicating with CouchDB, i.e. dirtying
+    // replicators and change liseteners.
+
+    let docs = await this.all()
+
+    let matchingDBNames = {}
+
+    sporks.each(docs, doc => {
+      let re = new RegExp(doc.reg_ex)
+      dbNames.forEach(dbName => {
+        // Does the name match the regular expression?
+        if (re.test(dbName)) {
+          // Index by name to prevent duplicates
+          matchingDBNames[dbName] = true
+        }
+      })
+    })
+
+    return sporks.keys(matchingDBNames)
   }
 }
 

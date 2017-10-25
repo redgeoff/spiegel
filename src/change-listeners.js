@@ -19,7 +19,7 @@ class ChangeListeners {
         dirty_listeners: {
           map: [
             'function(doc) {',
-            'if (doc.type === "listener" && doc.dirty) {',
+            'if (doc.type === "change_listener" && doc.dirty) {',
             'emit(doc._id, null);',
             '}',
             '}'
@@ -39,7 +39,7 @@ class ChangeListeners {
         clean_or_locked_listeners_by_db_name: {
           map: [
             'function(doc) {',
-            'if (doc.type === "listener" && (!doc.dirty || doc.locked_at)) {',
+            'if (doc.type === "change_listener" && (!doc.dirty || doc.locked_at)) {',
             'emit(doc.db_name, null);',
             '}',
             '}'
@@ -58,7 +58,7 @@ class ChangeListeners {
         listeners_by_db_name: {
           map: [
             'function(doc) {',
-            'if (doc.type === "listener") {',
+            'if (doc.type === "change_listener") {',
             'emit(doc.db_name, null);',
             '}',
             '}'
@@ -101,10 +101,12 @@ class ChangeListeners {
     return this._slouch.doc.getIgnoreMissing(this._spiegel._dbName, this._toId(dbName))
   }
 
+  // TODO: still needed?
   _upsert (listener) {
     return this._slouch.doc.upsert(this._spiegel._dbName, listener)
   }
 
+  // TODO: remove as now handled by dirtyIfCleanOrLocked?
   async dirtyIfClean (dbName) {
     let listener = await this._get(dbName)
 
@@ -115,7 +117,7 @@ class ChangeListeners {
         _id: this._toId(dbName),
 
         db_name: dbName,
-        type: 'change-listener'
+        type: 'change_listener'
       }
     }
 
@@ -170,6 +172,7 @@ class ChangeListeners {
     // to hold the lock at any given time
     let lockedListener = sporks.clone(listener)
     lockedListener.locked_at = new Date().toISOString()
+    this._setUpdatedAt(lockedListener)
     let response = await this._update(lockedListener)
     lockedListener._rev = response._rev
     return lockedListener
@@ -183,16 +186,56 @@ class ChangeListeners {
       { include_docs: true, keys: JSON.stringify(dbNames) }
     )
 
-    return response.rows.map(row => row)
+    return response.rows.map(row => row.doc)
+  }
+
+  async _getCleanLockedOrMissing (dbNames) {
+    let listeners = await this._getByDBNames(dbNames)
+
+    // Index by dbName for quick retrieval
+    let missing = sporks.flip(dbNames)
+
+    let lists = []
+    listeners.map(listener => {
+      // Remove from missing
+      delete missing[listener.db_name]
+
+      // Clean or locked?
+      if (!listener.dirty || listener.locked_at) {
+        lists.push(listener)
+      }
+    })
+
+    sporks.each(missing, (val, dbName) => {
+      lists.push({
+        db_name: dbName
+      })
+    })
+
+    return lists
+  }
+
+  // Useful for determining the last time a listener was used
+  _setUpdatedAt (listener) {
+    listener.updated_at = new Date().toISOString()
   }
 
   _dirtyOrCreate (listeners) {
-    // TODO: compare with dbNames passed in to see which ones are missing
-    // listeners.forEach(listener => {
-    //   replicator.dirty = true
-    // })
-    //
-    // return this._slouch.doc.bulkCreateOrUpdate(this._spiegel._dbName, replicators)
+    listeners.forEach(listener => {
+      // Existing listener?
+      if (listener._id) {
+        listener.dirty = true
+        this._setUpdatedAt(listener)
+      } else {
+        // Prefix so that we can create a listener even when the id is reserved, e.g. _users
+        listener._id = this._toId(listener.db_name)
+        listener.type = 'change_listener'
+        listener.dirty = true
+        this._setUpdatedAt(listener)
+      }
+    })
+
+    return this._slouch.doc.bulkCreateOrUpdate(this._spiegel._dbName, listeners)
   }
 
   async _dirtyAndGetConflictedDBNames (listeners) {
@@ -212,14 +255,39 @@ class ChangeListeners {
   }
 
   async _attemptToDirtyIfCleanOrLocked (dbNames) {
-    let listeners = await this._getByDBNames(dbNames)
-
-    // TODO: how to handle missing because not clean or locked and simply doesn't exist? Probably
-    // have to return no matter what and include dirty and locked_at
+    let listeners = await this._getCleanLockedOrMissing(dbNames)
 
     // length can be zero if there is nothing to dirty
     if (listeners.length > 0) {
       return this._dirtyAndGetConflictedDBNames(listeners)
+    }
+  }
+
+  // We need to dirty ChangeListeners so that the listening can be delegated to a listener process.
+  //
+  // We use bulk operations as this is far faster than processing each ChangeListener individually.
+  // With bulk operations we can take a batch of updates and in just a few requests to CouchDB
+  // schedule the delegation and then move on to the next set of updates. In addition, processing
+  // updates in a batch allows us to remove duplicates in that batch that often occur due to
+  // back-to-back writes to a particular DB.
+  //
+  // When dirtying the ChangeListener we first get a list of all the ChangeListeners with matching
+  // DB names. We then iterate through the results identifying clean or locked ChangeListeners and
+  // any missing ChangeListeners. We need to include the locked ChangeListeners as we may already be
+  // listening to a _changes feed, hence the lock, and we want to make sure to re-dirty the listener
+  // so that the revision number changes. This will then result in the listener being retried later.
+  // ChangeListeners are created when they are missing. A ChangeListeners's id is unique to the DB
+  // name and this therefore prevents two UpdateListener processes from creating duplicate
+  // ChangeListeners.
+  //
+  // Between the time the clean or locked ChangeListeners are retrieved and then dirtied, it is
+  // possible that another UpdateListener dirties the same ChangeListener. In this event, we'll
+  // detect the conflicts. We'll then retry the get and dirty for these conflicted ChangeListeners.
+  // We'll repeat this process until there are no more conflicts.
+  async dirtyIfCleanOrLocked (dbNames) {
+    let conflictedDBNames = await this._attemptToDirtyIfCleanOrLocked(dbNames)
+    if (conflictedDBNames && conflictedDBNames.length > 0) {
+      return this.dirtyIfCleanOrLocked(conflictedDBNames)
     }
   }
 
