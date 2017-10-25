@@ -330,6 +330,12 @@ class Replicators extends events.EventEmitter {
     return this._updateReplicator(replicator, false)
   }
 
+  async _unlock (replicator) {
+    // We do not upsert as we want the unlock to fail if the replicator has been updated
+    replicator.locked_at = null
+    return this._updateReplicator(replicator, false)
+  }
+
   async _lockAndThrowIfErrorAndNotConflict (replicator) {
     try {
       let rep = await this._lock(replicator)
@@ -543,7 +549,18 @@ class Replicators extends events.EventEmitter {
     let iterator = this._lockedReplicators()
     await iterator.each(async item => {
       if (this._hasStalled(item.doc)) {
-        await this._upsertUnlock(item.doc)
+        try {
+          await this._unlock(item.doc)
+        } catch (err) {
+          // We can expect to get a conflict if two replicator routines attempt to unlock the same
+          // stalled replicator. We also want to prevent a replicator process from unlocking a
+          // replicator, locking for a new replication and having another replicator process unlock
+          // the locked replicator.
+          if (!this._slouch.doc.isConflictError(err)) {
+            // Unexpected error
+            throw err
+          }
+        }
       }
     })
   }

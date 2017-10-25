@@ -29,7 +29,8 @@ describe('replicators', () => {
         '_upsertUnlock',
         '_lockReplicateUnlockLogError',
         '_changes',
-        '_unlockStalledReplicators'
+        '_unlockStalledReplicators',
+        '_unlock'
       ],
       calls
     )
@@ -531,8 +532,8 @@ describe('replicators', () => {
       return calls._unlockStalledReplicators.length === 2 ? true : undefined
     })
 
-    calls._upsertUnlock[0][0]._id.should.eql(replicator1._id)
-    calls._upsertUnlock[1][0]._id.should.eql(replicator3._id)
+    calls._unlock[0][0]._id.should.eql(replicator1._id)
+    calls._unlock[1][0]._id.should.eql(replicator3._id)
 
     await replicators.stop()
   })
