@@ -10,6 +10,8 @@ describe('replicators', () => {
   let replicatorIds = null
   let calls = null
   let globalError = false
+  let retryAfterSeconds = 1
+  let stalledAfterSeconds = 1
 
   let conflictError = new Error()
   conflictError.error = 'conflict'
@@ -26,7 +28,8 @@ describe('replicators', () => {
         '_unlockAndCleanIfConflictJustUnlock',
         '_upsertUnlock',
         '_lockReplicateUnlockLogError',
-        '_changes'
+        '_changes',
+        '_unlockStalledReplicators'
       ],
       calls
     )
@@ -39,7 +42,7 @@ describe('replicators', () => {
   }
 
   beforeEach(async () => {
-    replicators = new Replicators(testUtils.spiegel)
+    replicators = new Replicators(testUtils.spiegel, { retryAfterSeconds, stalledAfterSeconds })
     replicatorIds = []
     spy()
     listenForErrors()
@@ -415,6 +418,10 @@ describe('replicators', () => {
     calls._upsertUnlock.length.should.eql(0)
   })
 
+  const testDBNames = () => {
+    return ['test_db1' + testUtils.nextSuffix(), 'test_db2' + testUtils.nextSuffix()]
+  }
+
   const createReplicators = async dbNames => {
     await createReplicator({
       source: utils.couchDBURL() + '/' + dbNames[0],
@@ -452,7 +459,7 @@ describe('replicators', () => {
   }
 
   it('should start when replicators already dirty', async () => {
-    let dbNames = ['test_db1' + testUtils.nextSuffix(), 'test_db2' + testUtils.nextSuffix()]
+    let dbNames = testDBNames()
 
     await createReplicators(dbNames)
 
@@ -470,7 +477,7 @@ describe('replicators', () => {
   })
 
   it('should start with no replicators dirty', async () => {
-    let dbNames = ['test_db1' + testUtils.nextSuffix(), 'test_db2' + testUtils.nextSuffix()]
+    let dbNames = testDBNames()
 
     await replicators.start()
 
@@ -483,6 +490,49 @@ describe('replicators', () => {
     })
 
     lockReplicateUnlockLogErrorShouldEql(dbNames)
+
+    await replicators.stop()
+  })
+
+  it('should unstall', async () => {
+    let dbNames = testDBNames()
+
+    let replicator1 = await createReplicator({
+      source: utils.couchDBURL() + '/' + dbNames[0],
+      target: utils.couchDBURL() + '/' + dbNames[0],
+      dirty: true,
+
+      // Should be retried when unstaller runs a second time
+      locked_at: new Date(new Date().getTime() - retryAfterSeconds * 1000 / 2).toISOString()
+    })
+
+    // A decoy that should not be unstalled as it is not locked
+    await createReplicator({
+      source: utils.couchDBURL() + '/' + dbNames[1],
+      target: utils.couchDBURL() + '/' + dbNames[1],
+      dirty: true
+    })
+
+    let replicator3 = await createReplicator({
+      source: utils.couchDBURL() + '/' + dbNames[1],
+      target: utils.couchDBURL() + '/' + dbNames[1],
+      dirty: true,
+
+      // Should be retried when unstaller first runs
+      locked_at: new Date(new Date().getTime() - retryAfterSeconds * 1000 * 2).toISOString()
+    })
+
+    await testUtils.createTestDBs(dbNames)
+
+    await replicators.start()
+
+    // Wait for unstaller to loop twice
+    await testUtils.waitFor(() => {
+      return calls._unlockStalledReplicators.length === 2 ? true : undefined
+    })
+
+    calls._upsertUnlock[0][0]._id.should.eql(replicator1._id)
+    calls._upsertUnlock[1][0]._id.should.eql(replicator3._id)
 
     await replicators.stop()
   })
