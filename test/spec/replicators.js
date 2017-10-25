@@ -118,7 +118,7 @@ describe('replicators', () => {
     lockedReplicator.updated_at.should.not.eql(undefined)
   })
 
-  it('lock should throw when conflict', async () => {
+  const shouldThrowWhenConflict = async opName => {
     // Create replicator
     let replicator = await createReplicator({
       source: 'https://example.com/test_db1'
@@ -133,7 +133,7 @@ describe('replicators', () => {
     let err = null
     try {
       // Lock replicator
-      await replicators._lock(replicator)
+      await replicators[opName](replicator)
     } catch (_err) {
       err = _err
     }
@@ -142,6 +142,14 @@ describe('replicators', () => {
     // Get the saved replicator and make sure nothing changed
     let savedReplicator2 = await replicators._get(replicator._id)
     savedReplicator2.should.eql(savedReplicator1)
+  }
+
+  it('lock should throw when conflict', async () => {
+    await shouldThrowWhenConflict('_lock')
+  })
+
+  it('unlock should throw when conflict', async () => {
+    await shouldThrowWhenConflict('_unlock')
   })
 
   it('should convert to CouchDB replication params', async () => {
