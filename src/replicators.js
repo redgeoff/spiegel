@@ -450,9 +450,10 @@ class Replicators extends events.EventEmitter {
     this._iterator = this._changes({
       feed: 'continuous',
       heartbeat: true,
-      since: lastSeq,
+      since: lastSeq || undefined,
       filter: '_view',
-      view: 'dirty_and_unlocked_replicators/dirty_and_unlocked_replicators'
+      view: 'dirty_and_unlocked_replicators/dirty_and_unlocked_replicators',
+      include_docs: true
     })
 
     this._iterator.on('error', err => {
@@ -462,7 +463,7 @@ class Replicators extends events.EventEmitter {
     })
 
     this._iterator.each(replicator => {
-      return this._lockReplicateUnlockLogError(replicator)
+      return this._lockReplicateUnlockLogError(replicator.doc)
     }, this._throttler)
   }
 

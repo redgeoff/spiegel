@@ -415,9 +415,7 @@ describe('replicators', () => {
     calls._upsertUnlock.length.should.eql(0)
   })
 
-  it('should start when replicators already dirty', async () => {
-    let dbNames = ['test_db1' + testUtils.nextSuffix(), 'test_db2' + testUtils.nextSuffix()]
-
+  const createReplicators = async dbNames => {
     await createReplicator({
       source: utils.couchDBURL() + '/' + dbNames[0],
       target: utils.couchDBURL() + '/' + dbNames[0],
@@ -429,15 +427,9 @@ describe('replicators', () => {
       target: utils.couchDBURL() + '/' + dbNames[1],
       dirty: true
     })
+  }
 
-    await testUtils.createTestDBs(dbNames)
-
-    await replicators.start()
-
-    // Verify start with lastSeq. 1st entry is the _getLastSeq() called by _start() and then finally
-    // the call by _listen()
-    testUtils.shouldNotEqual(calls._changes[1][0].since, undefined)
-
+  const lockReplicateUnlockLogErrorShouldEql = dbNames => {
     calls._lockReplicateUnlockLogError.length.should.eql(2)
 
     // Order is not guaranteed so we index by source
@@ -457,12 +449,41 @@ describe('replicators', () => {
     indexedReplicators[utils.couchDBURL() + '/' + dbNames[1]].target.should.eql(
       utils.couchDBURL() + '/' + dbNames[1]
     )
+  }
+
+  it('should start when replicators already dirty', async () => {
+    let dbNames = ['test_db1' + testUtils.nextSuffix(), 'test_db2' + testUtils.nextSuffix()]
+
+    await createReplicators(dbNames)
+
+    await testUtils.createTestDBs(dbNames)
+
+    await replicators.start()
+
+    // Verify start with lastSeq. 1st entry is the _getLastSeq() called by _start() and then finally
+    // the call by _listen()
+    testUtils.shouldNotEqual(calls._changes[1][0].since, undefined)
+
+    lockReplicateUnlockLogErrorShouldEql(dbNames)
 
     await replicators.stop()
   })
 
-  // TODO: appears to be race condition with missing DB. Has to do with replicators processing after
-  // stopped?
+  it('should start with no replicators dirty', async () => {
+    let dbNames = ['test_db1' + testUtils.nextSuffix(), 'test_db2' + testUtils.nextSuffix()]
 
-  // TODO: start with no replicators dirty
+    await replicators.start()
+
+    await createReplicators(dbNames)
+
+    await testUtils.createTestDBs(dbNames)
+
+    await testUtils.waitFor(() => {
+      return calls._lockReplicateUnlockLogError.length === 2 ? true : undefined
+    })
+
+    lockReplicateUnlockLogErrorShouldEql(dbNames)
+
+    await replicators.stop()
+  })
 })
