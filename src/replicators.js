@@ -26,6 +26,11 @@ class Replicators extends events.EventEmitter {
     // replication queue and continuously run
     this._retryAfterSeconds = opts && opts.retryAfterSeconds ? opts.retryAfterSeconds : 10800
 
+    // It will take up to roughly stalledAfterSeconds + retryAfterSeconds before a replication is
+    // retried. Be careful not make stalledAfterSeconds too low though or else you'll waste a lot of
+    // CPU cycles just checking for stalled processes.
+    this._stalledAfterSeconds = opts && opts.stalledAfterSeconds ? opts.stalledAfterSeconds : 600
+
     // "continuous" is added here as we do not want the continuous parameter to be passed to CouchDB
     // or else the replication will block indefinitely. "cancel" is needed as it does not apply and
     // would lead to unintended behavior
@@ -129,12 +134,30 @@ class Replicators extends events.EventEmitter {
     })
   }
 
+  _createLockedReplicatorsView () {
+    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
+      _id: '_design/locked_replicators',
+      views: {
+        locked_replicators: {
+          map: [
+            'function(doc) {',
+            'if (doc.type === "replicator" && doc.locked_at) {',
+            'emit(doc._id, null);',
+            '}',
+            '}'
+          ].join(' ')
+        }
+      }
+    })
+  }
+
   async _createViews () {
     await this._createDirtyReplicatorsView()
     await this._createCleanOrLockedReplicatorsByDBNameView()
     await this._createDirtyAndUnLockedReplicatorsView()
     await this._createCleanReplicatorsView()
     await this._createReplicatorsByDBNameView()
+    await this._createLockedReplicatorsView()
   }
 
   create () {
@@ -153,6 +176,7 @@ class Replicators extends events.EventEmitter {
     )
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/clean_replicators')
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/replicators_by_db_name')
+    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/locked_replicators')
   }
 
   destroy () {
@@ -476,16 +500,67 @@ class Replicators extends events.EventEmitter {
 
     // Listen for changes. We don't await here as the listening is a continuous operation
     this._listen(lastSeq)
+
+    this._startUnstaller()
   }
 
   async stop () {
-    // this._stopped = true // TODO: remove?
+    this._stopUnstaller()
+
     if (this._iterator) {
       this._iterator.abort()
     }
+
     if (this._throttler) {
       await this._throttler.allDone()
     }
+  }
+
+  _lockedReplicators () {
+    return this._slouch.db.view(
+      this._spiegel._dbName,
+      '_design/locked_replicators',
+      'locked_replicators',
+      { include_docs: true }
+    )
+  }
+
+  _hasStalled (replicator) {
+    // A replicator can stall if a replication is started and then the associated replicator process
+    // crashes or is terminated abruptly.
+    return (
+      new Date().getTime() - new Date(replicator.locked_at).getTime() >
+      this._retryAfterSeconds * 1000
+    )
+  }
+
+  async _unlockStalledReplicators () {
+    // Note: we cannot use a view to automatically track stalled processes as views with time
+    // sensitive data like the current timestamp don't work as they are not refreshed as the
+    // timestamp changes and if they were you'd loose the performance benefit of a view. Therefore,
+    // we must iterate through all locked replicators. Fortunately, there should be a relatively
+    // small set of locked replicators at any given time.
+    let iterator = this._lockedReplicators()
+    await iterator.each(async item => {
+      if (this._hasStalled(item.doc)) {
+        await this._upsertUnlock(item.doc)
+      }
+    })
+  }
+
+  _startUnstaller () {
+    this._unstaller = setInterval(async () => {
+      try {
+        await this._unlockStalledReplicators()
+      } catch (err) {
+        // Unknown error
+        this._onError(err)
+      }
+    }, this._stalledAfterSeconds * 1000)
+  }
+
+  _stopUnstaller () {
+    clearInterval(this._unstaller)
   }
 }
 
