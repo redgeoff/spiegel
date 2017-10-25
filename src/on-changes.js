@@ -126,6 +126,12 @@ class OnChanges extends events.EventEmitter {
   }
 
   async matchWithDBNames (dbNames) {
+    // TODO: if we want to speed up this function even more, we can instead build a single reg ex,
+    // e.g. /(on-change-reg-ex-1)|(on-change-reg-ex-1)|(...)/ and do a single comparison. This most
+    // likely will have little impact on the performance of the UpdateListener however as the main
+    // bottleneck will probably be in the UpdateListener communicating with CouchDB, i.e. dirtying
+    // replicators and change liseteners.
+
     let docs = await this.all()
 
     let matchingDBNames = {}
