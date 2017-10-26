@@ -149,6 +149,39 @@ class OnChanges extends events.EventEmitter {
 
     return sporks.keys(matchingDBNames)
   }
+
+  async getMatchingOnChanges (dbName, doc) {
+    let onChanges = await this.all()
+
+    let matchingOnChanges = {}
+
+    sporks.each(onChanges, onChange => {
+      // Does the DB name match?
+      let dbNameRegExp = new RegExp(onChange.db_name)
+      if (dbNameRegExp.test(dbName)) {
+        let ok = true
+
+        // Was an if condition specified?
+        if (onChange.if) {
+          // Loop for each attribute
+          sporks.each(onChange.if, (reStr, name) => {
+            let re = new RegExp(reStr)
+
+            // Condition failed?
+            if (!re.test(doc[name])) {
+              ok = false
+            }
+          })
+        }
+
+        if (ok) {
+          matchingOnChanges[onChange._id] = onChange
+        }
+      }
+    })
+
+    return matchingOnChanges
+  }
 }
 
 module.exports = OnChanges
