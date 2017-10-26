@@ -2,6 +2,7 @@
 
 const sporks = require('sporks')
 const Process = require('./process')
+const ChangeProcessor = require('./change-processor')
 
 class ChangeListeners extends Process {
   constructor (spiegel, opts) {
@@ -17,8 +18,13 @@ class ChangeListeners extends Process {
       'change_listener'
     )
 
+    // The max number of changes that will be processed in a batch
+    this._batchSize = opts && opts.batchSize ? opts.batchSize : 100
+
     // Separate namespace for change listener ids
     this._idPrefix = 'spiegel_cl_'
+
+    this._changeProcessor = new ChangeProcessor(spiegel, opts)
   }
 
   // TODO: still needed?
@@ -147,9 +153,12 @@ class ChangeListeners extends Process {
   }
 
   _updateLastSeq (id, lastSeq) {
+    // Use getMergeUpsert as we want the lastSeq to be stored even if there is a conflict from say
+    // another process dirtying this ChangeListener
     return this._slouch.doc.getMergeUpsert(this._spiegel._dbName, { _id: id, last_seq: lastSeq })
   }
 
+  // TODO: remove? Isn't this now handled by process layer?
   _cleanAndUnlock (listener, lastSeq) {
     // Update listener and set last_seq and dirty=false. We must not ignore any errors from a
     // conflict as we want the routine that marks the monitor as dirty to always win so that we
@@ -163,6 +172,7 @@ class ChangeListeners extends Process {
     return this._update(listener)
   }
 
+  // TODO: remove? Isn't this now handled by process layer?
   async cleanAndUnlockOrUpdateLastSeq (listener, lastSeq) {
     try {
       await this._cleanAndUnlock(listener, lastSeq)
@@ -292,6 +302,45 @@ class ChangeListeners extends Process {
     if (conflictedDBNames && conflictedDBNames.length > 0) {
       return this.dirtyIfCleanOrLocked(conflictedDBNames)
     }
+  }
+
+  _processChange (change) {
+    return this._changeProcessor.process(change)
+  }
+
+  _processChangeFactory (change) {
+    return () => {
+      return this._processChange(change)
+    }
+  }
+
+  async _processBatchOfChanges (listener) {
+    let changes = await this._slouch.db.changesArray(listener.db_name, {
+      since: listener.last_seq || undefined,
+      include_docs: true,
+      limit: this._batchSize
+    })
+
+    let chain = Promise.resolve()
+
+    // Sequentially chain promises so that changes are processed in order and so that we don't
+    // dominate the mem
+    changes.results.forEach(change => {
+      chain = chain.then(this._processChangeFactory(change))
+    })
+
+    // Wait for all the changes to be processed
+    await chain
+
+    // Save the lastSeq as we want our next batch to resume from where we left off
+    await this._updateLastSeq(listener._id, changes.last_seq)
+
+    // Are there more batches to process?
+    return !!changes.pending
+  }
+
+  _process (listener) {
+    return this._processBatchOfChanges(listener)
   }
 }
 

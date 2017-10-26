@@ -140,10 +140,16 @@ class Process extends events.EventEmitter {
     return this._updateItem(rep, true)
   }
 
-  async _unlockAndClean (item) {
-    // We do not upsert as we want the clean to fail if the item has been updated
-    item.dirty = false
+  async _unlockAndClean (item, leaveDirty) {
+    // Leave dirty? This can occur when we want to unlock without cleaning as we still have more
+    // processing to do for this item
+    if (!leaveDirty) {
+      item.dirty = false
+    }
+
     item.locked_at = null
+
+    // We do not upsert as we want the clean to fail if the item has been updated
     return this._updateItem(item, false)
   }
 
@@ -175,7 +181,7 @@ class Process extends events.EventEmitter {
 
   async _processAndUnlockIfError (item) {
     try {
-      await this._process(item)
+      return await this._process(item)
     } catch (err) {
       // If an error is encountered when processing then leave the item dirty, but unlock it so that
       // the processing can be tried again
@@ -184,9 +190,9 @@ class Process extends events.EventEmitter {
     }
   }
 
-  async _unlockAndCleanIfConflictJustUnlock (item) {
+  async _unlockAndCleanIfConflictJustUnlock (item, leaveDirty) {
     try {
-      await this._unlockAndClean(item)
+      await this._unlockAndClean(item, leaveDirty)
     } catch (err) {
       if (this._slouch.doc.isConflictError(err)) {
         // A conflict can occur because an UpdateListener may have re-dirtied this item. When this
@@ -205,11 +211,11 @@ class Process extends events.EventEmitter {
     let conflict = await this._lockAndThrowIfErrorAndNotConflict(item)
     if (!conflict) {
       // Attempt to process and if there is an error then it is thrown and logged below
-      await this._processAndUnlockIfError(item)
+      let leaveDirty = await this._processAndUnlockIfError(item)
 
       // Attempt to unlock and clean the item. If there is a conflict, which can occur when an
       // UpdateListener re-dirties the item then just unlock the item so that it can be retried
-      await this._unlockAndCleanIfConflictJustUnlock(item)
+      await this._unlockAndCleanIfConflictJustUnlock(item, leaveDirty)
     }
   }
 
