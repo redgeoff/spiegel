@@ -15,8 +15,11 @@ class Spiegel {
     this._namespace = opts && opts.namespace ? opts.namespace : ''
 
     this._updateListeners = new UpdateListeners(this, opts)
-    this._changeListeners = new ChangeListeners(this)
-    this._replicators = new Replicators(this, opts)
+    this._changeListeners = new ChangeListeners(
+      this,
+      opts && opts.changeListener ? opts.changeListener : undefined
+    )
+    this._replicators = new Replicators(this, opts && opts.replicator ? opts.replicator : undefined)
     this._onChanges = new OnChanges(this)
   }
 
