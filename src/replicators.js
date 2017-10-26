@@ -2,8 +2,8 @@
 
 const log = require('./log')
 const sporks = require('sporks')
-const url = require('url')
 const Process = require('./process')
+const PasswordInjector = require('./password-injector')
 
 class Replicators extends Process {
   constructor (spiegel, opts) {
@@ -30,6 +30,8 @@ class Replicators extends Process {
       'continuous',
       'cancel'
     ]
+
+    this._passwordInjector = new PasswordInjector(this._passwords)
   }
 
   _createDirtyReplicatorsView () {
@@ -224,19 +226,7 @@ class Replicators extends Process {
   }
 
   _addPassword (urlString) {
-    if (this._passwords) {
-      let parts = url.parse(urlString)
-
-      // Was a password defined?
-      if (this._passwords[parts.hostname] && this._passwords[parts.hostname][parts.auth]) {
-        let password = this._passwords[parts.hostname][parts.auth]
-        return (
-          parts.protocol + '//' + parts.auth + ':' + password + '@' + parts.host + parts.pathname
-        )
-      }
-    }
-
-    return urlString
+    return this._passwordInjector.addPassword(urlString)
   }
 
   async _replicate (replicator) {

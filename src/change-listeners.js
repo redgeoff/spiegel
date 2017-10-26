@@ -304,39 +304,48 @@ class ChangeListeners extends Process {
     }
   }
 
-  _processChange (change) {
-    return this._changeProcessor.process(change)
+  _processChange (change, dbName) {
+    return this._changeProcessor.process(change, dbName)
   }
 
-  _processChangeFactory (change) {
+  _processChangeFactory (change, dbName) {
     return () => {
-      return this._processChange(change)
+      return this._processChange(change, dbName)
     }
   }
 
   async _processBatchOfChanges (listener) {
-    let changes = await this._slouch.db.changesArray(listener.db_name, {
-      since: listener.last_seq || undefined,
-      include_docs: true,
-      limit: this._batchSize
-    })
+    try {
+      let changes = await this._slouch.db.changesArray(listener.db_name, {
+        since: listener.last_seq || undefined,
+        include_docs: true,
+        limit: this._batchSize
+      })
 
-    let chain = Promise.resolve()
+      let chain = Promise.resolve()
 
-    // Sequentially chain promises so that changes are processed in order and so that we don't
-    // dominate the mem
-    changes.results.forEach(change => {
-      chain = chain.then(this._processChangeFactory(change))
-    })
+      // Sequentially chain promises so that changes are processed in order and so that we don't
+      // dominate the mem
+      changes.results.forEach(change => {
+        chain = chain.then(this._processChangeFactory(change, listener.db_name))
+      })
 
-    // Wait for all the changes to be processed
-    await chain
+      // Wait for all the changes to be processed
+      await chain
 
-    // Save the lastSeq as we want our next batch to resume from where we left off
-    await this._updateLastSeq(listener._id, changes.last_seq)
+      // Save the lastSeq as we want our next batch to resume from where we left off
+      await this._updateLastSeq(listener._id, changes.last_seq)
 
-    // Are there more batches to process?
-    return !!changes.pending
+      // Are there more batches to process? If there are then we will leave this ChangeListener
+      // dirty
+      return !!changes.pending
+    } catch (err) {
+      // Log and emit error
+      this._onError(err)
+
+      // Leave the ChangeListener as dirty so that it will be retried
+      return false
+    }
   }
 
   _process (listener) {

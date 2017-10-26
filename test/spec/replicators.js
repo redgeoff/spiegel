@@ -75,6 +75,7 @@ describe('replicators', () => {
     })
   })
 
+  // TODO: move to password-injector test
   it('should add passwords', function () {
     // Clear any passwords
     replicators._passwords = null
@@ -85,7 +86,7 @@ describe('replicators', () => {
       .should.eql('http://user1@example.com/mydb')
 
     // Fake passwords
-    replicators._passwords = {
+    replicators._passwordInjector._passwords = {
       'example.com': {
         user1: 'password1',
         user2: 'password2'
