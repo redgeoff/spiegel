@@ -1,11 +1,21 @@
 'use strict'
 
 const sporks = require('sporks')
+const Process = require('./process')
 
-class ChangeListeners {
-  constructor (spiegel) {
-    this._spiegel = spiegel
-    this._slouch = spiegel._slouch
+class ChangeListeners extends Process {
+  constructor (spiegel, opts) {
+    super(
+      spiegel,
+      {
+        passwords: opts && opts.passwords ? opts.passwords : undefined,
+        retryAfterSeconds: opts && opts.retryAfterSeconds ? opts.retryAfterSeconds : undefined,
+        maxConcurrentProcesses:
+          opts && opts.maxConcurrentProcesses ? opts.maxConcurrentProcesses : undefined,
+        stalledAfterSeconds: opts && opts.stalledAfterSeconds ? opts.stalledAfterSeconds : undefined
+      },
+      'change_listener'
+    )
 
     // Separate namespace for change listener ids
     this._idPrefix = 'spiegel_cl_'
@@ -71,12 +81,14 @@ class ChangeListeners {
   }
 
   async _createViews () {
+    await super._createViews()
     await this._createDirtyListenersView()
     await this._createCleanOrLockedListenersByNameView()
     await this._createListenersByDBNameView()
   }
 
   async _destroyViews () {
+    await super._destroyViews()
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_listeners')
     await this._slouch.doc.getAndDestroy(
       this._spiegel._dbName,
@@ -136,10 +148,6 @@ class ChangeListeners {
 
   _updateLastSeq (id, lastSeq) {
     return this._slouch.doc.getMergeUpsert(this._spiegel._dbName, { _id: id, last_seq: lastSeq })
-  }
-
-  _update (listener) {
-    return this._slouch.doc.update(this._spiegel._dbName, listener)
   }
 
   _cleanAndUnlock (listener, lastSeq) {
@@ -215,11 +223,6 @@ class ChangeListeners {
     return lists
   }
 
-  // Useful for determining the last time a listener was used
-  _setUpdatedAt (listener) {
-    listener.updated_at = new Date().toISOString()
-  }
-
   _dirtyOrCreate (listeners) {
     listeners.forEach(listener => {
       // Existing listener?
@@ -290,9 +293,6 @@ class ChangeListeners {
       return this.dirtyIfCleanOrLocked(conflictedDBNames)
     }
   }
-
-  // TODO:
-  // onChanges () {}
 }
 
 module.exports = ChangeListeners
