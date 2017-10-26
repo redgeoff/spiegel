@@ -12,21 +12,21 @@ describe('on-changes', () => {
     await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
       _id: '1',
       type: 'on_change',
-      reg_ex: 'foo'
+      db_name: 'foo'
     })
     docIds.push('1')
 
     await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
       _id: '2',
       type: 'on_change',
-      reg_ex: '^test_db1$'
+      db_name: '^test_db1$'
     })
     docIds.push('2')
 
     await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
       _id: '3',
       type: 'on_change',
-      reg_ex: 'test_db_([^_])*'
+      db_name: 'test_db_([^_])*'
     })
     docIds.push('3')
   }
@@ -107,12 +107,12 @@ describe('on-changes', () => {
   //     {
   //       _id: '1',
   //       type: 'on_change',
-  //       reg_ex: 'test_db1'
+  //       db_name: 'test_db1'
   //     },
   //     {
   //       _id: '1',
   //       type: 'on_change',
-  //       reg_ex: 'test_db1'
+  //       db_name: 'test_db1'
   //     }
   //   ]
   //   let before = new Date()
