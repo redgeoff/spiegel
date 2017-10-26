@@ -12,7 +12,6 @@ class Process extends events.EventEmitter {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
 
-    // "replicator" or "change_listener"
     this._type = type
 
     this._throttler = new Throttler(
@@ -168,6 +167,10 @@ class Process extends events.EventEmitter {
         throw err
       }
     }
+  }
+
+  _process () {
+    // Abstract method to be implemented by derived class
   }
 
   async _processAndUnlockIfError (item) {

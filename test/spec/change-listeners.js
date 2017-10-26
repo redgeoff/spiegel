@@ -35,7 +35,7 @@ describe('change-listeners', () => {
   const dirtyListener = async () => {
     await listeners.dirtyIfClean('test_db1')
     listenerIds[listeners._toId('test_db1')] = true
-    return listeners._get('test_db1')
+    return listeners._getByDBName('test_db1')
   }
 
   it('should dirty when missing', async () => {
@@ -58,7 +58,7 @@ describe('change-listeners', () => {
     await listeners.dirtyIfClean('test_db1')
 
     // Make sure it is now dirty and the lastSeq was preserved
-    listener = await listeners._get('test_db1')
+    listener = await listeners._getByDBName('test_db1')
     listener.dirty.should.eql(true)
     listener.last_seq.should.eql(lastSeq)
   })
@@ -88,7 +88,7 @@ describe('change-listeners', () => {
     let lockedListener = await listeners.lock(listener)
 
     // Get the saved listener and compare
-    let savedListener = await listeners._get('test_db1')
+    let savedListener = await listeners._getByDBName('test_db1')
     savedListener.should.eql(lockedListener)
 
     // The rev should have changed
@@ -109,7 +109,7 @@ describe('change-listeners', () => {
     listener.dirty = true
     await testUtils.spiegel._slouch.doc.update(testUtils.spiegel._dbName, listener)
 
-    let savedListener1 = await listeners._get(listener.db_name)
+    let savedListener1 = await listeners._getByDBName(listener.db_name)
 
     let err = null
     try {
@@ -121,7 +121,7 @@ describe('change-listeners', () => {
     testUtils.spiegel._slouch.doc.isConflictError(err).should.eql(true)
 
     // Get the saved listener and make sure nothing changed
-    let savedListener2 = await listeners._get(listener.db_name)
+    let savedListener2 = await listeners._getByDBName(listener.db_name)
     savedListener2.should.eql(savedListener1)
   })
 
@@ -137,7 +137,7 @@ describe('change-listeners', () => {
     await listeners._cleanAndUnlock(listener, lastSeq)
 
     // Make sure it is now clean and the lastSeq was set
-    listener = await listeners._get('test_db1')
+    listener = await listeners._getByDBName('test_db1')
     listener.dirty.should.eql(false)
     listener.last_seq.should.eql(lastSeq)
     testUtils.shouldEqual(listener.locked_at, undefined)
@@ -152,7 +152,7 @@ describe('change-listeners', () => {
     await listeners.cleanAndUnlockOrUpdateLastSeq(listener, lastSeq)
 
     // Make sure it is now clean and the lastSeq was set
-    listener = await listeners._get('test_db1')
+    listener = await listeners._getByDBName('test_db1')
     listener.dirty.should.eql(false)
     listener.last_seq.should.eql(lastSeq)
   })
@@ -169,7 +169,7 @@ describe('change-listeners', () => {
     await listeners.cleanAndUnlockOrUpdateLastSeq(listener, lastSeq)
 
     // Make sure it is still dirty, but the lastSeq was updated
-    listener = await listeners._get('test_db1')
+    listener = await listeners._getByDBName('test_db1')
     listener.dirty.should.eql(true)
     listener.last_seq.should.eql(lastSeq)
   })

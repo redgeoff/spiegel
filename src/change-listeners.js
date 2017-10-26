@@ -97,7 +97,7 @@ class ChangeListeners {
     return this._idPrefix + dbName
   }
 
-  _get (dbName) {
+  _getByDBName (dbName) {
     return this._slouch.doc.getIgnoreMissing(this._spiegel._dbName, this._toId(dbName))
   }
 
@@ -108,7 +108,7 @@ class ChangeListeners {
 
   // TODO: remove as now handled by dirtyIfCleanOrLocked?
   async dirtyIfClean (dbName) {
-    let listener = await this._get(dbName)
+    let listener = await this._getByDBName(dbName)
 
     if (!listener) {
       // doc missing?
