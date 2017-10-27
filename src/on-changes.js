@@ -25,6 +25,8 @@ class OnChanges extends events.EventEmitter {
 
     // A promise that resolves once the PouchDB data has loaded
     this._loaded = sporks.once(this, 'load')
+
+    this._running = false
   }
 
   _createOnChangesView () {
@@ -54,12 +56,23 @@ class OnChanges extends events.EventEmitter {
     return this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/on_changes')
   }
 
-  create () {
+  install () {
     return this._createViews()
   }
 
-  destroy () {
+  uninstall () {
     return this._destroyViews()
+  }
+
+  _create (onChange) {
+    onChange.type = 'on_change'
+    return this._slouch.doc.create(this._spiegel._dbName, onChange)
+  }
+
+  _getAndDestroy (id) {
+    // We need to use markAsDestroyed() as PouchDB can only sync deletions when they are done using
+    // the _deleted flag
+    return this._slouch.doc.markAsDestroyed(this._spiegel._dbName, id)
   }
 
   _setDoc (doc) {
@@ -90,7 +103,12 @@ class OnChanges extends events.EventEmitter {
     })
   }
 
+  isRunning () {
+    return this._running
+  }
+
   start () {
+    this._running = true
     this._from = this._db.replicate
       .from(utils.couchDBURL() + '/' + this._spiegel._dbName, {
         live: true,
@@ -102,6 +120,8 @@ class OnChanges extends events.EventEmitter {
         this._onPaused()
       })
       .on('error', err => {
+        // TODO: should an error be emitted so that spiegel layer can listen for it and also emit
+        // it?
         log.error(err)
       })
       .on('change', change => {
@@ -112,10 +132,11 @@ class OnChanges extends events.EventEmitter {
     return this._loaded
   }
 
-  stop () {
+  async stop () {
     let completed = sporks.once(this._from, 'complete')
     this._from.cancel()
-    return completed
+    await completed
+    this._running = false
   }
 
   async all () {
@@ -127,17 +148,17 @@ class OnChanges extends events.EventEmitter {
 
   async matchWithDBNames (dbNames) {
     // TODO: if we want to speed up this function even more, we can instead build a single reg ex,
-    // e.g. /(on-change-reg-ex-1)|(on-change-reg-ex-1)|(...)/ and do a single comparison. This most
-    // likely will have little impact on the performance of the UpdateListener however as the main
-    // bottleneck will probably be in the UpdateListener communicating with CouchDB, i.e. dirtying
-    // replicators and change liseteners.
+    // e.g. /(on-change-db-name-1)|(on-change-db-name-1)|(...)/ and do a single comparison. This
+    // most likely will have little impact on the performance of the UpdateListener however as the
+    // main bottleneck will probably be in the UpdateListener communicating with CouchDB, i.e.
+    // dirtying replicators and change liseteners.
 
     let docs = await this.all()
 
     let matchingDBNames = {}
 
     sporks.each(docs, doc => {
-      let re = new RegExp(doc.reg_ex)
+      let re = new RegExp(doc.db_name)
       dbNames.forEach(dbName => {
         // Does the name match the regular expression?
         if (re.test(dbName)) {
@@ -148,6 +169,39 @@ class OnChanges extends events.EventEmitter {
     })
 
     return sporks.keys(matchingDBNames)
+  }
+
+  async getMatchingOnChanges (dbName, doc) {
+    let onChanges = await this.all()
+
+    let matchingOnChanges = {}
+
+    sporks.each(onChanges, onChange => {
+      // Does the DB name match?
+      let dbNameRegExp = new RegExp(onChange.db_name)
+      if (dbNameRegExp.test(dbName)) {
+        let ok = true
+
+        // Was an if condition specified?
+        if (onChange.if) {
+          // Loop for each attribute
+          sporks.each(onChange.if, (reStr, name) => {
+            let re = new RegExp(reStr)
+
+            // Condition failed?
+            if (!re.test(doc[name])) {
+              ok = false
+            }
+          })
+        }
+
+        if (ok) {
+          matchingOnChanges[onChange._id] = onChange
+        }
+      }
+    })
+
+    return matchingOnChanges
   }
 }
 

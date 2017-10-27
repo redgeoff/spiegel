@@ -13,11 +13,11 @@ describe('spiegel', function () {
   testUtils.silenceLog()
 
   before(() => {
-    return testUtils.spiegel.create()
+    return testUtils.spiegel.install()
   })
 
   after(() => {
-    return testUtils.spiegel.destroy()
+    return testUtils.spiegel.uninstall()
   })
 
   require('./spec')

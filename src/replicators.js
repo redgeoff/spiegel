@@ -1,35 +1,23 @@
 'use strict'
 
-const Throttler = require('squadron').Throttler
 const log = require('./log')
 const sporks = require('sporks')
-const url = require('url')
-const events = require('events')
+const Process = require('./process')
+const PasswordInjector = require('./password-injector')
 
-class Replicators extends events.EventEmitter {
+class Replicators extends Process {
   constructor (spiegel, opts) {
-    super()
-
-    this._spiegel = spiegel
-    this._slouch = spiegel._slouch
-
-    this._throttler = new Throttler(
-      opts && opts.maxConcurrentReplicatorProcesses
-        ? opts.maxConcurrentReplicatorProcesses
-        : undefined
+    super(
+      spiegel,
+      {
+        passwords: opts && opts.passwords ? opts.passwords : undefined,
+        retryAfterSeconds: opts && opts.retryAfterSeconds ? opts.retryAfterSeconds : undefined,
+        maxConcurrentProcesses:
+          opts && opts.maxConcurrentProcesses ? opts.maxConcurrentProcesses : undefined,
+        stalledAfterSeconds: opts && opts.stalledAfterSeconds ? opts.stalledAfterSeconds : undefined
+      },
+      'replicator'
     )
-
-    this._passwords = opts && opts.replicatorPasswords ? opts.replicatorPasswords : {}
-
-    // WARNING: retryAfterSeconds must be less than the maximum time it takes to perform the
-    // replication or else there can be concurrent replications for the same DB that will backup the
-    // replication queue and continuously run
-    this._retryAfterSeconds = opts && opts.retryAfterSeconds ? opts.retryAfterSeconds : 10800
-
-    // It will take up to roughly stalledAfterSeconds + retryAfterSeconds before a replication is
-    // retried. Be careful not make stalledAfterSeconds too low though or else you'll waste a lot of
-    // CPU cycles just checking for stalled processes.
-    this._stalledAfterSeconds = opts && opts.stalledAfterSeconds ? opts.stalledAfterSeconds : 600
 
     // "continuous" is added here as we do not want the continuous parameter to be passed to CouchDB
     // or else the replication will block indefinitely. "cancel" is needed as it does not apply and
@@ -42,6 +30,8 @@ class Replicators extends events.EventEmitter {
       'continuous',
       'cancel'
     ]
+
+    this._passwordInjector = new PasswordInjector(this._passwords)
   }
 
   _createDirtyReplicatorsView () {
@@ -74,23 +64,6 @@ class Replicators extends events.EventEmitter {
             'if (i !== -1) {',
             'emit(doc.source.substr(i + 1), null);',
             '}',
-            '}',
-            '}'
-          ].join(' ')
-        }
-      }
-    })
-  }
-
-  _createDirtyAndUnLockedReplicatorsView () {
-    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
-      _id: '_design/dirty_and_unlocked_replicators',
-      views: {
-        dirty_and_unlocked_replicators: {
-          map: [
-            'function(doc) {',
-            'if (doc.type === "replicator" && doc.dirty && !doc.locked_at) {',
-            'emit(doc._id, null);',
             '}',
             '}'
           ].join(' ')
@@ -134,57 +107,31 @@ class Replicators extends events.EventEmitter {
     })
   }
 
-  _createLockedReplicatorsView () {
-    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
-      _id: '_design/locked_replicators',
-      views: {
-        locked_replicators: {
-          map: [
-            'function(doc) {',
-            'if (doc.type === "replicator" && doc.locked_at) {',
-            'emit(doc._id, null);',
-            '}',
-            '}'
-          ].join(' ')
-        }
-      }
-    })
-  }
-
   async _createViews () {
+    await super._createViews()
     await this._createDirtyReplicatorsView()
     await this._createCleanOrLockedReplicatorsByDBNameView()
-    await this._createDirtyAndUnLockedReplicatorsView()
     await this._createCleanReplicatorsView()
     await this._createReplicatorsByDBNameView()
-    await this._createLockedReplicatorsView()
   }
 
-  create () {
+  install () {
     return this._createViews()
   }
 
   async _destroyViews () {
+    await super._destroyViews()
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_replicators')
     await this._slouch.doc.getAndDestroy(
       this._spiegel._dbName,
       '_design/clean_or_locked_replicators_by_db_name'
     )
-    await this._slouch.doc.getAndDestroy(
-      this._spiegel._dbName,
-      '_design/dirty_and_unlocked_replicators'
-    )
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/clean_replicators')
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/replicators_by_db_name')
-    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/locked_replicators')
   }
 
-  destroy () {
+  uninstall () {
     return this._destroyViews()
-  }
-
-  _get (id) {
-    return this._slouch.doc.get(this._spiegel._dbName, id)
   }
 
   async _getCleanOrLocked (dbNames) {
@@ -196,11 +143,6 @@ class Replicators extends events.EventEmitter {
     )
 
     return response.rows.map(row => row.doc)
-  }
-
-  // Useful for determining the last time a replicator was used
-  _setUpdatedAt (listener) {
-    listener.updated_at = new Date().toISOString()
   }
 
   _dirty (replicators) {
@@ -270,88 +212,6 @@ class Replicators extends events.EventEmitter {
     }
   }
 
-  // TODO: refactor and move to Slouch?
-  async _getLastSeq () {
-    let lastSeq = null
-    await this._changes({
-      limit: 1,
-      descending: true,
-      filter: '_view',
-      view: 'dirty_and_unlocked_replicators/dirty_and_unlocked_replicators'
-    }).each(change => {
-      lastSeq = change.seq
-    })
-    return lastSeq
-  }
-
-  _getMergeUpsert (replicator) {
-    return this._slouch.doc.getMergeUpsert(this._spiegel._dbName, replicator)
-  }
-
-  _update (replicator) {
-    return this._slouch.doc.update(this._spiegel._dbName, replicator)
-  }
-
-  async _updateReplicator (replicator, getMergeUpsert) {
-    let lockedReplicator = sporks.clone(replicator)
-
-    this._setUpdatedAt(lockedReplicator)
-
-    let response = null
-
-    if (getMergeUpsert) {
-      response = await this._getMergeUpsert(lockedReplicator)
-    } else {
-      response = await this._update(lockedReplicator)
-    }
-
-    lockedReplicator._rev = response._rev
-    return lockedReplicator
-  }
-
-  async _lock (replicator) {
-    // We use an update instead of an upsert as we want there to be a conflict as we only want one
-    // process to hold the lock at any given time
-    let lockedReplicator = sporks.clone(replicator)
-    lockedReplicator.locked_at = new Date().toISOString()
-    return this._updateReplicator(lockedReplicator, false)
-  }
-
-  async _upsertUnlock (replicator) {
-    // Use new doc with just the locked_at cleared as we only want to change the locked status
-    let rep = { _id: replicator._id, locked_at: null }
-    return this._updateReplicator(rep, true)
-  }
-
-  async _unlockAndClean (replicator) {
-    // We do not upsert as we want the clean to fail if the replicator has been updated
-    replicator.dirty = false
-    replicator.locked_at = null
-    return this._updateReplicator(replicator, false)
-  }
-
-  async _unlock (replicator) {
-    // We do not upsert as we want the unlock to fail if the replicator has been updated
-    replicator.locked_at = null
-    return this._updateReplicator(replicator, false)
-  }
-
-  async _lockAndThrowIfErrorAndNotConflict (replicator) {
-    try {
-      let rep = await this._lock(replicator)
-
-      // Set the updated rev as we need to be able to unlock the replicator later
-      replicator._rev = rep._rev
-    } catch (err) {
-      if (this._slouch.doc.isConflictError(err)) {
-        log.trace('Ignoring common conflict', err)
-        return true
-      } else {
-        throw err
-      }
-    }
-  }
-
   _toCouchDBReplicationParams (params) {
     // We choose to blacklist as oppossed to whitelist so that any future CouchDB replication
     // parameters will work without Spiegel being updated
@@ -366,19 +226,7 @@ class Replicators extends events.EventEmitter {
   }
 
   _addPassword (urlString) {
-    if (this._passwords) {
-      let parts = url.parse(urlString)
-
-      // Was a password defined?
-      if (this._passwords[parts.hostname] && this._passwords[parts.hostname][parts.auth]) {
-        let password = this._passwords[parts.hostname][parts.auth]
-        return (
-          parts.protocol + '//' + parts.auth + ':' + password + '@' + parts.host + parts.pathname
-        )
-      }
-    }
-
-    return urlString
+    return this._passwordInjector.addPassword(urlString)
   }
 
   async _replicate (replicator) {
@@ -396,188 +244,8 @@ class Replicators extends events.EventEmitter {
     log.info('Finished replication from', replicator.source, 'to', replicator.target)
   }
 
-  async _replicateAndUnlockIfError (replicator) {
-    try {
-      await this._replicate(replicator)
-    } catch (err) {
-      // If an error is encountered when replicating then leave the replicator dirty, but unlock it
-      // so that the replication can be tried again
-      await this._upsertUnlock(replicator)
-      throw err
-    }
-  }
-
-  async _unlockAndCleanIfConflictJustUnlock (replicator) {
-    try {
-      await this._unlockAndClean(replicator)
-    } catch (err) {
-      if (this._slouch.doc.isConflictError(err)) {
-        // A conflict can occur because an UpdateListener may have re-dirtied this replicator. When
-        // this happens we need to leave the replicator dirty and unlock it so that the replication
-        // can be retried
-        log.trace('Ignoring common conflict', err)
-        await this._upsertUnlock(replicator)
-      } else {
-        throw err
-      }
-    }
-  }
-
-  async _lockReplicateUnlock (replicator) {
-    // Lock and if conflict then ignore error as conflicts are expected when another replicator
-    // process locks the same replicator
-    let conflict = await this._lockAndThrowIfErrorAndNotConflict(replicator)
-    if (!conflict) {
-      // Attempt to replicate and if there is an error then it is thrown and logged below
-      await this._replicateAndUnlockIfError(replicator)
-
-      // Attempt to unlock and clean the replicator. If there is a conflict, which can occur when
-      // an UpdateListener re-dirties the replicator then just unlock the replicator so that it
-      // can be retried
-      await this._unlockAndCleanIfConflictJustUnlock(replicator)
-    }
-  }
-
-  async _onError (err) {
-    log.error(err)
-
-    // The event name cannot be "error" or else it will conflict with other error handler logic
-    this.emit('err', err)
-  }
-
-  async _lockReplicateUnlockLogError (replicator) {
-    try {
-      await this._lockReplicateUnlock(replicator)
-    } catch (err) {
-      // Swallow the error as the replication will be retried. We want to just log the error and
-      // then swallow it so that the caller continues processing the replications
-      this._onError(err)
-    }
-  }
-
-  async _replicateAllDirtyAndUnlocked () {
-    let iterator = this._slouch.db.view(
-      this._spiegel._dbName,
-      '_design/dirty_and_unlocked_replicators',
-      'dirty_and_unlocked_replicators',
-      { include_docs: true }
-    )
-
-    await iterator.each(item => {
-      return this._lockReplicateUnlockLogError(item.doc)
-    }, this._throttler)
-  }
-
-  _changes (params) {
-    return this._slouch.db.changes(this._spiegel._dbName, params)
-  }
-
-  // Note: the changes feed with respect to the dirty_and_unlocked_replicators view will only get
-  // changes for unlocked replicators. i.e. a replicator can be re-dirtied many times while it is
-  // replicating, but it will only be scheduled for replication (and scheduled once) when the
-  // replicator is unlocked
-  async _listen (lastSeq) {
-    this._iterator = this._changes({
-      feed: 'continuous',
-      heartbeat: true,
-      since: lastSeq || undefined,
-      filter: '_view',
-      view: 'dirty_and_unlocked_replicators/dirty_and_unlocked_replicators',
-      include_docs: true
-    })
-
-    this._iterator.on('error', err => {
-      // Unexpected error. Errors should be handled at the Slouch layer and connections should be
-      // persistent
-      this._onError(err)
-    })
-
-    this._iterator.each(replicator => {
-      return this._lockReplicateUnlockLogError(replicator.doc)
-    }, this._throttler)
-  }
-
-  async start () {
-    // Get the last seq so that we can use this as the starting point when listening for changes
-    let lastSeq = await this._getLastSeq()
-
-    // Get all dirty replicators and then perform the replications concurrently
-    await this._replicateAllDirtyAndUnlocked()
-
-    // Listen for changes. We don't await here as the listening is a continuous operation
-    this._listen(lastSeq)
-
-    this._startUnstaller()
-  }
-
-  async stop () {
-    this._stopUnstaller()
-
-    if (this._iterator) {
-      this._iterator.abort()
-    }
-
-    if (this._throttler) {
-      await this._throttler.allDone()
-    }
-  }
-
-  _lockedReplicators () {
-    return this._slouch.db.view(
-      this._spiegel._dbName,
-      '_design/locked_replicators',
-      'locked_replicators',
-      { include_docs: true }
-    )
-  }
-
-  _hasStalled (replicator) {
-    // A replicator can stall if a replication is started and then the associated replicator process
-    // crashes or is terminated abruptly.
-    return (
-      new Date().getTime() - new Date(replicator.locked_at).getTime() >
-      this._retryAfterSeconds * 1000
-    )
-  }
-
-  async _unlockStalledReplicators () {
-    // Note: we cannot use a view to automatically track stalled processes as views with time
-    // sensitive data like the current timestamp don't work as they are not refreshed as the
-    // timestamp changes and if they were you'd loose the performance benefit of a view. Therefore,
-    // we must iterate through all locked replicators. Fortunately, there should be a relatively
-    // small set of locked replicators at any given time.
-    let iterator = this._lockedReplicators()
-    await iterator.each(async item => {
-      if (this._hasStalled(item.doc)) {
-        try {
-          await this._unlock(item.doc)
-        } catch (err) {
-          // We can expect to get a conflict if two replicator routines attempt to unlock the same
-          // stalled replicator. We also want to prevent a replicator process from unlocking a
-          // replicator, locking for a new replication and having another replicator process unlock
-          // the locked replicator.
-          if (!this._slouch.doc.isConflictError(err)) {
-            // Unexpected error
-            throw err
-          }
-        }
-      }
-    })
-  }
-
-  _startUnstaller () {
-    this._unstaller = setInterval(async () => {
-      try {
-        await this._unlockStalledReplicators()
-      } catch (err) {
-        // Unknown error
-        this._onError(err)
-      }
-    }, this._stalledAfterSeconds * 1000)
-  }
-
-  _stopUnstaller () {
-    clearInterval(this._unstaller)
+  async _process (item) {
+    await this._replicate(item)
   }
 }
 

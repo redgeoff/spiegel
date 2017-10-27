@@ -1,14 +1,30 @@
 'use strict'
 
 const sporks = require('sporks')
+const Process = require('./process')
+const ChangeProcessor = require('./change-processor')
 
-class ChangeListeners {
-  constructor (spiegel) {
-    this._spiegel = spiegel
-    this._slouch = spiegel._slouch
+class ChangeListeners extends Process {
+  constructor (spiegel, opts) {
+    super(
+      spiegel,
+      {
+        passwords: opts && opts.passwords ? opts.passwords : undefined,
+        retryAfterSeconds: opts && opts.retryAfterSeconds ? opts.retryAfterSeconds : undefined,
+        maxConcurrentProcesses:
+          opts && opts.maxConcurrentProcesses ? opts.maxConcurrentProcesses : undefined,
+        stalledAfterSeconds: opts && opts.stalledAfterSeconds ? opts.stalledAfterSeconds : undefined
+      },
+      'change_listener'
+    )
+
+    // The max number of changes that will be processed in a batch
+    this._batchSize = opts && opts.batchSize ? opts.batchSize : 100
 
     // Separate namespace for change listener ids
     this._idPrefix = 'spiegel_cl_'
+
+    this._changeProcessor = new ChangeProcessor(spiegel, opts)
   }
 
   // TODO: still needed?
@@ -71,12 +87,14 @@ class ChangeListeners {
   }
 
   async _createViews () {
+    await super._createViews()
     await this._createDirtyListenersView()
     await this._createCleanOrLockedListenersByNameView()
     await this._createListenersByDBNameView()
   }
 
   async _destroyViews () {
+    await super._destroyViews()
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_listeners')
     await this._slouch.doc.getAndDestroy(
       this._spiegel._dbName,
@@ -85,19 +103,20 @@ class ChangeListeners {
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/listeners_by_db_name')
   }
 
-  create () {
+  install () {
     return this._createViews()
   }
 
-  destroy () {
+  uninstall () {
     return this._destroyViews()
   }
 
+  // Prefix so that we can create a listener even when the id is reserved, e.g. _users
   _toId (dbName) {
     return this._idPrefix + dbName
   }
 
-  _get (dbName) {
+  _getByDBName (dbName) {
     return this._slouch.doc.getIgnoreMissing(this._spiegel._dbName, this._toId(dbName))
   }
 
@@ -108,12 +127,11 @@ class ChangeListeners {
 
   // TODO: remove as now handled by dirtyIfCleanOrLocked?
   async dirtyIfClean (dbName) {
-    let listener = await this._get(dbName)
+    let listener = await this._getByDBName(dbName)
 
     if (!listener) {
       // doc missing?
       listener = {
-        // Prefix so that we can create a listener even when the id is reserved, e.g. _users
         _id: this._toId(dbName),
 
         db_name: dbName,
@@ -135,13 +153,12 @@ class ChangeListeners {
   }
 
   _updateLastSeq (id, lastSeq) {
+    // Use getMergeUpsert as we want the lastSeq to be stored even if there is a conflict from say
+    // another process dirtying this ChangeListener
     return this._slouch.doc.getMergeUpsert(this._spiegel._dbName, { _id: id, last_seq: lastSeq })
   }
 
-  _update (listener) {
-    return this._slouch.doc.update(this._spiegel._dbName, listener)
-  }
-
+  // TODO: remove? Isn't this now handled by process layer?
   _cleanAndUnlock (listener, lastSeq) {
     // Update listener and set last_seq and dirty=false. We must not ignore any errors from a
     // conflict as we want the routine that marks the monitor as dirty to always win so that we
@@ -155,6 +172,7 @@ class ChangeListeners {
     return this._update(listener)
   }
 
+  // TODO: remove? Isn't this now handled by process layer?
   async cleanAndUnlockOrUpdateLastSeq (listener, lastSeq) {
     try {
       await this._cleanAndUnlock(listener, lastSeq)
@@ -215,9 +233,11 @@ class ChangeListeners {
     return lists
   }
 
-  // Useful for determining the last time a listener was used
-  _setUpdatedAt (listener) {
-    listener.updated_at = new Date().toISOString()
+  _create (listener) {
+    listener._id = this._toId(listener.db_name)
+    listener.type = 'change_listener'
+    this._setUpdatedAt(listener)
+    return this._slouch.doc.create(this._spiegel._dbName, listener)
   }
 
   _dirtyOrCreate (listeners) {
@@ -227,7 +247,6 @@ class ChangeListeners {
         listener.dirty = true
         this._setUpdatedAt(listener)
       } else {
-        // Prefix so that we can create a listener even when the id is reserved, e.g. _users
         listener._id = this._toId(listener.db_name)
         listener.type = 'change_listener'
         listener.dirty = true
@@ -291,8 +310,77 @@ class ChangeListeners {
     }
   }
 
-  // TODO:
-  // onChanges () {}
+  _processChange (change, dbName) {
+    return this._changeProcessor.process(change, dbName)
+  }
+
+  _processChangeFactory (change, dbName) {
+    return () => {
+      return this._processChange(change, dbName)
+    }
+  }
+
+  _slouchChangesArray (dbName, opts) {
+    return this._slouch.db.changesArray(dbName, opts)
+  }
+
+  _changesArray (dbName, opts) {
+    return this._slouchChangesArray(dbName, opts)
+  }
+
+  _changes (listener) {
+    return this._changesArray(listener.db_name, {
+      since: listener.last_seq || undefined,
+      include_docs: true,
+      limit: this._batchSize
+    })
+  }
+
+  async _processChanges (listener, changes) {
+    let chain = Promise.resolve()
+
+    // Sequentially chain promises so that changes are processed in order and so that we don't
+    // dominate the mem
+    changes.results.forEach(change => {
+      chain = chain.then(this._processChangeFactory(change, listener.db_name))
+    })
+
+    // Wait for all the changes to be processed
+    await chain
+  }
+
+  _moreBatches (changes) {
+    return !!changes.pending
+  }
+
+  async _processBatchOfChanges (listener) {
+    let changes = await this._changes(listener)
+
+    await this._processChanges(listener, changes)
+
+    // Save the lastSeq as we want our next batch to resume from where we left off
+    await this._updateLastSeq(listener._id, changes.last_seq)
+
+    // Are there more batches to process? If there are then we will leave this ChangeListener
+    // dirty
+    return this._moreBatches(changes)
+  }
+
+  async _processBatchOfChangesLogError (listener) {
+    try {
+      await this._processBatchOfChanges(listener)
+    } catch (err) {
+      // Log and emit error
+      this._onError(err)
+
+      // Leave the ChangeListener as dirty so that it will be retried
+      return true
+    }
+  }
+
+  _process (listener) {
+    return this._processBatchOfChangesLogError(listener)
+  }
 }
 
 module.exports = ChangeListeners

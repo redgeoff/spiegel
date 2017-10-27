@@ -9,24 +9,22 @@ describe('on-changes', () => {
   let docIds = []
 
   const createOnChanges = async () => {
-    await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
+    let onChangesInit = new OnChanges(testUtils.spiegel)
+    await onChangesInit._create({
       _id: '1',
-      type: 'on_change',
-      reg_ex: 'foo'
+      db_name: 'foo'
     })
     docIds.push('1')
 
-    await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
+    await onChangesInit._create({
       _id: '2',
-      type: 'on_change',
-      reg_ex: '^test_db1$'
+      db_name: '^test_db1$'
     })
     docIds.push('2')
 
-    await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
+    await onChangesInit._create({
       _id: '3',
-      type: 'on_change',
-      reg_ex: 'test_db_([^_])*'
+      db_name: 'test_db_([^_])*'
     })
     docIds.push('3')
   }
@@ -107,12 +105,12 @@ describe('on-changes', () => {
   //     {
   //       _id: '1',
   //       type: 'on_change',
-  //       reg_ex: 'test_db1'
+  //       db_name: 'test_db1'
   //     },
   //     {
   //       _id: '1',
   //       type: 'on_change',
-  //       reg_ex: 'test_db1'
+  //       db_name: 'test_db1'
   //     }
   //   ]
   //   let before = new Date()
@@ -122,4 +120,81 @@ describe('on-changes', () => {
   //   let after = new Date()
   //   console.log('took', after.getTime() - before.getTime(), 'ms')
   // })
+
+  it('should get matching on-changes', async () => {
+    // Fake all
+    onChanges.all = async () => {
+      return {
+        '0': {
+          _id: '0',
+          db_name: '^fo'
+        },
+
+        '1': {
+          _id: '1',
+          db_name: 'foo',
+          if: {
+            _id: 'some-id'
+          }
+        },
+
+        '2': {
+          _id: '2',
+          db_name: 'foo',
+          if: {
+            type: 'work',
+            priority: 'medium|high'
+          }
+        },
+
+        '3': {
+          _id: '3',
+          db_name: 'bar'
+        }
+      }
+    }
+
+    let matchingOnChanges = await onChanges.getMatchingOnChanges('foo', {
+      _id: 'some-id',
+      type: 'work',
+      priority: 'high'
+    })
+    matchingOnChanges.should.eql({
+      '0': {
+        _id: '0',
+        db_name: '^fo'
+      },
+
+      '1': {
+        _id: '1',
+        db_name: 'foo',
+        if: {
+          _id: 'some-id'
+        }
+      },
+
+      '2': {
+        _id: '2',
+        db_name: 'foo',
+        if: {
+          type: 'work',
+          priority: 'medium|high'
+        }
+      }
+    })
+
+    matchingOnChanges = await onChanges.getMatchingOnChanges('foo', {
+      type: 'work'
+    })
+    sporks.length(matchingOnChanges).should.eql(1)
+    matchingOnChanges['0']._id.should.eql('0')
+
+    matchingOnChanges = await onChanges.getMatchingOnChanges('bar', {
+      _id: 'some-id',
+      type: 'work',
+      priority: 'high'
+    })
+    sporks.length(matchingOnChanges).should.eql(1)
+    matchingOnChanges['3']._id.should.eql('3')
+  })
 })
