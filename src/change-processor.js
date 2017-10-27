@@ -35,7 +35,7 @@ class ChangeProcessor {
     // extra processing when similar changes occur back to back
     this._debouncer = new Debouncer()
 
-    this._request = sporks.promisify(request)
+    this._req = sporks.promisify(request)
 
     this._passwordInjector = new PasswordInjector(opts && opts.passwords)
   }
@@ -63,38 +63,65 @@ class ChangeProcessor {
     return params
   }
 
-  _makeDebouncedOrRegularRequest (change, onChange, dbName) {
-    let params = this._buildParams(change, onChange, dbName)
+  _getMethod (onChange) {
+    return onChange.method ? onChange.method.toUpperCase() : 'GET'
+  }
 
-    let method = onChange.method ? onChange.method.toUpperCase() : 'GET'
+  _addPassword (url) {
+    return this._passwordInjector.addPassword(url)
+  }
 
-    let opts = {
-      url: this._passwordInjector.addPassword(onChange.url),
-      method: method
-    }
-
+  _setParams (method, opts, params) {
     // Whether we use "qs" or "json" depends on the method
     if (method === 'DELETE' || method === 'GET') {
       opts.qs = params
     } else {
       opts.json = params
     }
+  }
 
+  _debounce (promiseFactory, resource) {
+    return this._debouncer.run(promiseFactory(), resource)
+  }
+
+  _request () {
+    return this._req.apply(this._req, arguments)
+  }
+
+  _makeDebouncedRequest (onChange, params, opts) {
+    // The resource depends on the URL and the params passed to the API
+    let resource = onChange.url + JSON.stringify(params)
+    return this._debounce(() => {
+      return this._request(opts)
+    }, resource)
+  }
+
+  _makeDebouncedOrRegularRequest (onChange, params, opts) {
     if (onChange.debounced) {
-      // The resource depends on the URL and the params passed to the API
-      let resource = onChange.url + JSON.stringify(params)
-
-      return this._debouncer.run(() => {
-        return this._request(opts)
-      }, resource)
+      return this._makeDebouncedRequest(onChange, params, opts)
     } else {
       return this._request(opts)
     }
   }
 
+  _buildAndMakeRequest (change, onChange, dbName) {
+    let params = this._buildParams(change, onChange, dbName)
+
+    let method = this._getMethod(onChange)
+
+    let opts = {
+      url: this._addPassword(onChange.url),
+      method: method
+    }
+
+    this._setParams(method, opts, params)
+
+    return this._makeDebouncedOrRegularRequest(onChange, params, opts)
+  }
+
   async _makeRequest (change, onChange, dbName) {
     // We don't await here as we only await below if the "block" option is being used
-    let req = this._makeDebouncedOrRegularRequest(change, onChange, dbName)
+    let req = this._buildAndMakeRequest(change, onChange, dbName)
 
     // Should we block until the next request?
     if (onChange.block) {
