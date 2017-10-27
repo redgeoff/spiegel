@@ -7,20 +7,22 @@ const sporks = require('sporks')
 describe('change-listeners', () => {
   let listeners = null
   let listenerIds = null
-  let upserts = null
+  let calls = null
 
   const spy = () => {
-    listeners._upsert = function (listener) {
-      upserts.push(listener)
-      return ChangeListeners.prototype._upsert.apply(this, arguments)
-    }
+    calls = []
+    testUtils.spy(listeners, ['_upsert', '_changesArray'], calls)
+  }
+
+  const fakeSlouchChangesArray = () => {
+    listeners._slouchChangesArray = sporks.resolveFactory()
   }
 
   beforeEach(async () => {
     listeners = new ChangeListeners(testUtils.spiegel)
     listenerIds = []
-    upserts = []
     spy()
+    fakeSlouchChangesArray()
   })
 
   afterEach(async () => {
@@ -68,7 +70,7 @@ describe('change-listeners', () => {
     let listener = await dirtyListener()
 
     // Make sure upsert was called
-    upserts.length.should.eql(1)
+    calls._upsert.length.should.eql(1)
 
     // Attempt to dirty listener
     listener = await dirtyListener()
@@ -77,7 +79,7 @@ describe('change-listeners', () => {
     listener.dirty.should.eql(true)
 
     // Make sure upsert was not called again
-    upserts.length.should.eql(1)
+    calls._upsert.length.should.eql(1)
   })
 
   it('lock listener', async () => {
@@ -172,5 +174,34 @@ describe('change-listeners', () => {
     listener = await listeners._getByDBName('test_db1')
     listener.dirty.should.eql(true)
     listener.last_seq.should.eql(lastSeq)
+  })
+
+  it('should get changes when last_seq undefined', () => {
+    listeners._batchSize = 10
+    listeners._changes({ db_name: 'test_db1' })
+    calls._changesArray[0][0].should.eql('test_db1')
+    calls._changesArray[0][1].should.eql({ since: undefined, include_docs: true, limit: 10 })
+  })
+
+  it('should get changes when last_seq defined', () => {
+    listeners._changes({ db_name: 'test_db1', last_seq: 'last-seq' })
+    calls._changesArray[0][1].should.eql({ since: 'last-seq', include_docs: true, limit: 100 })
+  })
+
+  it('should process changes sequentially', async () => {
+    // Fake long processChange so that we can ensure the changes are being processed sequentially
+    let changesProcessed = []
+    listeners._processChange = change => {
+      changesProcessed.push(change)
+      return sporks.timeout(100)
+    }
+
+    let changes = {
+      results: [{ doc: { thing: 'jam' } }, { doc: { thing: 'code' } }]
+    }
+
+    await listeners._processChanges({ db_name: 'test_db1' }, changes)
+
+    changesProcessed.should.eql([{ doc: { thing: 'jam' } }, { doc: { thing: 'code' } }])
   })
 })

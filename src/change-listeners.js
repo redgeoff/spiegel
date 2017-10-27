@@ -314,31 +314,55 @@ class ChangeListeners extends Process {
     }
   }
 
+  _slouchChangesArray (dbName, opts) {
+    return this._slouch.db.changesArray(dbName, opts)
+  }
+
+  _changesArray (dbName, opts) {
+    return this._slouchChangesArray(dbName, opts)
+  }
+
+  _changes (listener) {
+    return this._changesArray(listener.db_name, {
+      since: listener.last_seq || undefined,
+      include_docs: true,
+      limit: this._batchSize
+    })
+  }
+
+  async _processChanges (listener, changes) {
+    let chain = Promise.resolve()
+
+    // Sequentially chain promises so that changes are processed in order and so that we don't
+    // dominate the mem
+    changes.results.forEach(change => {
+      chain = chain.then(this._processChangeFactory(change, listener.db_name))
+    })
+
+    // Wait for all the changes to be processed
+    await chain
+  }
+
+  async _moreBatches (changes) {
+    return !!changes.pending
+  }
+
   async _processBatchOfChanges (listener) {
+    let changes = this._changes(listener)
+
+    await this._processChanges(listener, changes)
+
+    // Save the lastSeq as we want our next batch to resume from where we left off
+    await this._updateLastSeq(listener._id, changes.last_seq)
+
+    // Are there more batches to process? If there are then we will leave this ChangeListener
+    // dirty
+    return this._moreBatches(changes)
+  }
+
+  async _processBatchOfChangesLogError (listener) {
     try {
-      let changes = await this._slouch.db.changesArray(listener.db_name, {
-        since: listener.last_seq || undefined,
-        include_docs: true,
-        limit: this._batchSize
-      })
-
-      let chain = Promise.resolve()
-
-      // Sequentially chain promises so that changes are processed in order and so that we don't
-      // dominate the mem
-      changes.results.forEach(change => {
-        chain = chain.then(this._processChangeFactory(change, listener.db_name))
-      })
-
-      // Wait for all the changes to be processed
-      await chain
-
-      // Save the lastSeq as we want our next batch to resume from where we left off
-      await this._updateLastSeq(listener._id, changes.last_seq)
-
-      // Are there more batches to process? If there are then we will leave this ChangeListener
-      // dirty
-      return !!changes.pending
+      return this._processBatchOfChanges(listener)
     } catch (err) {
       // Log and emit error
       this._onError(err)
@@ -349,7 +373,7 @@ class ChangeListeners extends Process {
   }
 
   _process (listener) {
-    return this._processBatchOfChanges(listener)
+    return this._processBatchOfChangesLogError(listener)
   }
 }
 
