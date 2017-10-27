@@ -284,4 +284,14 @@ describe('change-listeners', () => {
 
     calls._onError[0][0].should.eql(err)
   })
+
+  it('should process', async () => {
+    await setUpForBatchOfChanges()
+
+    await listeners._process(listener)
+
+    // Check requests
+    requests.length.should.eql(1)
+    requests[0].should.eql({ url: 'https://example.com', method: 'GET', qs: {} })
+  })
 })
