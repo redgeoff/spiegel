@@ -32,11 +32,11 @@ class Spiegel {
     await this._replicators.install()
   }
 
-  async destroy () {
-    await this._changeListeners.destroy()
-    await this._updateListeners.destroy()
-    await this._replicators.destroy()
-    await this._onChanges.destroy()
+  async uninstall () {
+    await this._changeListeners.uninstall()
+    await this._updateListeners.uninstall()
+    await this._replicators.uninstall()
+    await this._onChanges.uninstall()
     await this._slouch.db.destroy(this._dbName)
   }
 

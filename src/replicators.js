@@ -130,7 +130,7 @@ class Replicators extends Process {
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/replicators_by_db_name')
   }
 
-  destroy () {
+  uninstall () {
     return this._destroyViews()
   }
 

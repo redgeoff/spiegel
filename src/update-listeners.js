@@ -66,7 +66,7 @@ class UpdateListeners {
     return this._createSieve()
   }
 
-  destroy () {
+  uninstall () {
     return this._destroySieve()
   }
 

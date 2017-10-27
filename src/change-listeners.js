@@ -107,7 +107,7 @@ class ChangeListeners extends Process {
     return this._createViews()
   }
 
-  destroy () {
+  uninstall () {
     return this._destroyViews()
   }
 

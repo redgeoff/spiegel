@@ -17,7 +17,7 @@ describe('spiegel', function () {
   })
 
   after(() => {
-    return testUtils.spiegel.destroy()
+    return testUtils.spiegel.uninstall()
   })
 
   require('./spec')

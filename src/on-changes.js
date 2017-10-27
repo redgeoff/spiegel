@@ -58,7 +58,7 @@ class OnChanges extends events.EventEmitter {
     return this._createViews()
   }
 
-  destroy () {
+  uninstall () {
     return this._destroyViews()
   }
 
