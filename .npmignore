@@ -1,4 +1,6 @@
 .git*
+.nyc_output
+cache
 dist
 node_modules
 .DS_Store
