@@ -103,7 +103,7 @@ class ChangeListeners extends Process {
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/listeners_by_db_name')
   }
 
-  create () {
+  install () {
     return this._createViews()
   }
 

@@ -23,13 +23,13 @@ class Spiegel {
     this._onChanges = new OnChanges(this)
   }
 
-  async create () {
+  async install () {
     await this._slouch.db.create(this._dbName)
     await this._slouch.security.onlyAdminCanView(this._dbName)
-    await this._updateListeners.create()
-    await this._changeListeners.create()
-    await this._onChanges.create()
-    await this._replicators.create()
+    await this._updateListeners.install()
+    await this._changeListeners.install()
+    await this._onChanges.install()
+    await this._replicators.install()
   }
 
   async destroy () {

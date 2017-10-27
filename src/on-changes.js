@@ -54,7 +54,7 @@ class OnChanges extends events.EventEmitter {
     return this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/on_changes')
   }
 
-  create () {
+  install () {
     return this._createViews()
   }
 

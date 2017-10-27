@@ -115,7 +115,7 @@ class Replicators extends Process {
     await this._createReplicatorsByDBNameView()
   }
 
-  create () {
+  install () {
     return this._createViews()
   }
 

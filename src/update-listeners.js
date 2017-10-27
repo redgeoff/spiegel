@@ -62,7 +62,7 @@ class UpdateListeners {
     )
   }
 
-  create () {
+  install () {
     return this._createSieve()
   }
 

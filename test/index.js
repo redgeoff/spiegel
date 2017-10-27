@@ -13,7 +13,7 @@ describe('spiegel', function () {
   testUtils.silenceLog()
 
   before(() => {
-    return testUtils.spiegel.create()
+    return testUtils.spiegel.install()
   })
 
   after(() => {
