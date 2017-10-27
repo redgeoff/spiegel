@@ -96,80 +96,10 @@ class ChangeListeners extends Process {
     return this._slouch.doc.getIgnoreMissing(this._spiegel._dbName, this._toId(dbName))
   }
 
-  // TODO: still needed?
-  _upsert (listener) {
-    return this._slouch.doc.upsert(this._spiegel._dbName, listener)
-  }
-
-  // TODO: remove as now handled by dirtyIfCleanOrLocked?
-  async dirtyIfClean (dbName) {
-    let listener = await this._getByDBName(dbName)
-
-    if (!listener) {
-      // doc missing?
-      listener = {
-        _id: this._toId(dbName),
-
-        db_name: dbName,
-        type: 'change_listener'
-      }
-    }
-
-    if (listener.dirty) {
-      // Do nothing as listener is already dirty. This will happen often as 2 UpdateListener
-      // processes will be trying to dirty the same listeners simultaenously as they are reading the
-      // same updates
-    } else {
-      listener.dirty = true
-
-      // Upsert a change as we want the listener to be considered dirty even if it was cleaned since
-      // we got the doc.
-      await this._upsert(listener)
-    }
-  }
-
   _updateLastSeq (id, lastSeq) {
     // Use getMergeUpsert as we want the lastSeq to be stored even if there is a conflict from say
     // another process dirtying this ChangeListener
     return this._slouch.doc.getMergeUpsert(this._spiegel._dbName, { _id: id, last_seq: lastSeq })
-  }
-
-  // TODO: remove? Isn't this now handled by process layer?
-  _cleanAndUnlock (listener, lastSeq) {
-    // Update listener and set last_seq and dirty=false. We must not ignore any errors from a
-    // conflict as we want the routine that marks the monitor as dirty to always win so that we
-    // prevent race conditions while setting the dirty status.
-    listener.last_seq = lastSeq
-    listener.dirty = false
-
-    // Release the lock
-    delete listener.locked_at
-
-    return this._update(listener)
-  }
-
-  // TODO: remove? Isn't this now handled by process layer?
-  async cleanAndUnlockOrUpdateLastSeq (listener, lastSeq) {
-    try {
-      await this._cleanAndUnlock(listener, lastSeq)
-    } catch (err) {
-      if (err.error === 'conflict') {
-        await this._updateLastSeq(listener._id, lastSeq)
-      } else {
-        throw err
-      }
-    }
-  }
-
-  async lock (listener) {
-    // We use update instead of upsert as we want there to be a conflict as we only want one process
-    // to hold the lock at any given time
-    let lockedListener = sporks.clone(listener)
-    lockedListener.locked_at = new Date().toISOString()
-    this._setUpdatedAt(lockedListener)
-    let response = await this._update(lockedListener)
-    lockedListener._rev = response._rev
-    return lockedListener
   }
 
   async _getByDBNames (dbNames) {
