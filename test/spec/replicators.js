@@ -31,7 +31,6 @@ describe('replicators', () => {
         await testUtils.spiegel._slouch.doc.getAndDestroy(testUtils.spiegel._dbName, id)
       })
     )
-    await testUtils.destroyTestDBs()
 
     // Was there an error?
     if (globalError) {

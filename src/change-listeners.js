@@ -343,7 +343,7 @@ class ChangeListeners extends Process {
     await chain
   }
 
-  async _moreBatches (changes) {
+  _moreBatches (changes) {
     return !!changes.pending
   }
 

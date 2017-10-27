@@ -8,6 +8,7 @@ describe('change-listeners', () => {
   let listeners = null
   let listenerIds = null
   let calls = null
+  let suffix = null
 
   const spy = () => {
     calls = []
@@ -19,6 +20,7 @@ describe('change-listeners', () => {
   }
 
   beforeEach(async () => {
+    suffix = testUtils.nextSuffix()
     listeners = new ChangeListeners(testUtils.spiegel)
     listenerIds = []
     spy()
@@ -32,6 +34,8 @@ describe('change-listeners', () => {
         await testUtils.spiegel._slouch.doc.getAndDestroy(testUtils.spiegel._dbName, id)
       })
     )
+
+    await testUtils.destroyTestDBs()
   })
 
   const dirtyListener = async () => {
@@ -203,5 +207,18 @@ describe('change-listeners', () => {
     await listeners._processChanges({ db_name: 'test_db1' }, changes)
 
     changesProcessed.should.eql([{ doc: { thing: 'jam' } }, { doc: { thing: 'code' } }])
+  })
+
+  it('should _moreBatches', () => {
+    listeners._moreBatches({ pending: 0 }).should.eql(false)
+    listeners._moreBatches({ pending: 10 }).should.eql(true)
+  })
+
+  const createTestDBs = async () => {
+    await testUtils.createTestDBs(['test_db1' + suffix, 'test_db3' + suffix])
+  }
+
+  it('should _processBatchOfChanges', async () => {
+    await createTestDBs()
   })
 })
