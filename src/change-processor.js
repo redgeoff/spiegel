@@ -41,7 +41,7 @@ class ChangeProcessor {
   }
 
   _buildParams (change, onChange, dbName) {
-    let params
+    let params = {}
 
     if (onChange.params) {
       sporks.each(onChange.params, (value, name) => {

@@ -1,8 +1,9 @@
 'use strict'
 
-require('./change-listeners')
-require('./globals')
 require('./change-listeners-bulk')
+require('./change-listeners')
+require('./change-processor')
+require('./globals')
 require('./on-changes')
 require('./password-injector')
 require('./process')
