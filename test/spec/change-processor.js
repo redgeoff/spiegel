@@ -32,7 +32,9 @@ describe('change-processor', () => {
         '_addPassword',
         '_setParams',
         '_makeDebouncedOrRegularRequest',
-        '_makeRequest'
+        '_makeRequest',
+        '_getMatchingOnChanges',
+        '_makeRequests'
       ],
       calls
     )
@@ -224,5 +226,14 @@ describe('change-processor', () => {
     calls._makeRequest[1][0].should.eql(change)
     calls._makeRequest[1][1].should.eql(onChanges[1])
     calls._makeRequest[1][2].should.eql(dbName)
+  })
+
+  it('should process', async () => {
+    // Sanity check
+    await changeProcessor._spiegel._onChanges.start()
+    await changeProcessor.process(change, 'test_db1')
+    calls._getMatchingOnChanges.length.should.eql(1)
+    calls._makeRequests.length.should.eql(1)
+    await changeProcessor._spiegel._onChanges.stop()
   })
 })

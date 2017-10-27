@@ -102,6 +102,8 @@ class OnChanges extends events.EventEmitter {
         this._onPaused()
       })
       .on('error', err => {
+        // TODO: should an error be emitted so that spiegel layer can listen for it and also emit
+        // it?
         log.error(err)
       })
       .on('change', change => {
