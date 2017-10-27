@@ -10,10 +10,12 @@ describe('change-listeners', () => {
   let onChangeIds = null
   let calls = null
   let suffix = null
+  let listener = null
+  let requests = null
 
   const spy = () => {
     calls = []
-    testUtils.spy(listeners, ['_upsert', '_changesArray'], calls)
+    testUtils.spy(listeners, ['_upsert', '_changesArray', '_onError'], calls)
   }
 
   const fakeSlouchChangesArray = () => {
@@ -231,15 +233,19 @@ describe('change-listeners', () => {
     await testUtils.createTestDBs(['test_db1' + suffix, 'test_db3' + suffix])
   }
 
-  it('should _processBatchOfChanges', async () => {
-    await listeners._spiegel._onChanges.start()
-
-    let listener = await listeners._create({ db_name: 'test_db1' + suffix })
+  const createListener = async () => {
+    listener = await listeners._create({ db_name: 'test_db1' + suffix })
     listenerIds[listener.id] = true
     listener = await listeners._get(listener.id)
+  }
+
+  const setUpForBatchOfChanges = async () => {
+    await listeners._spiegel._onChanges.start()
+
+    await createListener()
 
     // Fake request so that we don't actually hit an API
-    let requests = []
+    requests = []
     listeners._changeProcessor._request = opts => {
       requests.push(opts)
       return Promise.resolve()
@@ -252,6 +258,10 @@ describe('change-listeners', () => {
     onChangeIds.push(onChange.id)
 
     await createTestDBs()
+  }
+
+  it('should _processBatchOfChanges', async () => {
+    await setUpForBatchOfChanges()
 
     let moreBatches = await listeners._processBatchOfChanges(listener)
     moreBatches.should.eql(false)
@@ -259,5 +269,19 @@ describe('change-listeners', () => {
     // Check requests
     requests.length.should.eql(1)
     requests[0].should.eql({ url: 'https://example.com', method: 'GET', qs: {} })
+  })
+
+  it('_processBatchOfChangesLogError should handle error', async () => {
+    // Fake error
+    let err = new Error()
+    listeners._processBatchOfChanges = sporks.promiseErrorFactory(err)
+
+    await createListener()
+    let leaveDirty = await listeners._processBatchOfChangesLogError(listener)
+
+    // Should be left dirty so that it can be retried
+    leaveDirty.should.eql(true)
+
+    calls._onError[0][0].should.eql(err)
   })
 })

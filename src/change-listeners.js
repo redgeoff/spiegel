@@ -368,13 +368,13 @@ class ChangeListeners extends Process {
 
   async _processBatchOfChangesLogError (listener) {
     try {
-      return this._processBatchOfChanges(listener)
+      await this._processBatchOfChanges(listener)
     } catch (err) {
       // Log and emit error
       this._onError(err)
 
       // Leave the ChangeListener as dirty so that it will be retried
-      return false
+      return true
     }
   }
 
