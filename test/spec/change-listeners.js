@@ -7,6 +7,7 @@ const sporks = require('sporks')
 describe('change-listeners', () => {
   let listeners = null
   let listenerIds = null
+  let onChangeIds = null
   let calls = null
   let suffix = null
 
@@ -23,15 +24,25 @@ describe('change-listeners', () => {
     suffix = testUtils.nextSuffix()
     listeners = new ChangeListeners(testUtils.spiegel)
     listenerIds = []
+    onChangeIds = []
     spy()
-    fakeSlouchChangesArray()
   })
 
   afterEach(async () => {
+    if (listeners._spiegel._onChanges.isRunning()) {
+      await listeners._spiegel._onChanges.stop()
+    }
+
     let ids = sporks.keys(listenerIds)
     await Promise.all(
       ids.map(async id => {
-        await testUtils.spiegel._slouch.doc.getAndDestroy(testUtils.spiegel._dbName, id)
+        await listeners._getAndDestroy(id)
+      })
+    )
+
+    await Promise.all(
+      onChangeIds.map(async id => {
+        await listeners._spiegel._onChanges._getAndDestroy(id)
       })
     )
 
@@ -181,6 +192,7 @@ describe('change-listeners', () => {
   })
 
   it('should get changes when last_seq undefined', () => {
+    fakeSlouchChangesArray()
     listeners._batchSize = 10
     listeners._changes({ db_name: 'test_db1' })
     calls._changesArray[0][0].should.eql('test_db1')
@@ -188,6 +200,7 @@ describe('change-listeners', () => {
   })
 
   it('should get changes when last_seq defined', () => {
+    fakeSlouchChangesArray()
     listeners._changes({ db_name: 'test_db1', last_seq: 'last-seq' })
     calls._changesArray[0][1].should.eql({ since: 'last-seq', include_docs: true, limit: 100 })
   })
@@ -219,6 +232,32 @@ describe('change-listeners', () => {
   }
 
   it('should _processBatchOfChanges', async () => {
+    await listeners._spiegel._onChanges.start()
+
+    let listener = await listeners._create({ db_name: 'test_db1' + suffix })
+    listenerIds[listener.id] = true
+    listener = await listeners._get(listener.id)
+
+    // Fake request so that we don't actually hit an API
+    let requests = []
+    listeners._changeProcessor._request = opts => {
+      requests.push(opts)
+      return Promise.resolve()
+    }
+
+    let onChange = await listeners._spiegel._onChanges._create({
+      db_name: 'test_db1' + suffix,
+      url: 'https://example.com'
+    })
+    onChangeIds.push(onChange.id)
+
     await createTestDBs()
+
+    let moreBatches = await listeners._processBatchOfChanges(listener)
+    moreBatches.should.eql(false)
+
+    // Check requests
+    requests.length.should.eql(1)
+    requests[0].should.eql({ url: 'https://example.com', method: 'GET', qs: {} })
   })
 })

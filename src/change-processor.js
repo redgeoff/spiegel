@@ -145,7 +145,7 @@ class ChangeProcessor {
   }
 
   async process (change, dbName) {
-    let onChanges = await this._getMatchingOnChanges(change)
+    let onChanges = await this._getMatchingOnChanges(dbName, change)
     await this._makeRequests(change, onChanges, dbName)
   }
 }

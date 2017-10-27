@@ -9,23 +9,21 @@ describe('on-changes', () => {
   let docIds = []
 
   const createOnChanges = async () => {
-    await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
+    let onChangesInit = new OnChanges(testUtils.spiegel)
+    await onChangesInit._create({
       _id: '1',
-      type: 'on_change',
       db_name: 'foo'
     })
     docIds.push('1')
 
-    await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
+    await onChangesInit._create({
       _id: '2',
-      type: 'on_change',
       db_name: '^test_db1$'
     })
     docIds.push('2')
 
-    await testUtils.spiegel._slouch.doc.create(testUtils.spiegel._dbName, {
+    await onChangesInit._create({
       _id: '3',
-      type: 'on_change',
       db_name: 'test_db_([^_])*'
     })
     docIds.push('3')

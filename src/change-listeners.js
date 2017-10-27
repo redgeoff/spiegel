@@ -111,6 +111,7 @@ class ChangeListeners extends Process {
     return this._destroyViews()
   }
 
+  // Prefix so that we can create a listener even when the id is reserved, e.g. _users
   _toId (dbName) {
     return this._idPrefix + dbName
   }
@@ -131,7 +132,6 @@ class ChangeListeners extends Process {
     if (!listener) {
       // doc missing?
       listener = {
-        // Prefix so that we can create a listener even when the id is reserved, e.g. _users
         _id: this._toId(dbName),
 
         db_name: dbName,
@@ -233,6 +233,13 @@ class ChangeListeners extends Process {
     return lists
   }
 
+  _create (listener) {
+    listener._id = this._toId(listener.db_name)
+    listener.type = 'change_listener'
+    this._setUpdatedAt(listener)
+    return this._slouch.doc.create(this._spiegel._dbName, listener)
+  }
+
   _dirtyOrCreate (listeners) {
     listeners.forEach(listener => {
       // Existing listener?
@@ -240,7 +247,6 @@ class ChangeListeners extends Process {
         listener.dirty = true
         this._setUpdatedAt(listener)
       } else {
-        // Prefix so that we can create a listener even when the id is reserved, e.g. _users
         listener._id = this._toId(listener.db_name)
         listener.type = 'change_listener'
         listener.dirty = true
@@ -348,7 +354,7 @@ class ChangeListeners extends Process {
   }
 
   async _processBatchOfChanges (listener) {
-    let changes = this._changes(listener)
+    let changes = await this._changes(listener)
 
     await this._processChanges(listener, changes)
 

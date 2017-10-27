@@ -82,6 +82,10 @@ class Process extends events.EventEmitter {
     return this._slouch.doc.get(this._spiegel._dbName, id)
   }
 
+  _getAndDestroy (id) {
+    return this._slouch.doc.getAndDestroy(this._spiegel._dbName, id)
+  }
+
   // Useful for determining the last time a item was used
   _setUpdatedAt (item) {
     item.updated_at = new Date().toISOString()

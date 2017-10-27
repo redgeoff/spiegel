@@ -51,6 +51,12 @@ describe('change-processor', () => {
     requested = false
   })
 
+  afterEach(async () => {
+    if (changeProcessor._spiegel._onChanges.isRunning()) {
+      await changeProcessor._spiegel._onChanges.stop()
+    }
+  })
+
   const fakePasswords = () => {
     changeProcessor._passwordInjector._passwords = {
       'example.com': {
@@ -234,6 +240,5 @@ describe('change-processor', () => {
     await changeProcessor.process(change, 'test_db1')
     calls._getMatchingOnChanges.length.should.eql(1)
     calls._makeRequests.length.should.eql(1)
-    await changeProcessor._spiegel._onChanges.stop()
   })
 })

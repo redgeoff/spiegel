@@ -25,6 +25,8 @@ class OnChanges extends events.EventEmitter {
 
     // A promise that resolves once the PouchDB data has loaded
     this._loaded = sporks.once(this, 'load')
+
+    this._running = false
   }
 
   _createOnChangesView () {
@@ -62,6 +64,17 @@ class OnChanges extends events.EventEmitter {
     return this._destroyViews()
   }
 
+  _create (onChange) {
+    onChange.type = 'on_change'
+    return this._slouch.doc.create(this._spiegel._dbName, onChange)
+  }
+
+  _getAndDestroy (id) {
+    // We need to use markAsDestroyed() as PouchDB can only sync deletions when they are done using
+    // the _deleted flag
+    return this._slouch.doc.markAsDestroyed(this._spiegel._dbName, id)
+  }
+
   _setDoc (doc) {
     if (doc._deleted) {
       delete this._docs[doc._id]
@@ -90,7 +103,12 @@ class OnChanges extends events.EventEmitter {
     })
   }
 
+  isRunning () {
+    return this._running
+  }
+
   start () {
+    this._running = true
     this._from = this._db.replicate
       .from(utils.couchDBURL() + '/' + this._spiegel._dbName, {
         live: true,
@@ -114,10 +132,11 @@ class OnChanges extends events.EventEmitter {
     return this._loaded
   }
 
-  stop () {
+  async stop () {
     let completed = sporks.once(this._from, 'complete')
     this._from.cancel()
-    return completed
+    await completed
+    this._running = false
   }
 
   async all () {
