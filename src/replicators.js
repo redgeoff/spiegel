@@ -34,6 +34,8 @@ class Replicators extends Process {
     this._passwordInjector = new PasswordInjector(this._passwords)
   }
 
+  // Note: this view is currently not used, but it will be when we provide hooks for monitoring
+  // exporters that want to report the current number of dirty replicators
   _createDirtyReplicatorsView () {
     return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
       _id: '_design/dirty_replicators',
@@ -72,47 +74,10 @@ class Replicators extends Process {
     })
   }
 
-  // TODO: still needed or does clean_or_locked_replicators_by_db_name replace need for this view?
-  _createCleanReplicatorsView () {
-    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
-      _id: '_design/clean_replicators',
-      views: {
-        clean_replicators: {
-          map: [
-            'function(doc) {',
-            'if (doc.type === "replicator" && !doc.dirty) {',
-            'emit(doc._id, null);',
-            '}',
-            '}'
-          ].join(' ')
-        }
-      }
-    })
-  }
-
-  _createReplicatorsByDBNameView () {
-    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
-      _id: '_design/replicators_by_db_name',
-      views: {
-        replicators_by_db_name: {
-          map: [
-            'function(doc) {',
-            'if (doc.type === "replicator") {',
-            'emit(doc.db_name, null);',
-            '}',
-            '}'
-          ].join(' ')
-        }
-      }
-    })
-  }
-
   async _createViews () {
     await super._createViews()
     await this._createDirtyReplicatorsView()
     await this._createCleanOrLockedReplicatorsByDBNameView()
-    await this._createCleanReplicatorsView()
-    await this._createReplicatorsByDBNameView()
   }
 
   install () {
@@ -126,8 +91,6 @@ class Replicators extends Process {
       this._spiegel._dbName,
       '_design/clean_or_locked_replicators_by_db_name'
     )
-    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/clean_replicators')
-    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/replicators_by_db_name')
   }
 
   uninstall () {
