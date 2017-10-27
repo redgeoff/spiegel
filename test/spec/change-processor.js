@@ -9,6 +9,15 @@ describe('change-processor', () => {
   let calls = null
   let params = { foo: 'bar' }
   let opts = { method: 'GET' }
+  let requested = false
+  let doc = {
+    _id: '1',
+    _rev: '1',
+    thing: 'jam'
+  }
+  let change = {
+    doc
+  }
 
   const spy = () => {
     calls = []
@@ -22,7 +31,8 @@ describe('change-processor', () => {
         '_getMethod',
         '_addPassword',
         '_setParams',
-        '_makeDebouncedOrRegularRequest'
+        '_makeDebouncedOrRegularRequest',
+        '_makeRequest'
       ],
       calls
     )
@@ -36,6 +46,7 @@ describe('change-processor', () => {
     changeProcessor = new ChangeProcessor(testUtils.spiegel)
     spy()
     fake()
+    requested = false
   })
 
   const fakePasswords = () => {
@@ -47,16 +58,6 @@ describe('change-processor', () => {
   }
 
   it('should build params', () => {
-    let doc = {
-      _id: '1',
-      _rev: '1',
-      thing: 'jam'
-    }
-
-    let change = {
-      doc
-    }
-
     let onChange = {
       params: {
         foo: 'bar',
@@ -84,8 +85,8 @@ describe('change-processor', () => {
   it('should add password', () => {
     fakePasswords()
     changeProcessor
-      ._addPassword('https://user@example.com/test_db1')
-      .should.eql('https://user:password@example.com/test_db1')
+      ._addPassword('https://user@example.com/foo')
+      .should.eql('https://user:password@example.com/foo')
   })
 
   it('should set params', () => {
@@ -144,18 +145,8 @@ describe('change-processor', () => {
   it('should _buildAndMakeRequest', async () => {
     fakePasswords()
 
-    let doc = {
-      _id: '1',
-      _rev: '1',
-      thing: 'jam'
-    }
-
-    let change = {
-      doc
-    }
-
     let onChange = {
-      url: 'https://user@example.com/test_db1',
+      url: 'https://user@example.com/foo',
       params: {
         foo: 'bar',
         change: '$change',
@@ -173,7 +164,7 @@ describe('change-processor', () => {
     calls._makeDebouncedOrRegularRequest.length.should.eql(1)
 
     calls._request[0][0].should.eql({
-      url: 'https://user:password@example.com/test_db1',
+      url: 'https://user:password@example.com/foo',
       method: 'GET',
       qs: {
         foo: 'bar',
@@ -181,5 +172,57 @@ describe('change-processor', () => {
         db_name: 'test_db1'
       }
     })
+  })
+
+  const fakeLongRequest = () => {
+    changeProcessor._request = async () => {
+      // Wait a bit to simulate a long request
+      await sporks.timeout(100)
+      requested = true
+    }
+  }
+
+  it('_makeRequest should not block', async () => {
+    fakeLongRequest()
+    await changeProcessor._makeRequest(null, {})
+
+    // _makeRequest should have resolved before the request has finished
+    requested.should.eql(false)
+  })
+
+  it('_makeRequest should block', async () => {
+    fakeLongRequest()
+    await changeProcessor._makeRequest(null, { block: true })
+
+    // _makeRequest should have resolved after the request has finished
+    requested.should.eql(true)
+  })
+
+  it('should _makeRequests', async () => {
+    let onChanges = [
+      {
+        url: 'https://user@example.com/foo',
+        params: {
+          foo: 'bar'
+        }
+      },
+      {
+        url: 'https://user@example.com/foo',
+        params: {
+          foo: 'bar2'
+        }
+      }
+    ]
+
+    let dbName = 'test_db1'
+
+    await changeProcessor._makeRequests(change, onChanges, dbName)
+
+    calls._makeRequest[0][0].should.eql(change)
+    calls._makeRequest[0][1].should.eql(onChanges[0])
+    calls._makeRequest[0][2].should.eql(dbName)
+    calls._makeRequest[1][0].should.eql(change)
+    calls._makeRequest[1][1].should.eql(onChanges[1])
+    calls._makeRequest[1][2].should.eql(dbName)
   })
 })
