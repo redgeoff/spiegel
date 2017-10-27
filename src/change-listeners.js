@@ -27,7 +27,8 @@ class ChangeListeners extends Process {
     this._changeProcessor = new ChangeProcessor(spiegel, opts)
   }
 
-  // TODO: still needed?
+  // Note: this view is currently not used, but it will be when we provide hooks for monitoring
+  // exporters that want to report the current number of dirty listeners
   _createDirtyListenersView () {
     var doc = {
       _id: '_design/dirty_listeners',
@@ -37,26 +38,6 @@ class ChangeListeners extends Process {
             'function(doc) {',
             'if (doc.type === "change_listener" && doc.dirty) {',
             'emit(doc._id, null);',
-            '}',
-            '}'
-          ].join(' ')
-        }
-      }
-    }
-
-    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
-  }
-
-  // TODO: remove as use listeners_by_db_name instead?
-  _createCleanOrLockedListenersByNameView () {
-    var doc = {
-      _id: '_design/clean_or_locked_listeners_by_db_name',
-      views: {
-        clean_or_locked_listeners_by_db_name: {
-          map: [
-            'function(doc) {',
-            'if (doc.type === "change_listener" && (!doc.dirty || doc.locked_at)) {',
-            'emit(doc.db_name, null);',
             '}',
             '}'
           ].join(' ')
@@ -89,17 +70,12 @@ class ChangeListeners extends Process {
   async _createViews () {
     await super._createViews()
     await this._createDirtyListenersView()
-    await this._createCleanOrLockedListenersByNameView()
     await this._createListenersByDBNameView()
   }
 
   async _destroyViews () {
     await super._destroyViews()
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_listeners')
-    await this._slouch.doc.getAndDestroy(
-      this._spiegel._dbName,
-      '_design/clean_or_locked_listeners_by_db_name'
-    )
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/listeners_by_db_name')
   }
 
