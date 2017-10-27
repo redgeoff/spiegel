@@ -7,12 +7,7 @@
     "type": "git",
     "url": "git://github.com/redgeoff/spiegel"
   },
-  "keywords": [
-    "couchdb",
-    "scalable",
-    "replication",
-    "change listening"
-  ],
+  "keywords": ["couchdb", "scalable", "replication", "change listening"],
   "author": "Geoffrey Cox",
   "license": "MIT",
   "bugs": {
@@ -21,8 +16,8 @@
   "scripts": {
     "beautify": "prettier-eslint --write \"src/**/*.js\" \"test/**/*.js\"",
     "lint": "eslint test src",
-    "node-test": "istanbul test --dir cache/coverage/node node_modules/mocha/bin/_mocha test/index.js",
-    "node-full-test": "npm run node-test --coverage && istanbul check-coverage --lines 100 --function 100 --statements 100 --branches 100",
+    "node-test": "mocha",
+    "node-full-test": "nyc mocha",
     "test": "npm run lint && npm run node-full-test",
     "reset-db": "./scripts/reset-db.js",
     "benchmark-pouch-query": "node_modules/mocha/bin/_mocha test/benchmark/pouch-query.js",
@@ -39,18 +34,15 @@
     "eslint-plugin-node": "^5.2.0",
     "eslint-plugin-promise": "^3.5.0",
     "eslint-plugin-standard": "^3.0.1",
-    "gofur": "^0.0.8",
     "istanbul": "^0.4.5",
-    "jshint": "^2.9.4",
     "mocha": "^4.0.0",
+    "nyc": "^11.2.1",
     "pouchdb-find": "^6.3.4",
     "prettier-eslint-cli": "^4.4.0",
     "request": "^2.81.0"
   },
   "greenkeeper": {
-    "ignore": [
-      "chai-as-promised"
-    ]
+    "ignore": ["chai-as-promised"]
   },
   "dependencies": {
     "bunyan": "^1.8.12",
@@ -58,5 +50,17 @@
     "pouchdb": "^6.3.4",
     "pouchdb-adapter-memory": "^6.3.4",
     "sporks": "0.0.3"
+  },
+  "nyc": {
+    "check-coverage": true,
+    "lines": 100,
+    "statements": 100,
+    "functions": 100,
+    "branches": 100,
+    "reporter": ["lcov", "text-summary"],
+    "cache": true,
+    "all": true,
+    "include": ["src/**/*.js"],
+    "report-dir": "./cache/coverage/node"
   }
 }
