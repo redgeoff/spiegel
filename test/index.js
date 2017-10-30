@@ -21,4 +21,5 @@ describe('spiegel', function () {
   })
 
   require('./spec')
+  require('./integration')
 })

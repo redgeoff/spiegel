@@ -9,12 +9,12 @@ const log = require('../src/log')
 
 // Missing the required attributes?
 if (!argv.type || !argv.url) {
-  return fs
+  fs
     .createReadStream(__dirname + '/usage.txt')
-    .pipe(process.stdout)
     .on('close', function () {
       process.exit(1)
     })
+    .pipe(process.stdout)
 } else {
   const start = async () => {
     try {
@@ -22,7 +22,10 @@ if (!argv.type || !argv.url) {
       utils.setCouchDBConfig(argv.url)
 
       const Spiegel = require('../src/spiegel')
-      let spiegel = new Spiegel(argv.type, argv)
+      let spiegel = new Spiegel(argv.type, {
+        dbName: argv['db-name'],
+        namespace: argv['namespace']
+      })
       await spiegel.installIfNotInstalled()
       await spiegel.start()
     } catch (err) {
