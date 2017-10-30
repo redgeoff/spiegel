@@ -26,6 +26,7 @@ class UpdateListeners {
 
     this._replicators = this._spiegel._replicators
     this._changeListeners = this._spiegel._changeListeners
+    this._onChanges = this._spiegel._onChanges
   }
 
   // The sieve is primarily used to filter out:
@@ -165,13 +166,19 @@ class UpdateListeners {
   }
 
   async _listen () {
-    await this._listenToNextBatch()
+    try {
+      await this._listenToNextBatch()
 
-    // Make sure that nothing else is processed when we have stopped
-    if (!this._stopped) {
-      // We don't await here as we just want _listen to be called again and don't want to have to
-      // waste memory chaining the promises
-      this._listen()
+      // Make sure that nothing else is processed when we have stopped
+      if (!this._stopped) {
+        // We don't await here as we just want _listen to be called again and don't want to have to
+        // waste memory chaining the promises
+        this._listen()
+      }
+    } catch (err) {
+      // Log fatal error here as this is in our listening loop, which is detached from our starting
+      // chain of promises
+      log.fatal(err)
     }
   }
 

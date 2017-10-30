@@ -7,7 +7,9 @@ const Replicators = require('./replicators')
 const OnChanges = require('./on-changes')
 
 class Spiegel {
-  constructor (opts) {
+  constructor (type, opts) {
+    this._type = type
+
     this._slouch = slouch
     this._dbName = opts && opts.dbName ? opts.dbName : 'spiegel'
 
@@ -41,17 +43,46 @@ class Spiegel {
   }
 
   async start () {
-    await this._updateListeners.start()
-    // await this._changeListeners.start()
-    await this._onChanges.start()
-    // await this._replicators.start()
+    switch (this._type) {
+      case 'update-listener':
+        await this._onChanges.start()
+        await this._updateListeners.start()
+        break
+
+      case 'change-listener':
+        await this._onChanges.start()
+        await this._changeListeners.start()
+        break
+
+      case 'replicator':
+        await this._replicators.start()
+        break
+    }
   }
 
   async stop () {
-    await this._updateListeners.stop()
-    // await this._changeListeners.stop()
-    await this._onChanges.stop()
-    // await this._replicators.stop()
+    switch (this._type) {
+      case 'update-listener':
+        await this._onChanges.stop()
+        await this._updateListeners.stop()
+        break
+
+      case 'change-listener':
+        await this._onChanges.stop()
+        await this._changeListeners.stop()
+        break
+
+      case 'replicator':
+        await this._replicators.stop()
+        break
+    }
+  }
+
+  async installIfNotInstalled () {
+    let exists = await this._slouch.db.exists(this._dbName)
+    if (!exists) {
+      await this.install()
+    }
   }
 }
 

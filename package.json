@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "Scalable replication and change listening for CouchDB",
   "main": "index.js",
+  "bin": {
+    "spiegel": "bin/cmd.js"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/redgeoff/spiegel"
@@ -49,7 +52,8 @@
     "couch-slouch": "^0.1.4",
     "pouchdb": "^6.3.4",
     "pouchdb-adapter-memory": "^6.3.4",
-    "sporks": "0.0.3"
+    "sporks": "0.0.3",
+    "yargs": "^10.0.3"
   },
   "nyc": {
     "check-coverage": true,

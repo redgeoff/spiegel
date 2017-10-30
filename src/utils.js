@@ -2,6 +2,7 @@
 
 const config = require('./config.json')
 const fs = require('fs')
+const url = require('url')
 
 class Utils {
   couchDBURL () {
@@ -27,6 +28,15 @@ class Utils {
     } else {
       return './cache'
     }
+  }
+
+  setCouchDBConfig (couchDBURL) {
+    let u = url.parse(couchDBURL)
+    config.scheme = u.protocol
+    config.host = u.hostname
+    config.port = u.port
+    config.username = u.username
+    config.password = u.password
   }
 }
 
