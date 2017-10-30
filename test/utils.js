@@ -18,7 +18,7 @@ class Utils {
   }
 
   _newSpiegel () {
-    return new Spiegel({ dbName: 'test_spiegel', namespace: 'test_' })
+    return new Spiegel(null, { dbName: 'test_spiegel', namespace: 'test_' })
   }
 
   createSieve (suffix) {

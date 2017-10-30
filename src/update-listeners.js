@@ -118,16 +118,16 @@ class UpdateListeners {
 
     // We use bulk operations to get and then dirty replicators so that replication can be delegated
     // to one of the replicator processes.
-    await this._replicators.dirtyIfCleanOrLocked(dbNames)
+    await this._spiegel._replicators.dirtyIfCleanOrLocked(dbNames)
 
     // Filter dbNames by OnChanges and then only dirty the corresponding ChangeListeners
-    let filteredDBNames = await this._onChanges.matchWithDBNames(dbNames)
+    let filteredDBNames = await this._spiegel._onChanges.matchWithDBNames(dbNames)
 
     // Are there ChangeListeners to dirty?
     if (filteredDBNames.length > 0) {
       // We use bulk operations to get and then dirty/create ChangeListeners so that the listening
       // can be delegated to one of the ChangeListener processes.
-      await this._changeListeners.dirtyIfCleanOrLocked(dbNames)
+      await this._spiegel._changeListeners.dirtyIfCleanOrLocked(dbNames)
     }
   }
 
@@ -165,13 +165,19 @@ class UpdateListeners {
   }
 
   async _listen () {
-    await this._listenToNextBatch()
+    try {
+      await this._listenToNextBatch()
 
-    // Make sure that nothing else is processed when we have stopped
-    if (!this._stopped) {
-      // We don't await here as we just want _listen to be called again and don't want to have to
-      // waste memory chaining the promises
-      this._listen()
+      // Make sure that nothing else is processed when we have stopped
+      if (!this._stopped) {
+        // We don't await here as we just want _listen to be called again and don't want to have to
+        // waste memory chaining the promises
+        this._listen()
+      }
+    } catch (err) {
+      // Log fatal error here as this is in our listening loop, which is detached from our starting
+      // chain of promises
+      log.fatal(err)
     }
   }
 

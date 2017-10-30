@@ -1,0 +1,14 @@
+Usage: spiegel --type=type --url=couchdb-url options
+
+  --type=type             The type of the process: update-listener, change-listener or replicator
+
+  --url=couchdb-url       The URL to the CouchDB instance
+
+Options:
+
+  --batchSize=size        The maximum number of updates that will be processed in a batch
+
+  --batchTimeout=timeout  The time to wait after an update before the batch is considered done
+                          regardless of whether there are any more updates
+
+  TODO...
