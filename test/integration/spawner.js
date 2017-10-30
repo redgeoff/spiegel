@@ -22,6 +22,11 @@ class Spawner {
 
     let child = spawn(path.join(__dirname, '/../../bin/cmd.js'), opts)
 
+    // // Uncomment for extra debugging
+    // child.stdout.on('data', data => {
+    //   console.log('data=', data + '')
+    // })
+
     child.stderr.on('data', (/* data */) => {
       throw new Error('should not get data on stderr ' + JSON.stringify(opts))
     })
@@ -46,11 +51,17 @@ class Spawner {
   }
 
   _startReplicator () {
-    this._spawn(['--type=replicator'])
+    this._spawn([
+      '--type=replicator',
+      '--replicator-passwords=' + path.join(__dirname, '/replicator-passwords.json')
+    ])
   }
 
   _startChangeListener () {
-    this._spawn(['--type=change-listener'])
+    this._spawn([
+      '--type=change-listener',
+      '--change-listener-passwords=' + path.join(__dirname, '/change-listener-passwords.json')
+    ])
   }
 
   async start () {

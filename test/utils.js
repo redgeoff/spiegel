@@ -45,10 +45,14 @@ class Utils {
     )
   }
 
-  async createTestDB (dbName) {
+  async createDB (dbName) {
     await this._slouch.db.create(dbName)
 
     this._dbNames.push(dbName)
+  }
+
+  async createTestDB (dbName) {
+    await this.createDB(dbName)
 
     await this._slouch.doc.create(dbName, {
       _id: '1',
