@@ -234,7 +234,7 @@ class ChangeListeners extends Process {
     return this._slouchChangesArray(dbName, opts)
   }
 
-  _changes (listener) {
+  _changesForListener (listener) {
     return this._changesArray(listener.db_name, {
       since: listener.last_seq || undefined,
       include_docs: true,
@@ -260,7 +260,7 @@ class ChangeListeners extends Process {
   }
 
   async _processBatchOfChanges (listener) {
-    let changes = await this._changes(listener)
+    let changes = await this._changesForListener(listener)
 
     await this._processChanges(listener, changes)
 

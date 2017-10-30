@@ -117,7 +117,7 @@ class UpdateListeners {
     return this._spiegel._changeListeners.dirtyIfCleanOrLocked(dbNames)
   }
 
-  _matchWithDbNames (dbNames) {
+  _matchWithDBNames (dbNames) {
     return this._spiegel._onChanges.matchWithDBNames(dbNames)
   }
 
