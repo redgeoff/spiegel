@@ -17,8 +17,8 @@ You can also check for 100% code coverage using:
 
 Run specific tests:
 
-    $ npm run node-test -- -- -g 'some reg-ex'
+    $ npm run node-test -- -g 'some reg-ex'
 
 Run specific tests and generate code coverage:
 
-    $ npm run node-test -- -- --coverage -g 'some reg-ex'
+    $ npm run node-full-test -- -g 'some reg-ex'
