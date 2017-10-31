@@ -4,6 +4,7 @@ const log = require('./log')
 const sporks = require('sporks')
 const Process = require('./process')
 const PasswordInjector = require('./password-injector')
+const utils = require('./utils')
 
 class Replicators extends Process {
   constructor (spiegel, opts) {
@@ -195,16 +196,19 @@ class Replicators extends Process {
   async _replicate (replicator) {
     let couchParams = this._toCouchDBReplicationParams(replicator)
 
-    log.info('Beginning replication from', replicator.source, 'to', replicator.target)
-
     // Add passwords to URLs based on hostname and username so that passwords are not embedded in
     // the replicator docs
     couchParams.source = this._addPassword(couchParams.source)
     couchParams.target = this._addPassword(couchParams.target)
 
+    let sourceNoPwd = couchParams.source ? utils.censorPasswordInURL(couchParams.source) : undefined
+    let targetNoPwd = couchParams.target ? utils.censorPasswordInURL(couchParams.target) : undefined
+
+    log.info('Beginning replication from', sourceNoPwd, 'to', targetNoPwd)
+
     await this._slouch.db.replicate(couchParams)
 
-    log.info('Finished replication from', replicator.source, 'to', replicator.target)
+    log.info('Finished replication from', sourceNoPwd, 'to', targetNoPwd)
   }
 
   async _process (item) {

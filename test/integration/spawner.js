@@ -5,6 +5,7 @@ const spawn = require('child_process').spawn
 const utils = require('../../src/utils')
 const Spiegel = require('../../src/spiegel')
 const sporks = require('sporks')
+const JSONStream = require('JSONStream')
 
 class Spawner {
   constructor () {
@@ -20,17 +21,18 @@ class Spawner {
     opts.push('--namespace=' + this._namespace)
     opts.push('--url=' + utils.couchDBURL())
 
+    // Uncomment for extra debugging
+    // opts.push('--log-level=debug')
+
     let child = spawn(path.join(__dirname, '/../../bin/cmd.js'), opts)
 
-    child.stdout.on('data', data => {
+    child.stdout.pipe(JSONStream.parse()).on('data', logEntry => {
       // Uncomment for extra debugging
-      // console.log('data=', data + '')
-
-      let logEntry = JSON.parse(data)
+      // console.log('logEntry=', logEntry, '\n')
 
       // An error entry? There shouldn't be any errors
       if (logEntry.level > 30) {
-        throw new Error(data)
+        throw new Error(logEntry)
       }
     })
 

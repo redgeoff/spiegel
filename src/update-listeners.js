@@ -92,6 +92,8 @@ class UpdateListeners {
     let i = 0
 
     return this._dbUpdatesIterator.each(update => {
+      log.debug('Processing update ' + JSON.stringify(update))
+
       this._addToUpdatedDBs(update)
 
       this._lastSeq = update.seq

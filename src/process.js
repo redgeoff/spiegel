@@ -171,7 +171,7 @@ class Process extends events.EventEmitter {
       item._rev = rep._rev
     } catch (err) {
       if (this._slouch.doc.isConflictError(err)) {
-        log.trace('Ignoring common conflict', err)
+        log.debug('Ignoring common conflict', err)
         return true
       } else {
         throw err
