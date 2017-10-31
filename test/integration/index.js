@@ -2,7 +2,6 @@
 
 const Server = require('./api-server')
 const Spawner = require('./spawner')
-const sporks = require('sporks')
 const testUtils = require('../utils')
 const config = require('../../src/config.json')
 
