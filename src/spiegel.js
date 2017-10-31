@@ -25,8 +25,13 @@ class Spiegel {
     this._onChanges = new OnChanges(this)
   }
 
-  async install () {
+  async _createDB () {
     await this._slouch.db.create(this._dbName)
+    await this._slouch.security.onlyAdminCanView(this._dbName)
+  }
+
+  async install () {
+    await this._createDB()
     await this._slouch.security.onlyAdminCanView(this._dbName)
     await this._updateListeners.install()
     await this._changeListeners.install()
