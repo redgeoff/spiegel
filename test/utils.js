@@ -45,10 +45,14 @@ class Utils {
     )
   }
 
-  async createTestDB (dbName) {
+  async createDB (dbName) {
     await this._slouch.db.create(dbName)
 
     this._dbNames.push(dbName)
+  }
+
+  async createTestDB (dbName) {
+    await this.createDB(dbName)
 
     await this._slouch.doc.create(dbName, {
       _id: '1',
@@ -92,8 +96,8 @@ class Utils {
     eq.should.eql(true)
   }
 
-  waitFor (poll) {
-    return sporks.waitFor(poll, this.TIMEOUT - 2000)
+  waitFor (poll, maxSleep, sleepMs) {
+    return sporks.waitFor(poll, maxSleep || this.TIMEOUT - 2000, sleepMs)
   }
 
   // TODO: move to sporks?

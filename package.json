@@ -10,7 +10,12 @@
     "type": "git",
     "url": "git://github.com/redgeoff/spiegel"
   },
-  "keywords": ["couchdb", "scalable", "replication", "change listening"],
+  "keywords": [
+    "couchdb",
+    "scalable",
+    "replication",
+    "change listening"
+  ],
   "author": "Geoffrey Cox",
   "license": "MIT",
   "bugs": {
@@ -37,7 +42,11 @@
     "eslint-plugin-node": "^5.2.0",
     "eslint-plugin-promise": "^3.5.0",
     "eslint-plugin-standard": "^3.0.1",
+    "fs-extra": "^4.0.2",
     "istanbul": "^0.4.5",
+    "koa": "^2.3.0",
+    "koa-basic-auth": "^2.0.0",
+    "koa-route": "^3.2.0",
     "mocha": "^4.0.0",
     "nyc": "^11.2.1",
     "pouchdb-find": "^6.3.4",
@@ -45,7 +54,9 @@
     "request": "^2.81.0"
   },
   "greenkeeper": {
-    "ignore": ["chai-as-promised"]
+    "ignore": [
+      "chai-as-promised"
+    ]
   },
   "dependencies": {
     "bunyan": "^1.8.12",
@@ -61,10 +72,15 @@
     "statements": 100,
     "functions": 100,
     "branches": 100,
-    "reporter": ["lcov", "text-summary"],
+    "reporter": [
+      "lcov",
+      "text-summary"
+    ],
     "cache": true,
     "all": true,
-    "include": ["src/**/*.js"],
+    "include": [
+      "src/**/*.js"
+    ],
     "report-dir": "./cache/coverage/node"
   }
 }

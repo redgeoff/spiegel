@@ -10,7 +10,6 @@ class UpdateListeners {
   constructor (spiegel, opts) {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
-    this._onChanges = this._spiegel._onChanges
     this._globals = new Globals(spiegel)
 
     // The maximum number of updates that will be processed in this batch
@@ -23,10 +22,6 @@ class UpdateListeners {
     this._lastSeq = null
 
     this._stopped = false
-
-    this._replicators = this._spiegel._replicators
-    this._changeListeners = this._spiegel._changeListeners
-    this._onChanges = this._spiegel._onChanges
   }
 
   // The sieve is primarily used to filter out:
@@ -114,21 +109,33 @@ class UpdateListeners {
     })
   }
 
+  _replicatorsDirtyIfCleanOrLocked (dbNames) {
+    return this._spiegel._replicators.dirtyIfCleanOrLocked(dbNames)
+  }
+
+  _changeListenersDirtyIfCleanOrLocked (dbNames) {
+    return this._spiegel._changeListeners.dirtyIfCleanOrLocked(dbNames)
+  }
+
+  _matchWithDBNames (dbNames) {
+    return this._spiegel._onChanges.matchWithDBNames(dbNames)
+  }
+
   async _processNextBatch () {
     let dbNames = sporks.keys(this._updatedDBs)
 
     // We use bulk operations to get and then dirty replicators so that replication can be delegated
     // to one of the replicator processes.
-    await this._replicators.dirtyIfCleanOrLocked(dbNames)
+    await this._replicatorsDirtyIfCleanOrLocked(dbNames)
 
     // Filter dbNames by OnChanges and then only dirty the corresponding ChangeListeners
-    let filteredDBNames = await this._onChanges.matchWithDBNames(dbNames)
+    let filteredDBNames = await this._matchWithDBNames(dbNames)
 
     // Are there ChangeListeners to dirty?
     if (filteredDBNames.length > 0) {
       // We use bulk operations to get and then dirty/create ChangeListeners so that the listening
       // can be delegated to one of the ChangeListener processes.
-      await this._changeListeners.dirtyIfCleanOrLocked(dbNames)
+      await this._changeListenersDirtyIfCleanOrLocked(dbNames)
     }
   }
 

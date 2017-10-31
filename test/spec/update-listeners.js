@@ -44,23 +44,19 @@ describe('update-listeners', () => {
 
   const spyOnDirtyReplicators = () => {
     dirtyReplicators = {}
-    listeners._replicators = {
-      dirtyIfCleanOrLocked: function (dbNames) {
-        dbNames.forEach(dbName => {
-          dirtyReplicators[dbName] = true
-        })
-      }
+    listeners._replicatorsDirtyIfCleanOrLocked = function (dbNames) {
+      dbNames.forEach(dbName => {
+        dirtyReplicators[dbName] = true
+      })
     }
   }
 
   const spyOnDirtyChangeListeners = () => {
     dirtyChangeListeners = {}
-    listeners._changeListeners = {
-      dirtyIfCleanOrLocked: function (dbNames) {
-        dbNames.forEach(dbName => {
-          dirtyChangeListeners[dbName] = true
-        })
-      }
+    listeners._changeListenersDirtyIfCleanOrLocked = function (dbNames) {
+      dbNames.forEach(dbName => {
+        dirtyChangeListeners[dbName] = true
+      })
     }
   }
 
@@ -92,10 +88,8 @@ describe('update-listeners', () => {
   }
 
   const fakeOnChanges = async () => {
-    listeners._onChanges = {
-      matchWithDBNames: function (dbNames) {
-        return Promise.resolve(dbNames)
-      }
+    listeners._matchWithDBNames = function (dbNames) {
+      return Promise.resolve(dbNames)
     }
   }
 
