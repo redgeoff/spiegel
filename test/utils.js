@@ -6,6 +6,7 @@
 const Spiegel = require('../src/spiegel')
 const sporks = require('sporks')
 const log = require('../src/log')
+const config = require('../src/config.json')
 
 class Utils {
   constructor () {
@@ -127,6 +128,10 @@ class Utils {
     funs.forEach(fun => {
       log[fun] = () => {}
     })
+  }
+
+  couchDBURLWithoutAuth () {
+    return config.couchdb.scheme + '://' + config.couchdb.host + ':' + config.couchdb.port
   }
 }
 
