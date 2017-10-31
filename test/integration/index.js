@@ -7,10 +7,16 @@ const testUtils = require('../utils')
 const config = require('../../src/config.json')
 
 // A basic sanity test at the topmost layer to make sure that things are working
-describe('integration', () => {
+describe('integration', function () {
   let server = null
   let spawner = null
   let suffix = null
+  let docs1 = null
+  let docs2 = null
+
+  // More time is needed for these tests
+  const TIMEOUT = 25000
+  this.timeout(TIMEOUT)
 
   const createTestDBs = async () => {
     // Create DB and docs
@@ -71,20 +77,36 @@ describe('integration', () => {
   })
 
   it('should replicate and listen to changes', async () => {
-    // TODO: use testUtils.waitFor instead of timeout
-    await sporks.timeout(18000)
+    let waitForChangeListening = testUtils
+      .waitFor(
+        async () => {
+          docs1 = await spawner._spiegel._slouch.doc.allArray('test_db1' + suffix, {
+            include_docs: true
+          })
 
-    // Make sure the docs were replicated
-    let docs1 = await spawner._spiegel._slouch.doc.allArray('test_db1' + suffix, {
-      include_docs: true
-    })
-    let docs2 = await spawner._spiegel._slouch.doc.allArray('test_db2' + suffix, {
-      include_docs: true
-    })
-    docs2.should.eql(docs1)
+          docs2 = await spawner._spiegel._slouch.doc.allArray('test_db2' + suffix, {
+            include_docs: true
+          })
 
-    // Make sure the API was called during the change listening. Depending on the timing, it
-    // possible to receive multiple requests.
-    testUtils.shouldEqual(server.numRequests > 0, true)
+          return JSON.stringify(docs1) === JSON.stringify(docs2) ? true : undefined
+        },
+        TIMEOUT - 2000,
+        1000
+      )
+      .catch(err => {
+        console.error('test_db2' + suffix + '=' + JSON.stringify(docs2))
+        throw err
+      })
+
+    let waitForReplication = testUtils
+      .waitFor(() => {
+        return server.numRequests > 0 ? true : undefined
+      }, TIMEOUT - 2000)
+      .catch(err => {
+        console.error('server.numRequests=', server.numRequests)
+        throw err
+      })
+
+    await Promise.all([waitForChangeListening, waitForReplication])
   })
 })

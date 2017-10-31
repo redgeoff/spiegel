@@ -96,8 +96,8 @@ class Utils {
     eq.should.eql(true)
   }
 
-  waitFor (poll) {
-    return sporks.waitFor(poll, this.TIMEOUT - 2000)
+  waitFor (poll, maxSleep, sleepMs) {
+    return sporks.waitFor(poll, maxSleep || this.TIMEOUT - 2000, sleepMs)
   }
 
   // TODO: move to sporks?
