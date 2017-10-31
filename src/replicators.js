@@ -201,8 +201,8 @@ class Replicators extends Process {
     couchParams.source = this._addPassword(couchParams.source)
     couchParams.target = this._addPassword(couchParams.target)
 
-    let sourceNoPwd = utils.censorPasswordInURL(couchParams.source)
-    let targetNoPwd = utils.censorPasswordInURL(couchParams.target)
+    let sourceNoPwd = couchParams.source ? utils.censorPasswordInURL(couchParams.source) : undefined
+    let targetNoPwd = couchParams.target ? utils.censorPasswordInURL(couchParams.target) : undefined
 
     log.info('Beginning replication from', sourceNoPwd, 'to', targetNoPwd)
 
