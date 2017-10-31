@@ -12,6 +12,7 @@ describe('update-listeners', () => {
   let changeOpts = null
   let dirtyReplicators = null
   let dirtyChangeListeners = null
+  let globals = null
   // let lastSeq
   let suffix = null
 
@@ -60,6 +61,13 @@ describe('update-listeners', () => {
     }
   }
 
+  const spyOnSetGlobal = () => {
+    globals = []
+    listeners._setGlobal = function (name, value) {
+      globals.push({ name, value })
+    }
+  }
+
   // const fakeGlobals = async () => {
   //   listeners._globals.get = function (name) {
   //     if (name === 'lastSeq') {
@@ -100,6 +108,7 @@ describe('update-listeners', () => {
     spyOnChanges()
     spyOnDirtyReplicators()
     spyOnDirtyChangeListeners()
+    spyOnSetGlobal()
     if (fakeLastSeq) {
       // fakeGlobals()
     }
@@ -264,5 +273,25 @@ describe('update-listeners', () => {
     dirtyChangeListeners.should.eql({
       test_db1: true
     })
+  })
+
+  it('should save lastSeq', async () => {
+    await createListeners(
+      { batchSize: 1, batchTimeout: BATCH_TIMEOUT, saveSeqAfterSeconds: 0 },
+      false
+    )
+
+    // Wait for a couple updates
+    await testUtils
+      .waitFor(() => {
+        return updates.length >= 2 ? true : undefined
+      })
+      .catch(function (err) {
+        console.log('updates=', updates)
+        throw err
+      })
+
+    // Make sure that lastSeq was saved for the first update
+    globals[0].should.eql({ name: 'lastSeq', value: updates[0].seq })
   })
 })
