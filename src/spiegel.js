@@ -5,6 +5,7 @@ const UpdateListeners = require('./update-listeners')
 const ChangeListeners = require('./change-listeners')
 const Replicators = require('./replicators')
 const OnChanges = require('./on-changes')
+const log = require('./log')
 
 class Spiegel {
   constructor (type, opts) {
@@ -15,6 +16,8 @@ class Spiegel {
 
     // Used to create a separate namespace for testing
     this._namespace = opts && opts.namespace ? opts.namespace : ''
+
+    log.level(opts && opts.logLevel ? opts.logLevel : 'info')
 
     this._updateListeners = new UpdateListeners(this, opts)
     this._changeListeners = new ChangeListeners(

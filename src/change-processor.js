@@ -4,6 +4,8 @@ const Debouncer = require('squadron').Debouncer
 const request = require('request')
 const sporks = require('sporks')
 const PasswordInjector = require('./password-injector')
+const log = require('./log')
+const utils = require('./utils')
 
 // Example:
 // {
@@ -85,6 +87,10 @@ class ChangeProcessor {
   }
 
   _request () {
+    let opts = sporks.clone(arguments[0])
+    opts.url = utils.censorPasswordInURL(opts.url)
+    log.info('Requesting ' + JSON.stringify(opts))
+
     return this._req.apply(this._req, arguments)
   }
 

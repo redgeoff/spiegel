@@ -6,9 +6,15 @@ Usage: spiegel --type=type --url=couchdb-url options
 
 Options:
 
-  --batchSize=size        The maximum number of updates that will be processed in a batch
+  --batchSize=size        The maximum number of updates that will be processed in a batch.
+                          Default: 100.
 
-  --batchTimeout=timeout  The time to wait after an update before the batch is considered done
-                          regardless of whether there are any more updates
+  --batchTimeout=timeout  The time in milliseconds to wait after an update before the batch is
+                          considered done regardless of whether there are any more updates.
+                          Default: 1000.
+
+  --log-level=level       error|warn|info|debug. Setting a particular level implies that all log
+                          records at that level and above are logged.
+                          Default: info.
 
   TODO...

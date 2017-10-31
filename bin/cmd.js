@@ -35,6 +35,7 @@ if (!argv.type || !argv.url) {
       let spiegel = new Spiegel(argv.type, {
         dbName: argv['db-name'],
         namespace: argv['namespace'],
+        logLevel: argv['log-level'],
         replicator: {
           passwords: replicatorPasswords
         },
