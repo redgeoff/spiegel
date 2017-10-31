@@ -54,14 +54,14 @@ describe('change-listeners', () => {
   it('should get changes when last_seq undefined', () => {
     fakeSlouchChangesArray()
     listeners._batchSize = 10
-    listeners._changes({ db_name: 'test_db1' })
+    listeners._changesForListener({ db_name: 'test_db1' })
     calls._changesArray[0][0].should.eql('test_db1')
     calls._changesArray[0][1].should.eql({ since: undefined, include_docs: true, limit: 10 })
   })
 
   it('should get changes when last_seq defined', () => {
     fakeSlouchChangesArray()
-    listeners._changes({ db_name: 'test_db1', last_seq: 'last-seq' })
+    listeners._changesForListener({ db_name: 'test_db1', last_seq: 'last-seq' })
     calls._changesArray[0][1].should.eql({ since: 'last-seq', include_docs: true, limit: 100 })
   })
 
