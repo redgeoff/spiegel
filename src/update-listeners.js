@@ -1,7 +1,5 @@
 'use strict'
 
-// TODO: need to save lastSeq after opts.saveLastSeqTimeout
-
 const Globals = require('./globals')
 const log = require('./log')
 const sporks = require('sporks')
@@ -18,6 +16,11 @@ class UpdateListeners {
     // The time to wait after an update before the batch is considered done regardless of whether
     // there are any more updates
     this._batchTimeout = opts && opts.batchTimeout ? opts.batchTimeout : 1000
+
+    this._saveSeqAfterSeconds =
+      opts && opts.saveSeqAfterSeconds !== undefined ? opts.saveSeqAfterSeconds : 60
+
+    this._seqLastSaved = null
 
     this._lastSeq = null
 
@@ -148,6 +151,20 @@ class UpdateListeners {
     return this._slouch.db.changes('_global_changes', opts)
   }
 
+  async _setGlobal (name, value) {
+    await this._globals.set(name, value)
+  }
+
+  // We save the lastSeq every so often so that we can avoid having to re-process all the updates in
+  // the event that an UpdateListener is restarted or a new one starts up
+  async _saveLastSeqIfNeeded () {
+    // Is it time to save the lastSeq again?
+    if (new Date().getTime() - this._seqLastSaved.getTime() >= this._saveSeqAfterSeconds * 1000) {
+      await this._setGlobal('lastSeq', this._lastSeq)
+      this._seqLastSaved = new Date()
+    }
+  }
+
   async _listenToNextBatch () {
     // Clear any previous batch of updates
     this._updatedDBs = []
@@ -172,6 +189,7 @@ class UpdateListeners {
 
     // Make sure that nothing else is processed when we have stopped
     if (!this._stopped) {
+      await this._saveLastSeqIfNeeded()
       await this._processNextBatch()
     }
   }
@@ -193,8 +211,17 @@ class UpdateListeners {
     }
   }
 
+  _getLastSeq () {
+    return this._globals.get('lastSeq')
+  }
+
   async start () {
-    this._lastSeq = await this._globals.get('lastSeq')
+    this._lastSeq = await this._getLastSeq()
+
+    // We haven't actually saved the lastSeq but we need to initialize the value here so that we
+    // will save the updated value in the future
+    this._seqLastSaved = new Date()
+
     this._listen()
   }
 
