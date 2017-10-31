@@ -22,10 +22,17 @@ class Spawner {
 
     let child = spawn(path.join(__dirname, '/../../bin/cmd.js'), opts)
 
-    // // Uncomment for extra debugging
-    // child.stdout.on('data', data => {
-    //   console.log('data=', data + '')
-    // })
+    child.stdout.on('data', data => {
+      // Uncomment for extra debugging
+      // console.log('data=', data + '')
+
+      let logEntry = JSON.parse(data)
+
+      // An error entry? There shouldn't be any errors
+      if (logEntry.level > 30) {
+        throw new Error(data)
+      }
+    })
 
     child.stderr.on('data', (/* data */) => {
       throw new Error('should not get data on stderr ' + JSON.stringify(opts))
