@@ -121,13 +121,7 @@ class UpdateListeners {
     return this._spiegel._onChanges.matchWithDBNames(dbNames)
   }
 
-  async _processNextBatch () {
-    let dbNames = sporks.keys(this._updatedDBs)
-
-    // We use bulk operations to get and then dirty replicators so that replication can be delegated
-    // to one of the replicator processes.
-    await this._replicatorsDirtyIfCleanOrLocked(dbNames)
-
+  async _matchAndDirtyFiltered (dbNames) {
     // Filter dbNames by OnChanges and then only dirty the corresponding ChangeListeners
     let filteredDBNames = await this._matchWithDBNames(dbNames)
 
@@ -135,8 +129,18 @@ class UpdateListeners {
     if (filteredDBNames.length > 0) {
       // We use bulk operations to get and then dirty/create ChangeListeners so that the listening
       // can be delegated to one of the ChangeListener processes.
-      await this._changeListenersDirtyIfCleanOrLocked(dbNames)
+      await this._changeListenersDirtyIfCleanOrLocked(filteredDBNames)
     }
+  }
+
+  async _processNextBatch () {
+    let dbNames = sporks.keys(this._updatedDBs)
+
+    // We use bulk operations to get and then dirty replicators so that replication can be delegated
+    // to one of the replicator processes.
+    await this._replicatorsDirtyIfCleanOrLocked(dbNames)
+
+    await this._matchAndDirtyFiltered(dbNames)
   }
 
   // Separate out for easier unit testing

@@ -250,4 +250,19 @@ describe('update-listeners', () => {
     // Second call should resume from lastSeq
     changeOpts[1].since.should.eql(updates[0].seq)
   })
+
+  it('should _matchAndDirtyFiltered', async () => {
+    await createListeners()
+
+    // Fake filtering
+    listeners._matchWithDBNames = function () {
+      return Promise.resolve(['test_db1'])
+    }
+
+    await listeners._matchAndDirtyFiltered(['test_db1', 'test_db2'])
+
+    dirtyChangeListeners.should.eql({
+      test_db1: true
+    })
+  })
 })
