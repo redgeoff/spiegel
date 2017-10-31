@@ -46,6 +46,10 @@ class Utils {
     }
     return u.href
   }
+
+  getOpt (opts, name, def) {
+    return opts && opts[name] !== undefined ? opts[name] : def
+  }
 }
 
 module.exports = new Utils()

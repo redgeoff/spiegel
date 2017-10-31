@@ -3,23 +3,23 @@
 const sporks = require('sporks')
 const Process = require('./process')
 const ChangeProcessor = require('./change-processor')
+const utils = require('./utils')
 
 class ChangeListeners extends Process {
   constructor (spiegel, opts) {
     super(
       spiegel,
       {
-        passwords: opts && opts.passwords ? opts.passwords : undefined,
-        retryAfterSeconds: opts && opts.retryAfterSeconds ? opts.retryAfterSeconds : undefined,
-        maxConcurrentProcesses:
-          opts && opts.maxConcurrentProcesses ? opts.maxConcurrentProcesses : undefined,
-        stalledAfterSeconds: opts && opts.stalledAfterSeconds ? opts.stalledAfterSeconds : undefined
+        passwords: utils.getOpt(opts, 'passwords'),
+        retryAfterSeconds: utils.getOpt(opts, 'retryAfterSeconds'),
+        maxConcurrentProcesses: utils.getOpt(opts, 'maxConcurrentProcesses'),
+        stalledAfterSeconds: utils.getOpt(opts, 'stalledAfterSeconds')
       },
       'change_listener'
     )
 
     // The max number of changes that will be processed in a batch
-    this._batchSize = opts && opts.batchSize ? opts.batchSize : 100
+    this._batchSize = utils.getOpt(opts, 'batchSize', 100)
 
     // Separate namespace for change listener ids
     this._idPrefix = 'spiegel_cl_'
@@ -92,9 +92,9 @@ class ChangeListeners extends Process {
     return this._idPrefix + dbName
   }
 
-  _getByDBName (dbName) {
-    return this._slouch.doc.getIgnoreMissing(this._spiegel._dbName, this._toId(dbName))
-  }
+  // _getByDBName (dbName) {
+  //   return this._slouch.doc.getIgnoreMissing(this._spiegel._dbName, this._toId(dbName))
+  // }
 
   _updateLastSeq (id, lastSeq) {
     // Use getMergeUpsert as we want the lastSeq to be stored even if there is a conflict from say

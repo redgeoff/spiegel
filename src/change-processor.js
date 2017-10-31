@@ -39,7 +39,7 @@ class ChangeProcessor {
 
     this._req = sporks.promisify(request)
 
-    this._passwordInjector = new PasswordInjector(opts && opts.passwords)
+    this._passwordInjector = new PasswordInjector(utils.getOpt(opts, 'passwords'))
   }
 
   _buildParams (change, onChange, dbName) {

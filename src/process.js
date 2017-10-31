@@ -4,6 +4,7 @@ const Throttler = require('squadron').Throttler
 const log = require('./log')
 const sporks = require('sporks')
 const events = require('events')
+const utils = require('./utils')
 
 class Process extends events.EventEmitter {
   constructor (spiegel, opts, type) {
@@ -14,21 +15,19 @@ class Process extends events.EventEmitter {
 
     this._type = type
 
-    this._throttler = new Throttler(
-      opts && opts.maxConcurrentProcesses ? opts.maxConcurrentProcesses : undefined
-    )
+    this._throttler = new Throttler(utils.getOpt(opts, 'maxConcurrentProcesses'))
 
-    this._passwords = opts && opts.passwords ? opts.passwords : {}
+    this._passwords = utils.getOpt(opts, 'passwords', {})
 
     // WARNING: retryAfterSeconds must be less than the maximum time it takes to perform the action
     // or else there can be concurrent actions for the same DB that will backup the queue and
     // continuously run
-    this._retryAfterSeconds = opts && opts.retryAfterSeconds ? opts.retryAfterSeconds : 10800
+    this._retryAfterSeconds = utils.getOpt(opts, 'retryAfterSeconds', 10800)
 
     // It will take up to roughly stalledAfterSeconds + retryAfterSeconds before an action is
     // retried. Be careful not make stalledAfterSeconds too low though or else you'll waste a lot of
     // CPU cycles just checking for stalled processes.
-    this._stalledAfterSeconds = opts && opts.stalledAfterSeconds ? opts.stalledAfterSeconds : 600
+    this._stalledAfterSeconds = utils.getOpt(opts, 'stalledAfterSeconds', 600)
   }
 
   _createDirtyAndUnLockedView () {

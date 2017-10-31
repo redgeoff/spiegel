@@ -11,11 +11,10 @@ class Replicators extends Process {
     super(
       spiegel,
       {
-        passwords: opts && opts.passwords ? opts.passwords : undefined,
-        retryAfterSeconds: opts && opts.retryAfterSeconds ? opts.retryAfterSeconds : undefined,
-        maxConcurrentProcesses:
-          opts && opts.maxConcurrentProcesses ? opts.maxConcurrentProcesses : undefined,
-        stalledAfterSeconds: opts && opts.stalledAfterSeconds ? opts.stalledAfterSeconds : undefined
+        passwords: utils.getOpt(opts, 'passwords'),
+        retryAfterSeconds: utils.getOpt(opts, 'retryAfterSeconds'),
+        maxConcurrentProcesses: utils.getOpt(opts, 'maxConcurrentProcesses'),
+        stalledAfterSeconds: utils.getOpt(opts, 'stalledAfterSeconds')
       },
       'replicator'
     )
