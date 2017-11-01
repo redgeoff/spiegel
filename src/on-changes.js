@@ -107,28 +107,42 @@ class OnChanges extends events.EventEmitter {
     return this._running
   }
 
-  start () {
-    this._running = true
-    this._from = this._db.replicate
-      .from(utils.couchDBURL() + '/' + this._spiegel._dbName, {
-        live: true,
-        retry: true,
-        filter: '_view',
-        view: 'on_changes'
-      })
+  _onError (err) {
+    // TODO: should an error be emitted so that spiegel layer can listen for it and also emit
+    // it?
+    log.error(err)
+  }
+
+  _replicateFrom () {
+    return this._db.replicate.from.apply(this._db.replicate, arguments)
+  }
+
+  _startReplicatingFrom () {
+    let from = this._replicateFrom(utils.couchDBURL() + '/' + this._spiegel._dbName, {
+      live: true,
+      retry: true,
+      filter: '_view',
+      view: 'on_changes'
+    })
+
+    from
       .once('paused', () => {
         this._onPaused()
       })
       .on('error', err => {
-        // TODO: should an error be emitted so that spiegel layer can listen for it and also emit
-        // it?
-        log.error(err)
+        this._onError(err)
       })
       .on('change', change => {
         this._setDocs(change.docs)
         this.emit('change')
       })
 
+    return from
+  }
+
+  start () {
+    this._running = true
+    this._from = this._startReplicatingFrom()
     return this._loaded
   }
 

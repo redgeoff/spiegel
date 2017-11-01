@@ -3,10 +3,17 @@
 const OnChanges = require('../../src/on-changes')
 const testUtils = require('../utils')
 const sporks = require('sporks')
+const EventEmitter = require('events').EventEmitter
 
 describe('on-changes', () => {
   let onChanges = null
   let docIds = []
+  let calls = null
+
+  const spy = () => {
+    calls = []
+    testUtils.spy(onChanges, ['_onError'], calls)
+  }
 
   const createOnChanges = async () => {
     let onChangesInit = new OnChanges(testUtils.spiegel)
@@ -43,6 +50,7 @@ describe('on-changes', () => {
 
   beforeEach(async () => {
     onChanges = new OnChanges(testUtils.spiegel)
+    spy()
     await onChanges.start()
   })
 
@@ -196,5 +204,20 @@ describe('on-changes', () => {
     })
     sporks.length(matchingOnChanges).should.eql(1)
     matchingOnChanges['3']._id.should.eql('3')
+  })
+
+  it('should handle replication errors', async () => {
+    // Fake
+    let emitter = new EventEmitter()
+    onChanges._replicateFrom = () => emitter
+
+    onChanges._startReplicatingFrom()
+
+    // Fake error
+    let err = new Error('replication error')
+    emitter.emit('error', err)
+
+    // Make sure onError was called
+    calls._onError[0][0].should.eql(err)
   })
 })
