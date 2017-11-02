@@ -124,7 +124,7 @@ class Utils {
   }
 
   silenceLog () {
-    let funs = ['error', 'warn', 'info', 'debug', 'trace']
+    let funs = ['fatal', 'error', 'warn', 'info', 'debug', 'trace']
     funs.forEach(fun => {
       log[fun] = () => {}
     })

@@ -167,6 +167,12 @@ class UpdateListeners {
     }
   }
 
+  _listenToIteratorErrors (iterator) {
+    iterator.on('error', err => {
+      this._onError(err)
+    })
+  }
+
   async _listenToNextBatch () {
     // Clear any previous batch of updates
     this._updatedDBs = []
@@ -183,9 +189,7 @@ class UpdateListeners {
       limit: this._batchSize
     })
 
-    this._dbUpdatesIterator.on('error', err => {
-      this._onError(err)
-    })
+    this._listenToIteratorErrors(this._dbUpdatesIterator)
 
     await this._dbUpdatesIteratorEach()
 
@@ -194,6 +198,10 @@ class UpdateListeners {
       await this._saveLastSeqIfNeeded()
       await this._processNextBatch()
     }
+  }
+
+  _logFatal (err) {
+    log.fatal(err)
   }
 
   async _listen () {
@@ -209,7 +217,7 @@ class UpdateListeners {
     } catch (err) {
       // Log fatal error here as this is in our listening loop, which is detached from our starting
       // chain of promises
-      log.fatal(err)
+      this._logFatal(err)
     }
   }
 
