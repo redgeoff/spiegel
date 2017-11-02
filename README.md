@@ -1,8 +1,6 @@
 # spiegel
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/redgeoff/spiegel.svg)](https://greenkeeper.io/)
-
-[![Circle CI](https://circleci.com/gh/redgeoff/spiegel.svg?style=svg&circle-token=71ef4a94aae37c96dde8268b3ed094f5fb73dd7f)](https://circleci.com/gh/redgeoff/spiegel)
+[![Greenkeeper badge](https://badges.greenkeeper.io/redgeoff/spiegel.svg)](https://greenkeeper.io/) [![Circle CI](https://circleci.com/gh/redgeoff/spiegel.svg?style=svg&circle-token=71ef4a94aae37c96dde8268b3ed094f5fb73dd7f)](https://circleci.com/gh/redgeoff/spiegel)
 
 Scalable replication and change listening for CouchDB
 
