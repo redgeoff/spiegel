@@ -84,9 +84,13 @@ class Spiegel {
     }
   }
 
+  _installed () {
+    return this._slouch.db.exists(this._dbName)
+  }
+
   async installIfNotInstalled () {
-    let exists = await this._slouch.db.exists(this._dbName)
-    if (!exists) {
+    let installed = await this._installed()
+    if (!installed) {
       await this.install()
     }
   }

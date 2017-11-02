@@ -32,7 +32,7 @@ class Spawner {
 
       // An error entry? There shouldn't be any errors
       if (logEntry.level > 30) {
-        throw new Error(logEntry)
+        throw new Error(JSON.stringify(logEntry))
       }
     })
 
