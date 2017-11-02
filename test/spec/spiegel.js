@@ -72,6 +72,17 @@ describe('spiegel', () => {
   const shouldStartAndStop = async type => {
     // Sanity test. TODO: spy on calls
     let spiegel2 = newSpiegel(type)
+
+    // Fake
+    spiegel2._onChanges.start = sporks.resolveFactory()
+    spiegel2._onChanges.stop = sporks.resolveFactory()
+    spiegel2._updateListeners.start = sporks.resolveFactory()
+    spiegel2._updateListeners.stop = sporks.resolveFactory()
+    spiegel2._changeListeners.start = sporks.resolveFactory()
+    spiegel2._changeListeners.stop = sporks.resolveFactory()
+    spiegel2._replicators.start = sporks.resolveFactory()
+    spiegel2._replicators.stop = sporks.resolveFactory()
+
     await spiegel2.start()
     await spiegel2.stop()
   }
