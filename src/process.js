@@ -328,6 +328,20 @@ class Process extends events.EventEmitter {
     )
   }
 
+  async _unlockAndThrowIfNotConflict (doc) {
+    try {
+      await this._unlock(doc)
+    } catch (err) {
+      // We can expect to get a conflict if two processes attempt to unlock the same stalled
+      // item. We also want to prevent a process from unlocking an item, locking for a new
+      // processing and having another process unlock the locked item.
+      if (!this._slouch.doc.isConflictError(err)) {
+        // Unexpected error
+        throw err
+      }
+    }
+  }
+
   async _unlockStalled () {
     // Note: we cannot use a view to automatically track stalled processes as views with time
     // sensitive data like the current timestamp don't work as they are not refreshed as the
@@ -337,17 +351,7 @@ class Process extends events.EventEmitter {
     let iterator = this._lockedItems()
     await iterator.each(async item => {
       if (this._hasStalled(item.doc)) {
-        try {
-          await this._unlock(item.doc)
-        } catch (err) {
-          // We can expect to get a conflict if two processes attempt to unlock the same stalled
-          // item. We also want to prevent a process from unlocking an item, locking for a new
-          // processing and having another process unlock the locked item.
-          if (!this._slouch.doc.isConflictError(err)) {
-            // Unexpected error
-            throw err
-          }
-        }
+        await this._unlockAndThrowIfNotConflict(item.doc)
       }
     })
   }

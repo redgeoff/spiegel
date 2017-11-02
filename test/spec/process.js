@@ -525,4 +525,20 @@ describe('process', () => {
   it('should stop when not already started', async () => {
     await proc.stop()
   })
+
+  it('_unlockAndThrowIfNotConflict should throw if not conflict', async () => {
+    // Fake non-conflict error
+    proc._unlock = sporks.promiseErrorFactory(nonConflictError)
+
+    await sporks.shouldThrow(() => {
+      return proc._unlockAndThrowIfNotConflict()
+    }, nonConflictError)
+  })
+
+  it('_unlockAndThrowIfNotConflict should not throw if conflict', async () => {
+    // Fake non-conflict error
+    proc._unlock = sporks.promiseErrorFactory(conflictError)
+
+    await proc._unlockAndThrowIfNotConflict()
+  })
 })
