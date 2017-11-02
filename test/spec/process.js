@@ -67,10 +67,19 @@ describe('process', () => {
     listenForErrors()
   })
 
+  // TODO: move to slouch
+  const downsert = (dbName, id) => {
+    return testUtils.spiegel._slouch.doc._persistThroughConflicts(function () {
+      return testUtils.spiegel._slouch.doc.getAndDestroy(dbName, id)
+    })
+  }
+
   afterEach(async () => {
     await Promise.all(
       itemIds.map(async id => {
-        await testUtils.spiegel._slouch.doc.getAndDestroy(testUtils.spiegel._dbName, id)
+        // We need to use a downsert as we need to handle race conditions caused when we have
+        // multiple nodes
+        await downsert(testUtils.spiegel._dbName, id)
       })
     )
     await testUtils.destroyTestDBs()
