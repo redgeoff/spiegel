@@ -32,9 +32,7 @@ test:
     - nvm use 8.1.4 && npm run lint
 
   override:
-    # TODO: replace when we have 100% coverage
-    # - nvm use 8.1.4 && npm run node-full-test
-    - nvm use 8.1.4 && npm run node-test
+    - nvm use 8.1.4 && npm run node-full-test
 
   post:
     # Stop CouchDB instance to prevent bind conflicts with subsequent test containers
