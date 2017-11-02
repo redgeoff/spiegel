@@ -69,10 +69,22 @@ describe('spiegel', () => {
     calls.install.length.should.eql(1)
   })
 
-  // it('should start and stop update-listener', async () => {
-  //   // Sanity test. TODO: spy on calls
-  //   let spiegel2 = newSpiegel('update-listener')
-  //   spiegel2.start()
-  //   spiegel2.stop()
-  // })
+  const shouldStartAndStop = async type => {
+    // Sanity test. TODO: spy on calls
+    let spiegel2 = newSpiegel(type)
+    await spiegel2.start()
+    await spiegel2.stop()
+  }
+
+  it('should start and stop update-listener', async () => {
+    await shouldStartAndStop('update-listener')
+  })
+
+  it('should start and stop change-listener', async () => {
+    await shouldStartAndStop('change-listener')
+  })
+
+  it('should start and stop replicator', async () => {
+    await shouldStartAndStop('replicator')
+  })
 })
