@@ -4,6 +4,7 @@ const Throttler = require('squadron').Throttler
 const log = require('./log')
 const sporks = require('sporks')
 const events = require('events')
+const utils = require('./utils')
 
 class Process extends events.EventEmitter {
   constructor (spiegel, opts, type) {
@@ -14,21 +15,19 @@ class Process extends events.EventEmitter {
 
     this._type = type
 
-    this._throttler = new Throttler(
-      opts && opts.maxConcurrentProcesses ? opts.maxConcurrentProcesses : undefined
-    )
+    this._throttler = new Throttler(utils.getOpt(opts, 'maxConcurrentProcesses'))
 
-    this._passwords = opts && opts.passwords ? opts.passwords : {}
+    this._passwords = utils.getOpt(opts, 'passwords', {})
 
     // WARNING: retryAfterSeconds must be less than the maximum time it takes to perform the action
     // or else there can be concurrent actions for the same DB that will backup the queue and
     // continuously run
-    this._retryAfterSeconds = opts && opts.retryAfterSeconds ? opts.retryAfterSeconds : 10800
+    this._retryAfterSeconds = utils.getOpt(opts, 'retryAfterSeconds', 10800)
 
-    // It will take up to roughly stalledAfterSeconds + retryAfterSeconds before an action is
-    // retried. Be careful not make stalledAfterSeconds too low though or else you'll waste a lot of
+    // It will take up to roughly checkStalledSeconds + retryAfterSeconds before an action is
+    // retried. Be careful not make checkStalledSeconds too low though or else you'll waste a lot of
     // CPU cycles just checking for stalled processes.
-    this._stalledAfterSeconds = opts && opts.stalledAfterSeconds ? opts.stalledAfterSeconds : 600
+    this._checkStalledSeconds = utils.getOpt(opts, 'checkStalledSeconds', 600)
   }
 
   _createDirtyAndUnLockedView () {
@@ -144,12 +143,16 @@ class Process extends events.EventEmitter {
     return this._updateItem(rep, true)
   }
 
-  async _unlockAndClean (item, leaveDirty) {
+  _setDirty (item, leaveDirty) {
     // Leave dirty? This can occur when we want to unlock without cleaning as we still have more
     // processing to do for this item
     if (!leaveDirty) {
       item.dirty = false
     }
+  }
+
+  async _unlockAndClean (item, leaveDirty) {
+    this._setDirty(item, leaveDirty)
 
     item.locked_at = null
 
@@ -167,7 +170,7 @@ class Process extends events.EventEmitter {
     try {
       let rep = await this._lock(item)
 
-      // Set the updated rev as we need to be able to unlock the replicator later
+      // Set the updated rev as we need to be able to unlock the item later
       item._rev = rep._rev
     } catch (err) {
       if (this._slouch.doc.isConflictError(err)) {
@@ -230,9 +233,9 @@ class Process extends events.EventEmitter {
     this.emit('err', err)
   }
 
-  async _lockProcessUnlockLogError (replicator) {
+  async _lockProcessUnlockLogError (item) {
     try {
-      await this._lockProcessUnlock(replicator)
+      await this._lockProcessUnlock(item)
     } catch (err) {
       // Swallow the error as the item will be retried. We want to just log the error and then
       // swallow it so that the caller continues processing
@@ -257,6 +260,14 @@ class Process extends events.EventEmitter {
     return this._slouch.db.changes(this._spiegel._dbName, params)
   }
 
+  _listenToIteratorErrors (iterator) {
+    iterator.on('error', err => {
+      // Unexpected error. Errors should be handled at the Slouch layer and connections should be
+      // persistent
+      this._onError(err)
+    })
+  }
+
   // Note: the changes feed with respect to the dirty_and_unlocked view will only get changes for
   // unlocked items. i.e. an item can be re-dirtied many times while it is processing, but it will
   // only be scheduled for processing (and scheduled once) when the item is unlocked
@@ -270,14 +281,10 @@ class Process extends events.EventEmitter {
       include_docs: true
     })
 
-    this._iterator.on('error', err => {
-      // Unexpected error. Errors should be handled at the Slouch layer and connections should be
-      // persistent
-      this._onError(err)
-    })
+    this._listenToIteratorErrors(this._iterator)
 
-    this._iterator.each(replicator => {
-      return this._lockProcessUnlockLogError(replicator.doc)
+    this._iterator.each(item => {
+      return this._lockProcessUnlockLogError(item.doc)
     }, this._throttler)
   }
 
@@ -301,9 +308,7 @@ class Process extends events.EventEmitter {
       this._iterator.abort()
     }
 
-    if (this._throttler) {
-      await this._throttler.allDone()
-    }
+    await this._throttler.allDone()
   }
 
   _lockedItems () {
@@ -323,6 +328,20 @@ class Process extends events.EventEmitter {
     )
   }
 
+  async _unlockAndThrowIfNotConflict (doc) {
+    try {
+      await this._unlock(doc)
+    } catch (err) {
+      // We can expect to get a conflict if two processes attempt to unlock the same stalled
+      // item. We also want to prevent a process from unlocking an item, locking for a new
+      // processing and having another process unlock the locked item.
+      if (!this._slouch.doc.isConflictError(err)) {
+        // Unexpected error
+        throw err
+      }
+    }
+  }
+
   async _unlockStalled () {
     // Note: we cannot use a view to automatically track stalled processes as views with time
     // sensitive data like the current timestamp don't work as they are not refreshed as the
@@ -332,30 +351,24 @@ class Process extends events.EventEmitter {
     let iterator = this._lockedItems()
     await iterator.each(async item => {
       if (this._hasStalled(item.doc)) {
-        try {
-          await this._unlock(item.doc)
-        } catch (err) {
-          // We can expect to get a conflict if two processes attempt to unlock the same stalled
-          // item. We also want to prevent a process from unlocking an item, locking for a new
-          // processing and having another process unlock the locked item.
-          if (!this._slouch.doc.isConflictError(err)) {
-            // Unexpected error
-            throw err
-          }
-        }
+        await this._unlockAndThrowIfNotConflict(item.doc)
       }
     })
   }
 
+  async _unlockStalledLogError () {
+    try {
+      await this._unlockStalled()
+    } catch (err) {
+      // Unknown error
+      this._onError(err)
+    }
+  }
+
   _startUnstaller () {
-    this._unstaller = setInterval(async () => {
-      try {
-        await this._unlockStalled()
-      } catch (err) {
-        // Unknown error
-        this._onError(err)
-      }
-    }, this._stalledAfterSeconds * 1000)
+    this._unstaller = setInterval(() => {
+      this._unlockStalledLogError()
+    }, this._checkStalledSeconds * 1000)
   }
 
   _stopUnstaller () {

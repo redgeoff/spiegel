@@ -10,6 +10,7 @@ PouchDB.plugin(require('pouchdb-find'))
 const slouch = testUtils.spiegel._slouch
 const sporks = require('sporks')
 const utils = require('../../src/utils')
+const fs = require('fs')
 
 // Question: What is the fastest way to look up a replicator in a local CouchDB instance using the
 //           node leveldown adapter?
@@ -114,9 +115,20 @@ describe('pouch-query', function () {
     return completed
   }
 
+  const levelPath = () => {
+    // As per https://github.com/Level/levelup/issues/222 on VirtualBox there are problems when the
+    // directory uses mmap. As a workaround if we detect that we are running with vagrant then we'll
+    // use a directory that is exclusive to the VM.
+    if (fs.existsSync('/vagrant')) {
+      return '/home/ubuntu'
+    } else {
+      return './cache'
+    }
+  }
+
   beforeEach(async () => {
     await createDB()
-    db = new PouchDB(utils.levelPath() + '/test_bm_replicators')
+    db = new PouchDB(levelPath() + '/test_bm_replicators')
     await createPouchIndex()
     await startReplicating()
   })

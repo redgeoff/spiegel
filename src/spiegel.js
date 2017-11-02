@@ -6,25 +6,23 @@ const ChangeListeners = require('./change-listeners')
 const Replicators = require('./replicators')
 const OnChanges = require('./on-changes')
 const log = require('./log')
+const utils = require('./utils')
 
 class Spiegel {
   constructor (type, opts) {
     this._type = type
 
     this._slouch = slouch
-    this._dbName = opts && opts.dbName ? opts.dbName : 'spiegel'
+    this._dbName = utils.getOpt(opts, 'dbName', 'spiegel')
 
     // Used to create a separate namespace for testing
-    this._namespace = opts && opts.namespace ? opts.namespace : ''
+    this._namespace = utils.getOpt(opts, 'namespace')
 
-    log.level(opts && opts.logLevel ? opts.logLevel : 'info')
+    log.level(utils.getOpt(opts, 'logLevel', 'info'))
 
     this._updateListeners = new UpdateListeners(this, opts)
-    this._changeListeners = new ChangeListeners(
-      this,
-      opts && opts.changeListener ? opts.changeListener : undefined
-    )
-    this._replicators = new Replicators(this, opts && opts.replicator ? opts.replicator : undefined)
+    this._changeListeners = new ChangeListeners(this, utils.getOpt(opts, 'changeListener'))
+    this._replicators = new Replicators(this, utils.getOpt(opts, 'replicator'))
     this._onChanges = new OnChanges(this)
   }
 
@@ -86,9 +84,13 @@ class Spiegel {
     }
   }
 
+  _installed () {
+    return this._slouch.db.exists(this._dbName)
+  }
+
   async installIfNotInstalled () {
-    let exists = await this._slouch.db.exists(this._dbName)
-    if (!exists) {
+    let installed = await this._installed()
+    if (!installed) {
       await this.install()
     }
   }

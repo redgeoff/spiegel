@@ -4,6 +4,7 @@ const UpdateListeners = require('../../src/update-listeners')
 const testUtils = require('../utils')
 const sporks = require('sporks')
 // const Globals = require('../../src/globals')
+const EventEmitter = require('events').EventEmitter
 
 describe('update-listeners', () => {
   let listeners = null
@@ -15,9 +16,19 @@ describe('update-listeners', () => {
   let globals = null
   // let lastSeq
   let suffix = null
+  let calls = null
 
   // Specify a large batchTimeout so that time is not a factor
   const BATCH_TIMEOUT = 5000
+
+  const spy = () => {
+    calls = []
+    testUtils.spy(
+      listeners,
+      ['_logFatal', '_onError', '_changeListenersDirtyIfCleanOrLocked'],
+      calls
+    )
+  }
 
   const spyOnProcessNextBatch = () => {
     batches = []
@@ -65,6 +76,7 @@ describe('update-listeners', () => {
     globals = []
     listeners._setGlobal = function (name, value) {
       globals.push({ name, value })
+      return UpdateListeners.prototype._setGlobal.apply(this, arguments)
     }
   }
 
@@ -109,6 +121,7 @@ describe('update-listeners', () => {
     spyOnDirtyReplicators()
     spyOnDirtyChangeListeners()
     spyOnSetGlobal()
+    spy()
     if (fakeLastSeq) {
       // fakeGlobals()
     }
@@ -293,5 +306,48 @@ describe('update-listeners', () => {
 
     // Make sure that lastSeq was saved for the first update
     globals[0].should.eql({ name: 'lastSeq', value: updates[0].seq })
+  })
+
+  it('should log fatal errors when listening', async () => {
+    await createListeners()
+
+    // Fake error
+    let err = new Error()
+    listeners._listenToNextBatch = sporks.promiseErrorFactory(err)
+
+    await listeners._listen()
+
+    calls._logFatal[0][0].should.eql(err)
+  })
+
+  it('should _listenToIteratorErrors', async () => {
+    await createListeners()
+
+    let emitter = new EventEmitter()
+
+    listeners._listenToIteratorErrors(emitter)
+
+    // Fake error
+    let err = new Error()
+    emitter.emit('error', err)
+
+    // Make sure _onError was called
+    calls._onError[0][0].should.eql(err)
+  })
+
+  it('should stop when not already started', async () => {
+    let listeners2 = new UpdateListeners(testUtils.spiegel)
+    await listeners2.stop()
+  })
+
+  it('_matchAndDirtyFiltered should handle no filteredDBNames', async () => {
+    createListeners()
+
+    // Fake no DBs
+    listeners._matchWithDBNames = sporks.resolveFactory([])
+
+    await listeners._matchAndDirtyFiltered()
+
+    calls._changeListenersDirtyIfCleanOrLocked.length.should.eql(0)
   })
 })

@@ -4,6 +4,7 @@ const Process = require('../../src/process')
 const testUtils = require('../utils')
 const sporks = require('sporks')
 const utils = require('../../src/utils')
+const EventEmitter = require('events').EventEmitter
 
 describe('process', () => {
   let globalProc = null
@@ -12,7 +13,7 @@ describe('process', () => {
   let calls = null
   let globalError = false
   let retryAfterSeconds = 1
-  let stalledAfterSeconds = 1
+  let checkStalledSeconds = 1
   let type = 'item'
 
   let conflictError = new Error()
@@ -32,7 +33,8 @@ describe('process', () => {
         '_lockProcessUnlockLogError',
         '_changes',
         '_unlockStalled',
-        '_unlock'
+        '_unlock',
+        '_onError'
       ],
       calls
     )
@@ -44,8 +46,13 @@ describe('process', () => {
     })
   }
 
+  const ignoreGlobalErrors = () => {
+    // Fake emitting of error so that we don't actually emit an error
+    proc.emit = () => {}
+  }
+
   before(async () => {
-    globalProc = new Process(testUtils.spiegel, { retryAfterSeconds, stalledAfterSeconds }, type)
+    globalProc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds }, type)
     await globalProc._createViews()
   })
 
@@ -54,7 +61,7 @@ describe('process', () => {
   })
 
   beforeEach(async () => {
-    proc = new Process(testUtils.spiegel, { retryAfterSeconds, stalledAfterSeconds }, type)
+    proc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds }, type)
     itemIds = []
     spy()
     listenForErrors()
@@ -445,8 +452,9 @@ describe('process', () => {
       target: utils.couchDBURL() + '/' + dbNames[0],
       dirty: true,
 
-      // Should be retried when unstaller runs a second time
-      locked_at: new Date(new Date().getTime() - retryAfterSeconds * 1000 / 2).toISOString()
+      // Should be retried when unstaller a subsequent time. We add the multiple of 2 or else a race
+      // condition could cause this item to be processed in the first batch
+      locked_at: new Date(new Date().getTime() + retryAfterSeconds * 1000 * 2).toISOString()
     })
 
     // A decoy that should not be unstalled as it is not locked
@@ -462,21 +470,88 @@ describe('process', () => {
       dirty: true,
 
       // Should be retried when unstaller first runs
-      locked_at: new Date(new Date().getTime() - retryAfterSeconds * 1000 * 2).toISOString()
+      locked_at: new Date(new Date().getTime() - retryAfterSeconds * 1000).toISOString()
     })
 
     await testUtils.createTestDBs(dbNames)
 
     await proc.start()
 
-    // Wait for unstaller to loop twice
+    // Wait for 2 unlocks
     await testUtils.waitFor(() => {
-      return calls._unlockStalled.length === 2 ? true : undefined
+      return calls._unlock.length === 2 ? true : undefined
     })
 
-    calls._unlock[0][0]._id.should.eql(item1._id)
-    calls._unlock[1][0]._id.should.eql(item3._id)
+    calls._unlock[0][0]._id.should.eql(item3._id)
+    calls._unlock[1][0]._id.should.eql(item1._id)
+
+    // Make sure _unlockStalled was called mutiple times
+    calls._unlockStalled.length.should.above(1)
 
     await proc.stop()
+  })
+
+  it('_setDirty should not clean when leaveDirty', () => {
+    let item = { dirty: true }
+    proc._setDirty(item, true)
+    item.should.eql({ dirty: true })
+  })
+
+  it('_lockProcessUnlockLogError should handle error', async () => {
+    // Fake conflict error
+    proc._lockProcessUnlock = sporks.promiseErrorFactory(conflictError)
+
+    ignoreGlobalErrors()
+
+    await proc._lockProcessUnlockLogError()
+
+    // Make sure _onError was called
+    calls._onError[0][0].should.eql(conflictError)
+  })
+
+  it('should _listenToIteratorErrors', () => {
+    let emitter = new EventEmitter()
+
+    proc._listenToIteratorErrors(emitter)
+
+    ignoreGlobalErrors()
+
+    // Fake error
+    emitter.emit('error', conflictError)
+
+    // Make sure _onError was called
+    calls._onError[0][0].should.eql(conflictError)
+  })
+
+  it('should stop when not already started', async () => {
+    await proc.stop()
+  })
+
+  it('_unlockAndThrowIfNotConflict should throw if not conflict', async () => {
+    // Fake non-conflict error
+    proc._unlock = sporks.promiseErrorFactory(nonConflictError)
+
+    await sporks.shouldThrow(() => {
+      return proc._unlockAndThrowIfNotConflict()
+    }, nonConflictError)
+  })
+
+  it('_unlockAndThrowIfNotConflict should not throw if conflict', async () => {
+    // Fake non-conflict error
+    proc._unlock = sporks.promiseErrorFactory(conflictError)
+
+    await proc._unlockAndThrowIfNotConflict()
+  })
+
+  it('_unlockStalledLogError should log errors', async () => {
+    // Fake conflict error
+    proc._unlockStalled = sporks.promiseErrorFactory(conflictError)
+
+    ignoreGlobalErrors()
+
+    await proc._unlockStalledLogError()
+
+    // Make sure _onError was called
+    calls._onError[0][0].should.eql(conflictError)
   })
 })

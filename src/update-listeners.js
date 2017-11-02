@@ -3,6 +3,7 @@
 const Globals = require('./globals')
 const log = require('./log')
 const sporks = require('sporks')
+const utils = require('./utils')
 
 class UpdateListeners {
   constructor (spiegel, opts) {
@@ -11,14 +12,13 @@ class UpdateListeners {
     this._globals = new Globals(spiegel)
 
     // The maximum number of updates that will be processed in this batch
-    this._batchSize = opts && opts.batchSize ? opts.batchSize : 100
+    this._batchSize = utils.getOpt(opts, 'batchSize', 100)
 
     // The time to wait after an update before the batch is considered done regardless of whether
     // there are any more updates
-    this._batchTimeout = opts && opts.batchTimeout ? opts.batchTimeout : 1000
+    this._batchTimeout = utils.getOpt(opts, 'batchTimeout', 1000)
 
-    this._saveSeqAfterSeconds =
-      opts && opts.saveSeqAfterSeconds !== undefined ? opts.saveSeqAfterSeconds : 60
+    this._saveSeqAfterSeconds = utils.getOpt(opts, 'saveSeqAfterSeconds', 60)
 
     this._seqLastSaved = null
 
@@ -167,6 +167,12 @@ class UpdateListeners {
     }
   }
 
+  _listenToIteratorErrors (iterator) {
+    iterator.on('error', err => {
+      this._onError(err)
+    })
+  }
+
   async _listenToNextBatch () {
     // Clear any previous batch of updates
     this._updatedDBs = []
@@ -183,9 +189,7 @@ class UpdateListeners {
       limit: this._batchSize
     })
 
-    this._dbUpdatesIterator.on('error', err => {
-      this._onError(err)
-    })
+    this._listenToIteratorErrors(this._dbUpdatesIterator)
 
     await this._dbUpdatesIteratorEach()
 
@@ -194,6 +198,10 @@ class UpdateListeners {
       await this._saveLastSeqIfNeeded()
       await this._processNextBatch()
     }
+  }
+
+  _logFatal (err) {
+    log.fatal(err)
   }
 
   async _listen () {
@@ -209,7 +217,7 @@ class UpdateListeners {
     } catch (err) {
       // Log fatal error here as this is in our listening loop, which is detached from our starting
       // chain of promises
-      log.fatal(err)
+      this._logFatal(err)
     }
   }
 

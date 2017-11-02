@@ -16,6 +16,7 @@ class Utils {
     this.TIMEOUT = 20000
     this._suffixId = 0
     this._suffix = null
+    this._suffixTimestamp = new Date().getTime()
   }
 
   _newSpiegel () {
@@ -102,7 +103,7 @@ class Utils {
   }
 
   // TODO: move to sporks?
-  spy (obj, funs, calls) {
+  spy (obj, funs, calls, skip) {
     funs.forEach(fun => {
       let origFun = obj[fun]
 
@@ -110,21 +111,27 @@ class Utils {
 
       obj[fun] = function () {
         calls[fun].push(arguments)
-        return origFun.apply(this, arguments)
+        if (skip) {
+          return Promise.resolve()
+        } else {
+          return origFun.apply(this, arguments)
+        }
       }
     })
   }
 
   nextSuffix () {
     // We need to define a suffix to append to the DB names so that they are unique across tests or
-    // else CouchDB will sometimes give us unexpected results in the _global_changes DB
+    // else CouchDB will sometimes give us unexpected results in the _global_changes DB. The
+    // suffixTimestamp allows us to keep the namespaces different between runs of the entire test
+    // suite.
     this._suffixId++
-    this._suffix = '_' + this._suffixId
+    this._suffix = '_' + this._suffixTimestamp + '_' + this._suffixId
     return this._suffix
   }
 
   silenceLog () {
-    let funs = ['error', 'warn', 'info', 'debug', 'trace']
+    let funs = ['fatal', 'error', 'warn', 'info', 'debug', 'trace']
     funs.forEach(fun => {
       log[fun] = () => {}
     })

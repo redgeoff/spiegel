@@ -8,7 +8,7 @@ describe('replicators', () => {
   let replicatorIds = null
   let globalError = false
   let retryAfterSeconds = 1
-  let stalledAfterSeconds = 1
+  let checkStalledSeconds = 1
 
   let conflictError = new Error()
   conflictError.error = 'conflict'
@@ -20,7 +20,7 @@ describe('replicators', () => {
   }
 
   beforeEach(async () => {
-    replicators = new Replicators(testUtils.spiegel, { retryAfterSeconds, stalledAfterSeconds })
+    replicators = new Replicators(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds })
     replicatorIds = []
     listenForErrors()
   })
@@ -72,5 +72,9 @@ describe('replicators', () => {
       source: true,
       target: true
     })
+  })
+
+  it('_censorPasswordInURL should handle falsy values', () => {
+    testUtils.shouldEqual(replicators._censorPasswordInURL(null), null)
   })
 })
