@@ -14,7 +14,7 @@ describe('integration', function () {
   let docs2 = null
 
   // More time is needed for these tests
-  const TIMEOUT = 60000
+  const TIMEOUT = 30000
   this.timeout(TIMEOUT)
 
   const createTestDBs = async () => {
@@ -26,15 +26,11 @@ describe('integration', function () {
   }
 
   const createReplicator = async () => {
-    // URL w/o the password
+    // URL w/o the password. Note: assuming we are testing against CouchDB running in a Docker
+    // container, the port is always 5984 as this is the local port as seen from within the
+    // container.
     let url =
-      config.couchdb.scheme +
-      '://' +
-      config.couchdb.username +
-      '@' +
-      config.couchdb.host +
-      ':' +
-      config.couchdb.port
+      config.couchdb.scheme + '://' + config.couchdb.username + '@' + config.couchdb.host + ':5984'
 
     await spawner._spiegel._slouch.doc.create(spawner._spiegel._dbName, {
       type: 'replicator',
