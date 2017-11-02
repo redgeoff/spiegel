@@ -13,7 +13,7 @@ describe('process', () => {
   let calls = null
   let globalError = false
   let retryAfterSeconds = 1
-  let stalledAfterSeconds = 1
+  let checkStalledSeconds = 1
   let type = 'item'
 
   let conflictError = new Error()
@@ -52,7 +52,7 @@ describe('process', () => {
   }
 
   before(async () => {
-    globalProc = new Process(testUtils.spiegel, { retryAfterSeconds, stalledAfterSeconds }, type)
+    globalProc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds }, type)
     await globalProc._createViews()
   })
 
@@ -61,7 +61,7 @@ describe('process', () => {
   })
 
   beforeEach(async () => {
-    proc = new Process(testUtils.spiegel, { retryAfterSeconds, stalledAfterSeconds }, type)
+    proc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds }, type)
     itemIds = []
     spy()
     listenForErrors()
@@ -540,5 +540,17 @@ describe('process', () => {
     proc._unlock = sporks.promiseErrorFactory(conflictError)
 
     await proc._unlockAndThrowIfNotConflict()
+  })
+
+  it('_unlockStalledLogError should log errors', async () => {
+    // Fake conflict error
+    proc._unlockStalled = sporks.promiseErrorFactory(conflictError)
+
+    ignoreGlobalErrors()
+
+    await proc._unlockStalledLogError()
+
+    // Make sure _onError was called
+    calls._onError[0][0].should.eql(conflictError)
   })
 })

@@ -24,10 +24,10 @@ class Process extends events.EventEmitter {
     // continuously run
     this._retryAfterSeconds = utils.getOpt(opts, 'retryAfterSeconds', 10800)
 
-    // It will take up to roughly stalledAfterSeconds + retryAfterSeconds before an action is
-    // retried. Be careful not make stalledAfterSeconds too low though or else you'll waste a lot of
+    // It will take up to roughly checkStalledSeconds + retryAfterSeconds before an action is
+    // retried. Be careful not make checkStalledSeconds too low though or else you'll waste a lot of
     // CPU cycles just checking for stalled processes.
-    this._stalledAfterSeconds = utils.getOpt(opts, 'stalledAfterSeconds', 600)
+    this._checkStalledSeconds = utils.getOpt(opts, 'checkStalledSeconds', 600)
   }
 
   _createDirtyAndUnLockedView () {
@@ -356,15 +356,19 @@ class Process extends events.EventEmitter {
     })
   }
 
+  async _unlockStalledLogError () {
+    try {
+      await this._unlockStalled()
+    } catch (err) {
+      // Unknown error
+      this._onError(err)
+    }
+  }
+
   _startUnstaller () {
-    this._unstaller = setInterval(async () => {
-      try {
-        await this._unlockStalled()
-      } catch (err) {
-        // Unknown error
-        this._onError(err)
-      }
-    }, this._stalledAfterSeconds * 1000)
+    this._unstaller = setInterval(() => {
+      this._unlockStalledLogError()
+    }, this._checkStalledSeconds * 1000)
   }
 
   _stopUnstaller () {

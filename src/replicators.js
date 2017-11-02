@@ -14,7 +14,7 @@ class Replicators extends Process {
         passwords: utils.getOpt(opts, 'passwords'),
         retryAfterSeconds: utils.getOpt(opts, 'retryAfterSeconds'),
         maxConcurrentProcesses: utils.getOpt(opts, 'maxConcurrentProcesses'),
-        stalledAfterSeconds: utils.getOpt(opts, 'stalledAfterSeconds')
+        checkStalledSeconds: utils.getOpt(opts, 'checkStalledSeconds')
       },
       'replicator'
     )
