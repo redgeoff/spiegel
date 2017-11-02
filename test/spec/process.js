@@ -452,8 +452,9 @@ describe('process', () => {
       target: utils.couchDBURL() + '/' + dbNames[0],
       dirty: true,
 
-      // Should be retried when unstaller runs a second time
-      locked_at: new Date(new Date().getTime() + retryAfterSeconds * 1000 / 2).toISOString()
+      // Should be retried when unstaller a subsequent time. We add the multiple of 2 or else a race
+      // condition could cause this item to be processed in the first batch
+      locked_at: new Date(new Date().getTime() + retryAfterSeconds * 1000 * 2).toISOString()
     })
 
     // A decoy that should not be unstalled as it is not locked
@@ -484,8 +485,8 @@ describe('process', () => {
     calls._unlock[0][0]._id.should.eql(item3._id)
     calls._unlock[1][0]._id.should.eql(item1._id)
 
-    // Make sure _unlockStalled was called twice
-    calls._unlockStalled.length.should.eql(2)
+    // Make sure _unlockStalled was called mutiple times
+    calls._unlockStalled.length.should.above(1)
 
     await proc.stop()
   })
