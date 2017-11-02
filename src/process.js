@@ -143,12 +143,16 @@ class Process extends events.EventEmitter {
     return this._updateItem(rep, true)
   }
 
-  async _unlockAndClean (item, leaveDirty) {
+  _setDirty (item, leaveDirty) {
     // Leave dirty? This can occur when we want to unlock without cleaning as we still have more
     // processing to do for this item
     if (!leaveDirty) {
       item.dirty = false
     }
+  }
+
+  async _unlockAndClean (item, leaveDirty) {
+    this._setDirty(item, leaveDirty)
 
     item.locked_at = null
 
@@ -166,7 +170,7 @@ class Process extends events.EventEmitter {
     try {
       let rep = await this._lock(item)
 
-      // Set the updated rev as we need to be able to unlock the replicator later
+      // Set the updated rev as we need to be able to unlock the item later
       item._rev = rep._rev
     } catch (err) {
       if (this._slouch.doc.isConflictError(err)) {
@@ -229,9 +233,9 @@ class Process extends events.EventEmitter {
     this.emit('err', err)
   }
 
-  async _lockProcessUnlockLogError (replicator) {
+  async _lockProcessUnlockLogError (item) {
     try {
-      await this._lockProcessUnlock(replicator)
+      await this._lockProcessUnlock(item)
     } catch (err) {
       // Swallow the error as the item will be retried. We want to just log the error and then
       // swallow it so that the caller continues processing
@@ -256,6 +260,14 @@ class Process extends events.EventEmitter {
     return this._slouch.db.changes(this._spiegel._dbName, params)
   }
 
+  _listenToIteratorErrors (iterator) {
+    iterator.on('error', err => {
+      // Unexpected error. Errors should be handled at the Slouch layer and connections should be
+      // persistent
+      this._onError(err)
+    })
+  }
+
   // Note: the changes feed with respect to the dirty_and_unlocked view will only get changes for
   // unlocked items. i.e. an item can be re-dirtied many times while it is processing, but it will
   // only be scheduled for processing (and scheduled once) when the item is unlocked
@@ -269,14 +281,10 @@ class Process extends events.EventEmitter {
       include_docs: true
     })
 
-    this._iterator.on('error', err => {
-      // Unexpected error. Errors should be handled at the Slouch layer and connections should be
-      // persistent
-      this._onError(err)
-    })
+    this._listenToIteratorErrors(this._iterator)
 
-    this._iterator.each(replicator => {
-      return this._lockProcessUnlockLogError(replicator.doc)
+    this._iterator.each(item => {
+      return this._lockProcessUnlockLogError(item.doc)
     }, this._throttler)
   }
 
@@ -300,9 +308,7 @@ class Process extends events.EventEmitter {
       this._iterator.abort()
     }
 
-    if (this._throttler) {
-      await this._throttler.allDone()
-    }
+    await this._throttler.allDone()
   }
 
   _lockedItems () {

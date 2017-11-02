@@ -4,6 +4,7 @@ const Process = require('../../src/process')
 const testUtils = require('../utils')
 const sporks = require('sporks')
 const utils = require('../../src/utils')
+const EventEmitter = require('events').EventEmitter
 
 describe('process', () => {
   let globalProc = null
@@ -32,7 +33,8 @@ describe('process', () => {
         '_lockProcessUnlockLogError',
         '_changes',
         '_unlockStalled',
-        '_unlock'
+        '_unlock',
+        '_onError'
       ],
       calls
     )
@@ -42,6 +44,11 @@ describe('process', () => {
     proc.once('err', function (err) {
       globalError = err
     })
+  }
+
+  const ignoreGlobalErrors = () => {
+    // Fake emitting of error so that we don't actually emit an error
+    proc.emit = () => {}
   }
 
   before(async () => {
@@ -446,7 +453,7 @@ describe('process', () => {
       dirty: true,
 
       // Should be retried when unstaller runs a second time
-      locked_at: new Date(new Date().getTime() - retryAfterSeconds * 1000 / 2).toISOString()
+      locked_at: new Date(new Date().getTime() + retryAfterSeconds * 1000 / 2).toISOString()
     })
 
     // A decoy that should not be unstalled as it is not locked
@@ -462,21 +469,60 @@ describe('process', () => {
       dirty: true,
 
       // Should be retried when unstaller first runs
-      locked_at: new Date(new Date().getTime() - retryAfterSeconds * 1000 * 2).toISOString()
+      locked_at: new Date(new Date().getTime() - retryAfterSeconds * 1000).toISOString()
     })
 
     await testUtils.createTestDBs(dbNames)
 
     await proc.start()
 
-    // Wait for unstaller to loop twice
+    // Wait for 2 unlocks
     await testUtils.waitFor(() => {
-      return calls._unlockStalled.length === 2 ? true : undefined
+      return calls._unlock.length === 2 ? true : undefined
     })
 
-    calls._unlock[0][0]._id.should.eql(item1._id)
-    calls._unlock[1][0]._id.should.eql(item3._id)
+    calls._unlock[0][0]._id.should.eql(item3._id)
+    calls._unlock[1][0]._id.should.eql(item1._id)
 
+    // Make sure _unlockStalled was called twice
+    calls._unlockStalled.length.should.eql(2)
+
+    await proc.stop()
+  })
+
+  it('_setDirty should not clean when leaveDirty', () => {
+    let item = { dirty: true }
+    proc._setDirty(item, true)
+    item.should.eql({ dirty: true })
+  })
+
+  it('_lockProcessUnlockLogError should handle error', async () => {
+    // Fake conflict error
+    proc._lockProcessUnlock = sporks.promiseErrorFactory(conflictError)
+
+    ignoreGlobalErrors()
+
+    await proc._lockProcessUnlockLogError()
+
+    // Make sure _onError was called
+    calls._onError[0][0].should.eql(conflictError)
+  })
+
+  it('should _listenToIteratorErrors', () => {
+    let emitter = new EventEmitter()
+
+    proc._listenToIteratorErrors(emitter)
+
+    ignoreGlobalErrors()
+
+    // Fake error
+    emitter.emit('error', conflictError)
+
+    // Make sure _onError was called
+    calls._onError[0][0].should.eql(conflictError)
+  })
+
+  it('should stop when not already started', async () => {
     await proc.stop()
   })
 })
