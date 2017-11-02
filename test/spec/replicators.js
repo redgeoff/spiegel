@@ -73,4 +73,8 @@ describe('replicators', () => {
       target: true
     })
   })
+
+  it('_censorPasswordInURL should handle falsy values', () => {
+    testUtils.shouldEqual(replicators._censorPasswordInURL(null), null)
+  })
 })

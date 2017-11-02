@@ -192,6 +192,10 @@ class Replicators extends Process {
     return this._passwordInjector.addPassword(urlString)
   }
 
+  _censorPasswordInURL (url) {
+    return url ? utils.censorPasswordInURL(url) : url
+  }
+
   async _replicate (replicator) {
     let couchParams = this._toCouchDBReplicationParams(replicator)
 
@@ -200,8 +204,8 @@ class Replicators extends Process {
     couchParams.source = this._addPassword(couchParams.source)
     couchParams.target = this._addPassword(couchParams.target)
 
-    let sourceNoPwd = couchParams.source ? utils.censorPasswordInURL(couchParams.source) : undefined
-    let targetNoPwd = couchParams.target ? utils.censorPasswordInURL(couchParams.target) : undefined
+    let sourceNoPwd = this._censorPasswordInURL(couchParams.source)
+    let targetNoPwd = this._censorPasswordInURL(couchParams.target)
 
     log.info('Beginning replication from', sourceNoPwd, 'to', targetNoPwd)
 
