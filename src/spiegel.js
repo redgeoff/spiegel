@@ -16,7 +16,7 @@ class Spiegel {
     this._dbName = utils.getOpt(opts, 'dbName', 'spiegel')
 
     // Used to create a separate namespace for testing
-    this._namespace = utils.getOpt(opts, 'namespace')
+    this._namespace = utils.getOpt(opts, 'namespace', '')
 
     log.level(utils.getOpt(opts, 'logLevel', 'info'))
 
@@ -50,6 +50,10 @@ class Spiegel {
 
   async start () {
     switch (this._type) {
+      case 'install':
+        await this.install()
+        break
+
       case 'update-listener':
         await this._onChanges.start()
         await this._updateListeners.start()
@@ -62,6 +66,10 @@ class Spiegel {
 
       case 'replicator':
         await this._replicators.start()
+        break
+
+      case 'uninstall':
+        await this.uninstall()
         break
     }
   }
@@ -84,16 +92,16 @@ class Spiegel {
     }
   }
 
-  _installed () {
-    return this._slouch.db.exists(this._dbName)
-  }
+  // _installed () {
+  //   return this._slouch.db.exists(this._dbName)
+  // }
 
-  async installIfNotInstalled () {
-    let installed = await this._installed()
-    if (!installed) {
-      await this.install()
-    }
-  }
+  // async installIfNotInstalled () {
+  //   let installed = await this._installed()
+  //   if (!installed) {
+  //     await this.install()
+  //   }
+  // }
 }
 
 module.exports = Spiegel
