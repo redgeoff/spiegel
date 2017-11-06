@@ -43,7 +43,7 @@ if (!argv.type || !argv.url) {
           passwords: changeListenerPasswords
         }
       })
-      await spiegel.installIfNotInstalled()
+      // await spiegel.installIfNotInstalled()
       await spiegel.start()
     } catch (err) {
       try {

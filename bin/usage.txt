@@ -1,6 +1,7 @@
 Usage: spiegel --type=type --url=couchdb-url options
 
-  --type=type             The type of the process: update-listener, change-listener or replicator
+  --type=type             The type of the process: update-listener, change-listener, replicator,
+                          install or uninstall
 
   --url=couchdb-url       The URL to the CouchDB instance
 
@@ -16,5 +17,13 @@ Options:
   --log-level=level       error|warn|info|debug. Setting a particular level implies that all log
                           records at that level and above are logged.
                           Default: info.
+
+  --db-name=name          The name of the spiegel DB.
+                          Default: spiegel
+
+  --namespace=namespace   The namespace used to prefix names of global docs, e.g. the sieve in
+                          _global_changes. You can use this namespace to keep test data separate
+                          from other data.
+                          Default: ''
 
   TODO...

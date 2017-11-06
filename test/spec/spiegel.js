@@ -39,35 +39,35 @@ describe('spiegel', () => {
     )
   })
 
-  const fakeInstall = () => {
-    spiegel.install = async () => {
-      calls.install.push(arguments)
-    }
-  }
+  // const fakeInstall = () => {
+  //   spiegel.install = async () => {
+  //     calls.install.push(arguments)
+  //   }
+  // }
 
-  it('installIfNotInstalled should install if not installed', async () => {
-    // Fake not installed
-    spiegel._installed = sporks.resolveFactory(false)
+  // it('installIfNotInstalled should install if not installed', async () => {
+  //   // Fake not installed
+  //   spiegel._installed = sporks.resolveFactory(false)
+  //
+  //   fakeInstall()
+  //
+  //   await spiegel.installIfNotInstalled()
+  //
+  //   // First install from beforeEach and 2nd from installIfNotInstalled() above
+  //   calls.install.length.should.eql(2)
+  // })
 
-    fakeInstall()
-
-    await spiegel.installIfNotInstalled()
-
-    // First install from beforeEach and 2nd from installIfNotInstalled() above
-    calls.install.length.should.eql(2)
-  })
-
-  it('installIfNotInstalled should not install if installed', async () => {
-    // Fake installed
-    spiegel._installed = sporks.resolveFactory(true)
-
-    fakeInstall()
-
-    await spiegel.installIfNotInstalled()
-
-    // First install from beforeEach
-    calls.install.length.should.eql(1)
-  })
+  // it('installIfNotInstalled should not install if installed', async () => {
+  //   // Fake installed
+  //   spiegel._installed = sporks.resolveFactory(true)
+  //
+  //   fakeInstall()
+  //
+  //   await spiegel.installIfNotInstalled()
+  //
+  //   // First install from beforeEach
+  //   calls.install.length.should.eql(1)
+  // })
 
   const shouldStartAndStop = async type => {
     // Sanity test. TODO: spy on calls
@@ -82,6 +82,8 @@ describe('spiegel', () => {
     spiegel2._changeListeners.stop = sporks.resolveFactory()
     spiegel2._replicators.start = sporks.resolveFactory()
     spiegel2._replicators.stop = sporks.resolveFactory()
+    spiegel2.install = sporks.resolveFactory()
+    spiegel2.uninstall = sporks.resolveFactory()
 
     await spiegel2.start()
     await spiegel2.stop()
@@ -97,5 +99,13 @@ describe('spiegel', () => {
 
   it('should start and stop replicator', async () => {
     await shouldStartAndStop('replicator')
+  })
+
+  it('should start and stop install', async () => {
+    await shouldStartAndStop('install')
+  })
+
+  it('should start and stop uninstall', async () => {
+    await shouldStartAndStop('uninstall')
   })
 })
