@@ -105,7 +105,7 @@ class ChangeProcessor {
   }
 
   _makeDebouncedOrRegularRequest (onChange, params, opts) {
-    if (onChange.debounced) {
+    if (onChange.debounce) {
       return this._makeDebouncedRequest(onChange, params, opts)
     } else {
       return this._request(opts)
