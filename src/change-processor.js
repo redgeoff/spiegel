@@ -105,7 +105,7 @@ class ChangeProcessor {
   }
 
   _makeDebouncedOrRegularRequest (onChange, params, opts) {
-    if (onChange.debounced) {
+    if (onChange.debounce) {
       return this._makeDebouncedRequest(onChange, params, opts)
     } else {
       return this._request(opts)
@@ -148,8 +148,8 @@ class ChangeProcessor {
     await Promise.all(promises)
   }
 
-  _getMatchingOnChanges (change) {
-    return this._spiegel._onChanges.getMatchingOnChanges(change)
+  _getMatchingOnChanges (dbName, change) {
+    return this._spiegel._onChanges.getMatchingOnChanges(dbName, change.doc)
   }
 
   async process (change, dbName) {

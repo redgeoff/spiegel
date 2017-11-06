@@ -140,7 +140,7 @@ describe('change-processor', () => {
   it('_makeDebouncedOrRegularRequest should make debounced request', async () => {
     let onChange = {
       url: 'https://example.com',
-      debounced: true
+      debounce: true
     }
 
     await changeProcessor._makeDebouncedOrRegularRequest(onChange, params, opts)
