@@ -148,8 +148,8 @@ class ChangeProcessor {
     await Promise.all(promises)
   }
 
-  _getMatchingOnChanges (change) {
-    return this._spiegel._onChanges.getMatchingOnChanges(change)
+  _getMatchingOnChanges (dbName, change) {
+    return this._spiegel._onChanges.getMatchingOnChanges(dbName, change)
   }
 
   async process (change, dbName) {
