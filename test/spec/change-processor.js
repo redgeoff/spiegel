@@ -41,7 +41,10 @@ describe('change-processor', () => {
   }
 
   const fake = () => {
-    changeProcessor._req = sporks.resolveFactory()
+    changeProcessor._req = async () => {
+      // Add a little delay to simulate a request
+      await sporks.timeout(10)
+    }
   }
 
   beforeEach(async () => {
@@ -113,7 +116,7 @@ describe('change-processor', () => {
     opts.should.eql({ qs: params })
   })
 
-  it('should _makeDebouncedRequest', async () => {
+  const makeDebouncedRequest = async () => {
     await changeProcessor._makeDebouncedRequest(
       {
         url: 'https://example.com'
@@ -121,9 +124,28 @@ describe('change-processor', () => {
       params,
       opts
     )
+  }
 
+  it('should _makeDebouncedRequest', async () => {
+    await makeDebouncedRequest()
     calls._debounce[0][1].should.eql('https://example.com' + JSON.stringify(params))
     calls._request[0][0].should.eql(opts)
+  })
+
+  it('should debounce', async () => {
+    // This seems like overkill and is testing some functionality that is also tested in squadron,
+    // however without this test it is possible for a tiny bug to break the debouncer at the Spiegel
+    // layer.
+    await Promise.all([
+      makeDebouncedRequest(),
+      makeDebouncedRequest(),
+      makeDebouncedRequest(),
+      makeDebouncedRequest()
+    ])
+
+    // We expect only 1 API requests. The 1st one runs and the rest are ignored as these subsequent
+    // requests are made before the 1st one is even started.
+    calls._request.length.should.eql(1)
   })
 
   it('_makeDebouncedOrRegularRequest should make regular request', async () => {
