@@ -83,7 +83,7 @@ class ChangeProcessor {
   }
 
   _debounce (promiseFactory, resource) {
-    return this._debouncer.run(promiseFactory(), resource)
+    return this._debouncer.run(promiseFactory, resource)
   }
 
   _request () {
