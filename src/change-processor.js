@@ -149,7 +149,7 @@ class ChangeProcessor {
   }
 
   _getMatchingOnChanges (dbName, change) {
-    return this._spiegel._onChanges.getMatchingOnChanges(dbName, change)
+    return this._spiegel._onChanges.getMatchingOnChanges(dbName, change.doc)
   }
 
   async process (change, dbName) {
