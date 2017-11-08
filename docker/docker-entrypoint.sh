@@ -26,7 +26,7 @@ if [ "$1" = '/usr/local/bin/spiegel' ]; then
     dockerParam=${i^^}
 
     # Replace hyphens with underscores as linux doesn't allow hyphens in env var names
-    dockerParam=${dockerParam/-/_}
+    dockerParam=${dockerParam//-/_}
 
     # Append to the list of params and values
     if [ "${!dockerParam}" != "" ]; then
