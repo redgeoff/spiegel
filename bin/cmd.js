@@ -41,7 +41,9 @@ if (!argv.type || !argv.url) {
         },
         changeListener: {
           passwords: changeListenerPasswords
-        }
+        },
+        batchSize: argv['batch-size'],
+        batchTimeout: argv['batch-timeout']
       })
       // await spiegel.installIfNotInstalled()
       await spiegel.start()
