@@ -54,7 +54,6 @@ if (!argv.type || !argv.url) {
         log.error('failed to stop')
       }
       log.fatal(err)
-      process.exit(-1)
     }
   }
   start()

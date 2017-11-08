@@ -202,7 +202,6 @@ class UpdateListeners {
 
   _logFatal (err) {
     log.fatal(err)
-    process.exit(-1)
   }
 
   async _listen () {
