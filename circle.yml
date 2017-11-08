@@ -37,6 +37,9 @@ test:
   override:
     - nvm use 8.1.4 && npm run node-full-test
 
+  # Test docker image
+  - HOST_IP=`/sbin/ip route | awk '/eth0  proto/ { print $9 }'` && docker run -it -e URL="http://admin:admin@$HOST_IP:5984" -e TYPE="install" redgeoff/spiegel
+
   post:
     # Stop CouchDB instance to prevent bind conflicts with subsequent test containers
     - docker stop couchdb
