@@ -5,26 +5,24 @@ const { URL } = require('url')
 
 class Utils {
   couchDBURL () {
-    return (
-      config.couchdb.scheme +
-      '://' +
-      config.couchdb.username +
-      ':' +
-      config.couchdb.password +
-      '@' +
-      config.couchdb.host +
-      ':' +
-      config.couchdb.port
-    )
+    let u = new URL('http://example.com')
+    u.protocol = config.couchdb.scheme
+    u.hostname = config.couchdb.host
+    u.port = config.couchdb.port
+    u.username = config.couchdb.username
+    u.password = config.couchdb.password
+
+    // Remove trailing slash
+    return u.href.replace(/\/$/, '')
   }
 
   setCouchDBConfig (couchDBURL) {
     let u = new URL(couchDBURL)
-    config.scheme = u.protocol
-    config.host = u.hostname
-    config.port = u.port
-    config.username = u.username
-    config.password = u.password
+    config.couchdb.scheme = u.protocol
+    config.couchdb.host = u.hostname
+    config.couchdb.port = u.port
+    config.couchdb.username = u.username
+    config.couchdb.password = u.password
   }
 
   censorPasswordInURL (urlString) {
