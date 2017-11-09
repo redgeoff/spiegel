@@ -264,28 +264,38 @@ class Process extends events.EventEmitter {
     iterator.on('error', err => {
       // Unexpected error. Errors should be handled at the Slouch layer and connections should be
       // persistent
-      this._onError(err)
+      this._logFatal(err)
     })
+  }
+
+  _logFatal (err) {
+    log.fatal(err)
   }
 
   // Note: the changes feed with respect to the dirty_and_unlocked view will only get changes for
   // unlocked items. i.e. an item can be re-dirtied many times while it is processing, but it will
   // only be scheduled for processing (and scheduled once) when the item is unlocked
   async _listen (lastSeq) {
-    this._iterator = this._changes({
-      feed: 'continuous',
-      heartbeat: true,
-      since: lastSeq || undefined,
-      filter: '_view',
-      view: 'dirty_and_unlocked_' + this._type + '/dirty_and_unlocked_' + this._type,
-      include_docs: true
-    })
+    try {
+      this._iterator = this._changes({
+        feed: 'continuous',
+        heartbeat: true,
+        since: lastSeq || undefined,
+        filter: '_view',
+        view: 'dirty_and_unlocked_' + this._type + '/dirty_and_unlocked_' + this._type,
+        include_docs: true
+      })
 
-    this._listenToIteratorErrors(this._iterator)
+      this._listenToIteratorErrors(this._iterator)
 
-    this._iterator.each(item => {
-      return this._lockProcessUnlockLogError(item.doc)
-    }, this._throttler)
+      this._iterator.each(item => {
+        return this._lockProcessUnlockLogError(item.doc)
+      }, this._throttler)
+    } catch (err) {
+      // Log fatal error here as this is in our listening loop, which is detached from our starting
+      // chain of promises
+      this._logFatal(err)
+    }
   }
 
   async start () {
