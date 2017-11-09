@@ -77,19 +77,19 @@ Options:
                             else there can be concurrent actions for the same DB that will backup
                             the queue and continuously run.
 
-                            Applies to: update-listener, change-listener
+                            Applies to: change-listener, replicator
                             Default: 10800
 
   --concurrency=num         The maximum number of items that will be processed concurrently.
                             Warning: setting this value too high can result in the process using a
                             lot of memory as it queues tasks.
 
-                            Applies to: update-listener, change-listener
+                            Applies to: change-listener, replicator
                             Default: 20
 
   --check-stalled=secs      It takes check-stalled + retry-after secs before an action is retried.
                             Be careful not make check-stalled too low though or else you'll waste a
                             lot of CPU cycles just checking for stalled processes.
 
-                            Applies to: update-listener, change-listener
+                            Applies to: change-listener, replicator
                             Default: 600
