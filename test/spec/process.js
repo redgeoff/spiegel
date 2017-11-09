@@ -34,7 +34,8 @@ describe('process', () => {
         '_changes',
         '_unlockStalled',
         '_unlock',
-        '_onError'
+        '_onError',
+        '_logFatal'
       ],
       calls
     )
@@ -528,8 +529,8 @@ describe('process', () => {
     // Fake error
     emitter.emit('error', conflictError)
 
-    // Make sure _onError was called
-    calls._onError[0][0].should.eql(conflictError)
+    // Make sure _logFatal was called
+    calls._logFatal[0][0].should.eql(conflictError)
   })
 
   it('should stop when not already started', async () => {
@@ -562,5 +563,17 @@ describe('process', () => {
 
     // Make sure _onError was called
     calls._onError[0][0].should.eql(conflictError)
+  })
+
+  it('should log fatal errors when listening', async () => {
+    // Fake error
+    let err = new Error()
+    proc._changes = () => {
+      throw err
+    }
+
+    await proc._listen()
+
+    calls._logFatal[0][0].should.eql(err)
   })
 })
