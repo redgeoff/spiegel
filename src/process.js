@@ -15,7 +15,7 @@ class Process extends events.EventEmitter {
 
     this._type = type
 
-    this._throttler = new Throttler(utils.getOpt(opts, 'maxConcurrentProcesses'))
+    this._throttler = new Throttler(utils.getOpt(opts, 'concurrency', 20))
 
     this._passwords = utils.getOpt(opts, 'passwords', {})
 

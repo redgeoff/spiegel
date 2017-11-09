@@ -6,11 +6,14 @@ set -e
 declare -a params=(
   "batch-size"
   "batch-timeout"
-  "change-listener-passwords"
+  "check-stalled"
+  "concurrency"
   "db-name"
   "log-level"
   "namespace"
-  "replicator-passwords"
+  "passwords-file"
+  "retry-after"
+  "save-seq-after"
   "type"
   "url"
 )
