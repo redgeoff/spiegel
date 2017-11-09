@@ -23,27 +23,39 @@ if (!argv.type || !argv.url) {
       // Set CouchDB config
       utils.setCouchDBConfig(argv.url)
 
-      let replicatorPasswords = argv['replicator-passwords']
-        ? await fs.readJson(argv['replicator-passwords'])
-        : undefined
+      let replicatorPasswords =
+        argv.type === 'replicator' && argv['passwords-file']
+          ? await fs.readJson(argv['passwords-file'])
+          : undefined
 
-      let changeListenerPasswords = argv['change-listener-passwords']
-        ? await fs.readJson(argv['change-listener-passwords'])
-        : undefined
+      let changeListenerPasswords =
+        argv.type === 'change-listener' && argv['passwords-file']
+          ? await fs.readJson(argv['passwords-file'])
+          : undefined
 
       const Spiegel = require('../src/spiegel')
       let spiegel = new Spiegel(argv.type, {
         dbName: argv['db-name'],
         namespace: argv['namespace'],
         logLevel: argv['log-level'],
-        replicator: {
-          passwords: replicatorPasswords
+        updateListener: {
+          batchSize: argv['batch-size'],
+          batchTimeout: argv['batch-timeout'],
+          saveSeqAfterSeconds: argv['save-seq-after'],
+          concurrency: argv['concurrency'],
+          retryAfterSeconds: argv['retry-after'],
+          checkStalledSeconds: argv['check-stalled']
         },
         changeListener: {
-          passwords: changeListenerPasswords
+          passwords: changeListenerPasswords,
+          batchSize: argv['batch-size'],
+          concurrency: argv['concurrency'],
+          retryAfterSeconds: argv['retry-after'],
+          checkStalledSeconds: argv['check-stalled']
         },
-        batchSize: argv['batch-size'],
-        batchTimeout: argv['batch-timeout']
+        replicator: {
+          passwords: replicatorPasswords
+        }
       })
       // await spiegel.installIfNotInstalled()
       await spiegel.start()

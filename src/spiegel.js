@@ -20,7 +20,7 @@ class Spiegel {
 
     log.level(utils.getOpt(opts, 'logLevel', 'info'))
 
-    this._updateListeners = new UpdateListeners(this, opts)
+    this._updateListeners = new UpdateListeners(this, utils.getOpt(opts, 'updateListener'))
     this._changeListeners = new ChangeListeners(this, utils.getOpt(opts, 'changeListener'))
     this._replicators = new Replicators(this, utils.getOpt(opts, 'replicator'))
     this._onChanges = new OnChanges(this)

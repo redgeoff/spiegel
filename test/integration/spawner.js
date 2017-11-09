@@ -62,14 +62,14 @@ class Spawner {
   _startReplicator () {
     this._spawn([
       '--type=replicator',
-      '--replicator-passwords=' + path.join(__dirname, '/replicator-passwords.json')
+      '--passwords-file=' + path.join(__dirname, '/replicator-passwords.json')
     ])
   }
 
   _startChangeListener () {
     this._spawn([
       '--type=change-listener',
-      '--change-listener-passwords=' + path.join(__dirname, '/change-listener-passwords.json')
+      '--passwords-file=' + path.join(__dirname, '/change-listener-passwords.json')
     ])
   }
 

@@ -1,29 +1,95 @@
 Usage: spiegel --type=type --url=couchdb-url options
 
   --type=type             The type of the process: update-listener, change-listener, replicator,
-                          install or uninstall
+                          install or uninstall. The install and uninstall processes run and then
+                          exit, but the update-listener, change-listener and replicator will run
+                          indefinitely. You can run as many update-listeners, change-listeners and
+                          replicators as your DB setup can handle. In most cases you'll want to run
+                          at least 2 of each of these processes for redundancy. In general, if you
+                          need to listen to more changes or respond to these changes faster, add a
+                          change-listener. Similarly, if you need to perform more replications or
+                          replicate faster, add a replicator.
+
+                          install           Creates the spiegel DB and sieve
+
+                          uninstall         Destroys the spiegel DB and sieve
+
+                          update-listener   The update-listener listens for all DB updates and then
+                                            schedules on_changes and replications accordingly.
+
+                          change-listener   The change-listener runs on_change rules for all
+                                            matching changes
+
+                          replicator        The replicator performs replications
 
   --url=couchdb-url       The URL to the CouchDB instance
 
 Options:
 
-  --batch-size=size         The maximum number of updates that will be processed in a batch.
-                            Default: 100.
-
-  --batch-timeout=timeout   The time in milliseconds to wait after an update before the batch is
-                            considered done regardless of whether there are any more updates.
-                            Default: 1000.
-
   --log-level=level         error|warn|info|debug. Setting a particular level implies that all log
                             records at that level and above are logged.
-                            Default: info.
+
+                            Default: info
 
   --db-name=name            The name of the spiegel DB.
+
                             Default: spiegel
 
   --namespace=namespace     The namespace used to prefix names of global docs, e.g. the sieve in
                             _global_changes. You can use this namespace to keep test data separate
                             from other data.
+
                             Default: ''
 
-  TODO...
+  --batch-timeout=ms        The time in milliseconds to wait after an update before the batch is
+                            considered done regardless of whether there are any more updates.
+
+                            Applies to: update-listener
+                            Default: 1000
+
+  --save-seq-after=secs     The time in seconds after which the last _global_changes seq number is
+                            saved. This seq number is used to avoid re-processing updates whenever
+                            an update-listener is started or restarted.
+
+                            Applies to: update-listener
+                            Default: 60
+
+  --passwords-file=path     A JSON file with passwords for hostnames and usernames, e.g.
+                            {
+                              "example.com": {
+                                "user1": "secret1",
+                                "user2": "secret2"
+                              },
+                              "google.com": {
+                                "larry": "mypassword"
+                              }
+                            }
+
+                            Applies to: change-listener or replicator
+
+  --batch-size=size         The maximum number of items that will be processed in a batch.
+
+                            Applies to: update-listener, change-listener
+                            Default: 100
+
+  --retry-after=secs        A failed item will be reprocessed after this many seconds. Warning: secs
+                            must be less than the maximum time it takes to perform the action or
+                            else there can be concurrent actions for the same DB that will backup
+                            the queue and continuously run.
+
+                            Applies to: update-listener, change-listener
+                            Default: 10800
+
+  --concurrency=num         The maximum number of items that will be processed concurrently.
+                            Warning: setting this value too high can result in the process using a
+                            lot of memory as it queues tasks.
+
+                            Applies to: update-listener, change-listener
+                            Default: 20
+
+  --check-stalled=secs      It takes check-stalled + retry-after secs before an action is retried.
+                            Be careful not make check-stalled too low though or else you'll waste a
+                            lot of CPU cycles just checking for stalled processes.
+
+                            Applies to: update-listener, change-listener
+                            Default: 600
