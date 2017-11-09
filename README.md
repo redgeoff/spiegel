@@ -115,17 +115,18 @@ Spiegel was designed to provide scalable replication and change listening for [Q
 
 ## Passwords Config
 The passwords config specifies the passwords so that they don't have to be stored in the on_change and replicator docs.
-    ```js
-    {
-      '<host>': {
-        '<username1>': '<password1>',
-        '<username2>': '<password2>',
-        ...
-      },
-      '<host2>': {
-        '<username3>': '<password3>',
-        ...
-      }
-      ...
-    }
-    ```
+
+```js
+{
+  '<host>': {
+    '<username1>': '<password1>',
+    '<username2>': '<password2>'
+    // ...
+  },
+  '<host2>': {
+    '<username3>': '<password3>'
+    // ...
+  }
+  // ...
+}
+```
