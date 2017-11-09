@@ -29,7 +29,8 @@ Spiegel was designed to provide scalable replication and change listening for [Q
       target: '<couch-url>',
       filter: '<filter>',
       query_params: '<query-params>'
-      // ... any other params accepted by the [_replicate API](http://docs.couchdb.org/en/2.1.1/api/server/common.html#replicate)
+      // ... any other params accepted by the _replicate API:
+      // (http://docs.couchdb.org/en/2.1.1/api/server/common.html#replicate)
       
       // The following attributes are automatically populated and managed by Spiegel
       dirty: '<true>|<false>',
@@ -73,7 +74,8 @@ Spiegel was designed to provide scalable replication and change listening for [Q
 1. `change_listener`
     ```js
     {
-      _id: 'spiegel_cl_<db-name>', // Namespaced to prevent conflict with replicators and reserved ids like '_users'
+      _id: 'spiegel_cl_<db-name>', // Namespaced to prevent conflict with replicators and
+                                   // reserved ids like '_users'
       type: 'change_listener',
       db_name: '<db-name>',
       dirty: '<true>|<false>',
