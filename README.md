@@ -137,6 +137,37 @@ You can then scale up (or down), e.g.:
       --passwords-file=replicator-passwords.json
     ```
 
-TODO: usage and explain docker option names
+## Usage
+```
+Usage: spiegel --type=type --url=couchdb-url options
+
+  --type=type             The type of the process: update-listener, change-listener, replicator,
+                          install or uninstall. The install and uninstall processes run and then
+                          exit, but the update-listener, change-listener and replicator will run
+                          indefinitely. You can run as many update-listeners, change-listeners and
+                          replicators as your DB setup can handle. In most cases you'll want to run
+                          at least 2 of each of these processes for redundancy. In general, if you
+                          need to listen to more changes or respond to these changes faster, add a
+                          change-listener. Similarly, if you need to perform more replications or
+                          replicate faster, add a replicator.
+
+                          install           Creates the spiegel DB and sieve
+
+                          uninstall         Destroys the spiegel DB and sieve
+
+                          update-listener   The update-listener listens for all DB updates and then
+                                            schedules on_changes and replications accordingly.
+
+                          change-listener   The change-listener runs on_change rules for all
+                                            matching changes
+
+                          replicator        The replicator performs replications
+
+  --url=couchdb-url       The URL to the CouchDB instance
+```
+
+For a complete list of options see [Usage](bin/usage.txt)
+
+Note: the Docker image's environment variables are equal to the uppercase snake case of the options available on the command line, e.g. use LOG_LEVEL instead of --log-level
 
 ## [Spiegel Design](DESIGN.md)
