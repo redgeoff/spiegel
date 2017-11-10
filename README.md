@@ -170,4 +170,6 @@ For a complete list of options see [Usage](bin/usage.txt)
 
 Note: the Docker image's environment variables are equal to the uppercase snake case of the options available on the command line, e.g. use LOG_LEVEL instead of --log-level
 
+## [Usage](bin/usage.txt)
+
 ## [Spiegel Design](DESIGN.md)
