@@ -19,80 +19,80 @@ Spiegel was designed to provide scalable replication and change listening for [Q
 
 ## Spiegel User Defined Docs
 
-1. `replicator`
-    ```js
-    {
-      type: 'replicator',
-      source: '<couch-url>', // e.g. https://user@db.example.com:6984. Passwords maintained via
-                             // passwords config
-      target: '<couch-url>',
-      filter: '<filter>',
-      query_params: '<query-params>'
-      // ... any other params accepted by the _replicate API:
-      // (http://docs.couchdb.org/en/2.1.1/api/server/common.html#replicate)
+### `replicator`
+```js
+{
+  type: 'replicator',
+  source: '<couch-url>', // e.g. https://user@db.example.com:6984. Passwords maintained via
+                         // passwords config
+  target: '<couch-url>',
+  filter: '<filter>',
+  query_params: '<query-params>'
+  // ... any other params accepted by the _replicate API:
+  // (http://docs.couchdb.org/en/2.1.1/api/server/common.html#replicate)
 
-      // The following attributes are automatically populated and managed by Spiegel
-      dirty: '<true>|<false>',
-      updated_at: '<ISO Timestamp>',
-      locked_at: '<ISO Timestamp>|<null>'
-    }
-    ```
+  // The following attributes are automatically populated and managed by Spiegel
+  dirty: '<true>|<false>',
+  updated_at: '<ISO Timestamp>',
+  locked_at: '<ISO Timestamp>|<null>'
+}
+```
 
-2. `on_change`
-    ```js
-    {
-      type: 'on_change',
+### `on_change`
+```js
+{
+  type: 'on_change',
 
-      db_name: '<reg-ex>', // Matches against a DB name
+  db_name: '<reg-ex>', // Matches against a DB name
 
-      // on_change only applies if this condition is met
-      if: {
-        '<attr-1>': '<reg-ex>',
-        '<attr-2>': '<reg-ex>',
-        ...
-      },
+  // on_change only applies if this condition is met
+  if: {
+    '<attr-1>': '<reg-ex>',
+    '<attr-2>': '<reg-ex>',
+    ...
+  },
 
-      url: '<api-url>', // e.g. https://user@api.example.com. Passwords maintained via
-                        // passwords config
+  url: '<api-url>', // e.g. https://user@api.example.com. Passwords maintained via
+                    // passwords config
 
-      // Parameters passed to API call
-      params: {
-        foo: 'bar',
-        change: '$change'   // can use $change for change doc
-        db_name: '$db_name' // $db_name is the name of matching DB
-      },
+  // Parameters passed to API call
+  params: {
+    foo: 'bar',
+    change: '$change'   // can use $change for change doc
+    db_name: '$db_name' // $db_name is the name of matching DB
+  },
 
-      method: '<POST|PUT|GET|DELETE>'
-      block: <true|false>, // API request must resolve before moving on
-      debounce: <true|false> // Duplicate API requests as identifed by URL and params are ignored
-    }
-    ```
+  method: '<POST|PUT|GET|DELETE>'
+  block: <true|false>, // API request must resolve before moving on
+  debounce: <true|false> // Duplicate API requests as identifed by URL and params are ignored
+}
+```
 
 ## Spiegel Internal Docs
 
-1. `change_listener`
-    ```js
-    {
-      _id: 'spiegel_cl_<db-name>', // Namespaced to prevent conflict with replicators and
-                                   // reserved ids like '_users'
-      type: 'change_listener',
-      db_name: '<db-name>',
-      dirty: '<true>|<false>',
-      updated_at: '<ISO-timestamp>',
-      locked_at: '<ISO-timestamp>|<null>',
-      last_seq: '<last-seq>' // Used to keep track of the current place in the _changes feed for
-                             // the target DB
-    }
-    ```
+### `change_listener`
+```js
+{
+  _id: 'spiegel_cl_<db-name>', // Namespaced to prevent conflict with replicators and
+                               // reserved ids like '_users'
+  type: 'change_listener',
+  db_name: '<db-name>',
+  dirty: '<true>|<false>',
+  updated_at: '<ISO-timestamp>',
+  locked_at: '<ISO-timestamp>|<null>',
+  last_seq: '<last-seq>' // Used to keep track of the current place in the _changes feed for
+                         // the target DB
+}
+```
 
-2. `global`
-    ```js
-    {
-      _id: '<global-name>',
-      type: 'global',
-      value: '<value>'
-    }
-    ```
+### `global`
+```js
+{
+  _id: '<global-name>',
+  type: 'global',
+  value: '<value>'
+}
+```
 
 ## Processes
 
