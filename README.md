@@ -81,6 +81,9 @@ Spiegel was designed to provide scalable replication and change listening for [Q
       -e PASSWORDS_FILE=/usr/src/app/passwords.json \
       redgeoff/spiegel
     ```
+8. [Create your `on_change` docs](https://github.com/redgeoff/spiegel/blob/master/DESIGN.md#on_change) in the `spiegel` DB
+9. [Create your `replicator` docs](https://github.com/redgeoff/spiegel/blob/master/DESIGN.md#replicator) in the `spiegel` DB
+
 Note: for extra security, use the [Docker Secrets](https://docs.docker.com/engine/swarm/secrets/#advanced-example-use-secrets-with-a-wordpress-service) to encrypt the URL parameter.
 
 You can then scale up (or down), e.g.:
@@ -136,6 +139,8 @@ You can then scale up (or down), e.g.:
       --url='http://user:password@yourcouchdb.com:5984' \
       --passwords-file=replicator-passwords.json
     ```
+8. [Create your `on_change` docs](https://github.com/redgeoff/spiegel/blob/master/DESIGN.md#on_change) in the `spiegel` DB
+9. [Create your `replicator` docs](https://github.com/redgeoff/spiegel/blob/master/DESIGN.md#replicator) in the `spiegel` DB
 
 ## Usage
 ```
