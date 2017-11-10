@@ -20,7 +20,7 @@ Spiegel was designed to provide scalable replication and change listening for [Q
 ![Spiegel](spiegel.svg)
 
 ## Installation
-We recommend that you install Spiegel via Docker, especially Docker Swarm, as this will allow you to easily scale up or down as your needs change. Moreover, Docker will take care of automatically restarting the processes in the event of a permanent error. You can of course run Spiegel via npm, but then the scaling and auto restarting will be up to you to implement.
+**We recommend that you install Spiegel via Docker**, especially Docker Swarm, as this will allow you to easily scale up or down as your needs change. Moreover, Docker will take care of automatically restarting the processes in the event of a permanent error. You can of course run Spiegel via npm, but then the scaling and auto restarting will be up to you to implement.
 
 ### Install via Docker Swarm
 1. Install Docker Swarm: see the [official Docker documentation](https://docs.docker.com/engine/swarm/swarm-tutorial/) or [Installing Docker Swarm on Ubuntu](https://github.com/redgeoff/docker-ce-vagrant/blob/master/docker.sh)
@@ -84,12 +84,59 @@ We recommend that you install Spiegel via Docker, especially Docker Swarm, as th
 Note: for extra security, use the [Docker Secrets](https://docs.docker.com/engine/swarm/secrets/#advanced-example-use-secrets-with-a-wordpress-service) to encrypt the URL parameter.
 
 You can then scale up (or down), e.g.:
+
     $ docker service scale update-listener=3
     $ docker service scale change-listener=3
     $ docker service scale replicator=3
 
-TODO: npm install
+### Install via NPM
+1. Install via NPM
+    ```
+    $ npm install -g spiegel
+    ```
+2. Create a passwords file for your change_listeners, e.g. change-listener-passwords.json:
+    ```
+    {
+      "yourapi.com": {
+        "apiuser": "apipassword"
+      }
+    }
+    ```
+3. Create a passwords file for your replicators, e.g. replicator-passwords.json:
+    ```
+    {
+      "yourcouchdb.com": {
+        "user": "password"
+      }
+    }
+    ```
+4. Install Spiegel:
+    ```
+    $ spiegel \
+      --type='install' \
+      --url='http://user:password@yourcouchdb.com:5984'
+    ```
+5. Run the Update Listener Process:
+    ```
+    $ spiegel \
+      --type='update-listener' \
+      --url='http://user:password@yourcouchdb.com:5984'
+    ```
+6. Run the Change Listener Process:
+    ```
+    $ spiegel \
+      --type='change-listener' \
+      --url='http://user:password@yourcouchdb.com:5984' \
+      --passwords-file=change-listener-passwords.json
+    ```
+7. Run the Replicator Process:
+    ```
+    $ spiegel \
+      --type='replicator' \
+      --url='http://user:password@yourcouchdb.com:5984' \
+      --passwords-file=replicator-passwords.json
+    ```
 
 TODO: usage and explain docker option names
 
-## [Design](DESIGN.md)
+## [Spiegel Design](DESIGN.md)
