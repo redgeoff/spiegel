@@ -17,6 +17,7 @@ Spiegel was designed to provide scalable replication and change listening for [Q
 2. Is fault tolerant and gracefully handles network issues, crashed database instances or other transient issues.
 
 ## Spiegel Diagram
-TODO
+![Spiegel](spiegel.svg)
 
-## (Design)[DESIGN.md]
+
+## [Design](DESIGN.md)
