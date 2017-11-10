@@ -14,7 +14,8 @@ Spiegel was designed to provide scalable replication and change listening for [Q
 1. Supports any number of instances of each process for scalability. This way, you can add instances (e.g. via docker) to support any load
 2. Is fault tolerant and gracefully handles network issues, crashed database instances or other transient issues.
 
-## TODO: insert diagram
+## Diagram
+![Spiegel](spiegel.svg)
 
 ## Spiegel User Defined Docs
 
