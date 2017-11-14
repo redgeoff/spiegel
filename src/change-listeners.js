@@ -31,9 +31,9 @@ class ChangeListeners extends Process {
   // exporters that want to report the current number of dirty listeners
   _createDirtyListenersView () {
     var doc = {
-      _id: '_design/dirty_listeners',
+      _id: '_design/dirty_change_listeners',
       views: {
-        dirty_listeners: {
+        dirty_change_listeners: {
           map: [
             'function(doc) {',
             'if (doc.type === "change_listener" && doc.dirty) {',
@@ -50,9 +50,9 @@ class ChangeListeners extends Process {
 
   _createListenersByDBNameView () {
     var doc = {
-      _id: '_design/listeners_by_db_name',
+      _id: '_design/change_listeners_by_db_name',
       views: {
-        listeners_by_db_name: {
+        change_listeners_by_db_name: {
           map: [
             'function(doc) {',
             'if (doc.type === "change_listener") {',
@@ -75,8 +75,11 @@ class ChangeListeners extends Process {
 
   async _destroyViews () {
     await super._destroyViews()
-    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_listeners')
-    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/listeners_by_db_name')
+    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_change_listeners')
+    await this._slouch.doc.getAndDestroy(
+      this._spiegel._dbName,
+      '_design/change_listeners_by_db_name'
+    )
   }
 
   install () {
@@ -105,8 +108,8 @@ class ChangeListeners extends Process {
   async _getByDBNames (dbNames) {
     let response = await this._slouch.db.viewArray(
       this._spiegel._dbName,
-      '_design/listeners_by_db_name',
-      'listeners_by_db_name',
+      '_design/change_listeners_by_db_name',
+      'change_listeners_by_db_name',
       { include_docs: true, keys: JSON.stringify(dbNames) }
     )
 
