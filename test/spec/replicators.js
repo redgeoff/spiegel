@@ -9,6 +9,7 @@ describe('replicators', () => {
   let globalError = false
   let retryAfterSeconds = 1
   let checkStalledSeconds = 1
+  let calls = null
 
   let conflictError = new Error()
   conflictError.error = 'conflict'
@@ -19,8 +20,19 @@ describe('replicators', () => {
     })
   }
 
+  const spy = () => {
+    calls = []
+    testUtils.spy(
+      replicators,
+      ['_toCouchDBReplicationParams', '_addPassword', '_censorPasswordInURL', '_slouchReplicate'],
+      calls
+    )
+  }
+
   beforeEach(async () => {
     replicators = new Replicators(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds })
+    calls = []
+    spy()
     replicatorIds = []
     listenForErrors()
   })
@@ -76,5 +88,29 @@ describe('replicators', () => {
 
   it('_censorPasswordInURL should handle falsy values', () => {
     testUtils.shouldEqual(replicators._censorPasswordInURL(null), null)
+  })
+
+  it('should _replicate', async () => {
+    // Note: this test is needed as otherwise a race condition could lead to not having complete
+    // test coverage of the replication
+
+    // Fake
+    calls._slouchReplicate = []
+    replicators._slouchReplicate = function () {
+      calls._slouchReplicate.push(arguments)
+      return Promise.resolve()
+    }
+
+    let params = {
+      source: 'https://example.com/db1',
+      target: 'https://example.com/db2'
+    }
+    await replicators._replicate(params)
+
+    // Sanity checks
+    calls._toCouchDBReplicationParams.length.should.eql(1)
+    calls._addPassword.length.should.eql(2)
+    calls._censorPasswordInURL.length.should.eql(2)
+    calls._slouchReplicate[0][0].should.eql(params)
   })
 })
