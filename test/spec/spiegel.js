@@ -39,11 +39,11 @@ describe('spiegel', () => {
     )
   })
 
-  // const fakeInstall = () => {
-  //   spiegel.install = async () => {
-  //     calls.install.push(arguments)
-  //   }
-  // }
+  const fakeInstall = () => {
+    spiegel.install = async () => {
+      calls.install.push(arguments)
+    }
+  }
 
   // it('installIfNotInstalled should install if not installed', async () => {
   //   // Fake not installed
@@ -68,6 +68,22 @@ describe('spiegel', () => {
   //   // First install from beforeEach
   //   calls.install.length.should.eql(1)
   // })
+
+  it('_throwIfNotInstalled should throw if not installed', async () => {
+    // Fake not installed
+    spiegel._installed = sporks.resolveFactory(false)
+
+    fakeInstall()
+
+    let err = null
+    try {
+      await spiegel._throwIfNotInstalled()
+    } catch (_err) {
+      err = _err
+    }
+
+    testUtils.shouldNotEqual(err, null)
+  })
 
   const shouldStartAndStop = async type => {
     // Sanity test. TODO: spy on calls
