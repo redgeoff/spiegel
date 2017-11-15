@@ -18,6 +18,7 @@ describe('change-processor', () => {
   let change = {
     doc
   }
+  let origReq = null
 
   const spy = () => {
     calls = []
@@ -41,10 +42,15 @@ describe('change-processor', () => {
   }
 
   const fake = () => {
+    origReq = changeProcessor._req
     changeProcessor._req = async () => {
       // Add a little delay to simulate a request
       await sporks.timeout(10)
     }
+  }
+
+  const unfake = () => {
+    changeProcessor._req = origReq
   }
 
   beforeEach(async () => {
@@ -262,5 +268,30 @@ describe('change-processor', () => {
     await changeProcessor.process(change, 'test_db1')
     calls._getMatchingOnChanges.length.should.eql(1)
     calls._makeRequests.length.should.eql(1)
+  })
+
+  it('should request', async () => {
+    unfake()
+
+    let response = await changeProcessor._request({
+      url: 'http://user:secret@localhost:3000/foo'
+    })
+
+    response[0].body.should.eql('Hello World')
+  })
+
+  it('request should handle status codes', async () => {
+    unfake()
+
+    let err = null
+    try {
+      await changeProcessor._request({
+        url: 'http://user:secret@localhost:3000/womp-womp'
+      })
+    } catch (_err) {
+      err = _err
+    }
+
+    err.message.should.eql('Error')
   })
 })

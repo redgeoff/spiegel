@@ -22,6 +22,14 @@ class Server {
       })
     )
 
+    app.use(
+      route.get('/womp-womp', async ctx => {
+        this.numRequests++
+        // This will return an Error (400). We use a 400 error so that nothing is logged to stdout
+        ctx.throw(400, 'Error')
+      })
+    )
+
     this._server = app.listen(3000)
   }
 
@@ -30,4 +38,4 @@ class Server {
   }
 }
 
-module.exports = Server
+module.exports = new Server()

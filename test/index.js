@@ -5,6 +5,7 @@ chai.use(require('chai-as-promised'))
 chai.should()
 
 const testUtils = require('./utils')
+const server = require('./api-server')
 
 describe('spiegel', function () {
   // Extend the timeout as the DB needs more time to process changes
@@ -12,12 +13,14 @@ describe('spiegel', function () {
 
   testUtils.silenceLog()
 
-  before(() => {
-    return testUtils.spiegel.install()
+  before(async () => {
+    await testUtils.spiegel.install()
+    await server.start()
   })
 
-  after(() => {
-    return testUtils.spiegel.uninstall()
+  after(async () => {
+    await server.stop()
+    await testUtils.spiegel.uninstall()
   })
 
   require('./spec')

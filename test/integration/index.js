@@ -1,13 +1,12 @@
 'use strict'
 
-const Server = require('./api-server')
+const server = require('../api-server')
 const Spawner = require('./spawner')
 const testUtils = require('../utils')
 const config = require('../../src/config.json')
 
 // A basic sanity test at the topmost layer to make sure that things are working
 describe('integration', function () {
-  let server = null
   let spawner = null
   let suffix = null
   let docs1 = null
@@ -50,9 +49,6 @@ describe('integration', function () {
   beforeEach(async () => {
     suffix = testUtils.nextSuffix()
 
-    server = new Server()
-    await server.start()
-
     spawner = new Spawner()
     await spawner.start()
 
@@ -66,12 +62,13 @@ describe('integration', function () {
   afterEach(async () => {
     await spawner.stop()
 
-    await server.stop()
-
     await testUtils.destroyTestDBs()
   })
 
   it('should replicate and listen to changes', async () => {
+    // Reset the value so previous tests don't interfer
+    server.numRequests = 0
+
     let waitForChangeListening = testUtils
       .waitFor(
         async () => {

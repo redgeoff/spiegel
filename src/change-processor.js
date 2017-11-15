@@ -86,6 +86,19 @@ class ChangeProcessor {
     return this._debouncer.run(promiseFactory, resource)
   }
 
+  // Apparently, we cannot expect request to generate an error when we get a non-200 status code!
+  // So, we need to create a wrapper.
+  async _statusAwareRequest () {
+    let response = await this._req.apply(this._req, arguments)
+
+    // Status code error?
+    if (response && response[0] && response[0].statusCode !== 200) {
+      throw new Error(response[0].body)
+    }
+
+    return response
+  }
+
   _request () {
     let opts = sporks.clone(arguments[0])
     if (opts.url) {
@@ -93,7 +106,7 @@ class ChangeProcessor {
     }
     log.info('Requesting ' + JSON.stringify(opts))
 
-    return this._req.apply(this._req, arguments)
+    return this._statusAwareRequest.apply(this, arguments)
   }
 
   _makeDebouncedRequest (onChange, params, opts) {
