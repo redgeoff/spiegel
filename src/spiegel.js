@@ -55,16 +55,19 @@ class Spiegel {
         break
 
       case 'update-listener':
+        await this._throwIfNotInstalled()
         await this._onChanges.start()
         await this._updateListeners.start()
         break
 
       case 'change-listener':
+        await this._throwIfNotInstalled()
         await this._onChanges.start()
         await this._changeListeners.start()
         break
 
       case 'replicator':
+        await this._throwIfNotInstalled()
         await this._replicators.start()
         break
 
@@ -92,9 +95,16 @@ class Spiegel {
     }
   }
 
-  // _installed () {
-  //   return this._slouch.db.exists(this._dbName)
-  // }
+  _installed () {
+    return this._slouch.db.exists(this._dbName)
+  }
+
+  async _throwIfNotInstalled () {
+    let installed = await this._installed()
+    if (!installed) {
+      throw new Error('spiegel not installed')
+    }
+  }
 
   // async installIfNotInstalled () {
   //   let installed = await this._installed()
