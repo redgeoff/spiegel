@@ -196,6 +196,10 @@ class Replicators extends Process {
     return url ? utils.censorPasswordInURL(url) : url
   }
 
+  _slouchReplicate (params) {
+    return this._slouch.db.replicate(params)
+  }
+
   async _replicate (replicator) {
     let couchParams = this._toCouchDBReplicationParams(replicator)
 
@@ -209,7 +213,7 @@ class Replicators extends Process {
 
     log.info('Beginning replication from', sourceNoPwd, 'to', targetNoPwd)
 
-    await this._slouch.db.replicate(couchParams)
+    await this._slouchReplicate(couchParams)
 
     log.info('Finished replication from', sourceNoPwd, 'to', targetNoPwd)
   }
