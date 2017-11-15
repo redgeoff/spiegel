@@ -454,6 +454,87 @@ describe('process', () => {
     await proc.stop()
   })
 
+  // In production, conflicts will occur when the same doc is changed on different nodes
+  // simultaneously and then these docs are replicated. The only reliable way to reproduce this case
+  // in our tests is use replication.
+  const createConflictViaReplication = async () => {
+    // Create DB that we can use for replication
+    let dbName = 'test_db3' + testUtils.nextSuffix()
+    await testUtils.createDB(dbName)
+
+    // Replicate the spiegel DB
+    await testUtils.spiegel._slouch.db.replicate({
+      source: utils.couchDBURL() + '/' + testUtils.spiegel._dbName,
+      target: utils.couchDBURL() + '/' + dbName
+    })
+
+    // Change the new doc
+    await testUtils.spiegel._slouch.doc.getMergeUpdate(dbName, {
+      _id: itemIds[0],
+      new_data: new Date().toISOString(),
+      dirty: true
+    })
+
+    // Change the old doc
+    await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
+      _id: itemIds[0],
+      new_data: new Date().toISOString(),
+      dirty: true
+    })
+
+    // Replicate back to create the conflict
+    await testUtils.spiegel._slouch.db.replicate({
+      source: utils.couchDBURL() + '/' + dbName,
+      target: utils.couchDBURL() + '/' + testUtils.spiegel._dbName
+    })
+
+    // Update the old doc to trigger spiegel to process it
+    await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
+      _id: itemIds[0],
+      new_data: new Date().toISOString(),
+      dirty: true
+    })
+  }
+
+  it('should clear conflicts', async () => {
+    let dbNames = testDBNames()
+
+    await proc.start()
+
+    await createItems(dbNames)
+
+    await testUtils.createTestDBs(dbNames)
+
+    await testUtils.waitFor(() => {
+      return calls._lockProcessUnlockLogError.length === 2 ? true : undefined
+    })
+
+    await createConflictViaReplication()
+
+    await testUtils.waitFor(() => {
+      return calls._lockProcessUnlockLogError.length === 4 ? true : undefined
+    })
+
+    // Make sure a conflict was read
+    calls._lockProcessUnlockLogError[3][0]._conflicts.length.should.eql(1)
+
+    // Trigger another item
+    await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
+      _id: itemIds[0],
+      new_data: new Date().toISOString(),
+      dirty: true
+    })
+
+    await testUtils.waitFor(() => {
+      return calls._lockProcessUnlockLogError.length === 5 ? true : undefined
+    })
+
+    // Make sure the conflicts have been cleared
+    testUtils.shouldEqual(calls._lockProcessUnlockLogError[4]._conflicts, undefined)
+
+    await proc.stop()
+  })
+
   it('should unstall', async () => {
     let dbNames = testDBNames()
 

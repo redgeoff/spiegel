@@ -186,9 +186,22 @@ class Process extends events.EventEmitter {
     // Abstract method to be implemented by derived class
   }
 
+  async _clearConflicts (item) {
+    // Are there conflicts?
+    if (item._conflicts) {
+      let destroys = []
+      item._conflicts.forEach(rev => {
+        destroys.push(this._slouch.doc.destroy(this._spiegel._dbName, item._id, rev))
+      })
+      await Promise.all(destroys)
+    }
+  }
+
   async _processAndUnlockIfError (item) {
     try {
-      return await this._process(item)
+      let leaveDirty = await this._process(item)
+      await this._clearConflicts(item)
+      return leaveDirty
     } catch (err) {
       // If an error is encountered when processing then leave the item dirty, but unlock it so that
       // the processing can be tried again
@@ -248,7 +261,7 @@ class Process extends events.EventEmitter {
       this._spiegel._dbName,
       '_design/dirty_and_unlocked_' + this._type,
       'dirty_and_unlocked_' + this._type,
-      { include_docs: true }
+      { include_docs: true, conflicts: true }
     )
 
     await iterator.each(item => {
@@ -283,7 +296,8 @@ class Process extends events.EventEmitter {
         since: lastSeq || undefined,
         filter: '_view',
         view: 'dirty_and_unlocked_' + this._type + '/dirty_and_unlocked_' + this._type,
-        include_docs: true
+        include_docs: true,
+        conflicts: true
       })
 
       this._listenToIteratorErrors(this._iterator)
