@@ -5,6 +5,7 @@ const testUtils = require('../utils')
 const sporks = require('sporks')
 const utils = require('../../src/utils')
 const EventEmitter = require('events').EventEmitter
+const config = require('../../src/config.json')
 
 describe('process', () => {
   let globalProc = null
@@ -462,10 +463,22 @@ describe('process', () => {
     let dbName = 'test_db3' + testUtils.nextSuffix()
     await testUtils.createDB(dbName)
 
+    // Note: assuming we are testing against CouchDB running in a Docker container, the port is
+    // always 5984 as this is the local port as seen from within the container.
+    let url =
+      config.couchdb.scheme +
+      '://' +
+      config.couchdb.username +
+      ':' +
+      config.couchdb.password +
+      '@' +
+      config.couchdb.host +
+      ':5984'
+
     // Replicate the spiegel DB
     await testUtils.spiegel._slouch.db.replicate({
-      source: utils.couchDBURL() + '/' + testUtils.spiegel._dbName,
-      target: utils.couchDBURL() + '/' + dbName
+      source: url + '/' + testUtils.spiegel._dbName,
+      target: url + '/' + dbName
     })
 
     // Change the new doc
@@ -484,8 +497,8 @@ describe('process', () => {
 
     // Replicate back to create the conflict
     await testUtils.spiegel._slouch.db.replicate({
-      source: utils.couchDBURL() + '/' + dbName,
-      target: utils.couchDBURL() + '/' + testUtils.spiegel._dbName
+      source: url + '/' + dbName,
+      target: url + '/' + testUtils.spiegel._dbName
     })
 
     // Update the old doc to trigger spiegel to process it
