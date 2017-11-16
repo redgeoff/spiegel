@@ -149,9 +149,9 @@ describe('change-processor', () => {
       makeDebouncedRequest()
     ])
 
-    // We expect only 1 API requests. The 1st one runs and the rest are ignored as these subsequent
-    // requests are made before the 1st one is even started.
-    calls._request.length.should.eql(1)
+    // We expect only 2 API requests. The 1st one runs immediately, the 2nd one is queued and the
+    // rest are ignored as these subsequent requests are made before the 2nd one is even started.
+    calls._request.length.should.eql(2)
   })
 
   it('_makeDebouncedOrRegularRequest should make regular request', async () => {
