@@ -13,7 +13,8 @@ This will run the tests in node:
 You can also check for 100% code coverage using:
 
     $ npm run node-full-test
-    You can then view the test coverage by opening cache/coverage/node/lcov-report/index.html in a browser
+    
+You can then view the test coverage by opening cache/coverage/node/lcov-report/index.html in a browser
 
 Run specific tests:
 
