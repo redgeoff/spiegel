@@ -670,4 +670,37 @@ describe('process', () => {
 
     calls._logFatal[0][0].should.eql(err)
   })
+
+  it('should get dirty and unlocked', async () => {
+    let item1 = await createItem({})
+
+    let item2 = await createItem({
+      dirty: true
+    })
+
+    await createItem({
+      dirty: false
+    })
+
+    let item4 = await createItem({
+      dirty: true,
+      locked_at: null
+    })
+
+    await createItem({
+      dirty: true,
+      locked_at: new Date().toISOString()
+    })
+
+    let items = {}
+    await proc._dirtyAndUnlocked().each(item => {
+      // Order is not guaranteed so index by id
+      items[item.doc._id] = item.doc
+    })
+
+    sporks.length(items).should.eql(3)
+    testUtils.shouldNotEqual(items[item1._id], undefined)
+    testUtils.shouldNotEqual(items[item2._id], undefined)
+    testUtils.shouldNotEqual(items[item4._id], undefined)
+  })
 })

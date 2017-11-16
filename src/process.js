@@ -37,7 +37,9 @@ class Process extends events.EventEmitter {
         ['dirty_and_unlocked_' + this._type]: {
           map: [
             'function(doc) {',
-            'if (doc.type === "' + this._type + '" && doc.dirty && !doc.locked_at) {',
+            // Note: we use doc.dirty !== false as we also want to consider the item dirty when
+            // there is no dirty attribute
+            'if (doc.type === "' + this._type + '" && doc.dirty !== false && !doc.locked_at) {',
             'emit(doc._id, null);',
             '}',
             '}'
@@ -256,13 +258,17 @@ class Process extends events.EventEmitter {
     }
   }
 
-  async _processAllDirtyAndUnlocked () {
-    let iterator = this._slouch.db.view(
+  _dirtyAndUnlocked () {
+    return this._slouch.db.view(
       this._spiegel._dbName,
       '_design/dirty_and_unlocked_' + this._type,
       'dirty_and_unlocked_' + this._type,
       { include_docs: true, conflicts: true }
     )
+  }
+
+  async _processAllDirtyAndUnlocked () {
+    let iterator = this._dirtyAndUnlocked()
 
     await iterator.each(item => {
       return this._lockProcessUnlockLogError(item.doc)
