@@ -297,4 +297,17 @@ describe('change-processor', () => {
 
     err.message.should.eql('Error')
   })
+
+  it('should _requestAndPush', async () => {
+    let promise = Promise.resolve()
+    let requests = []
+
+    // Fake
+    changeProcessor._request = () => {
+      return promise
+    }
+
+    changeProcessor._requestAndPush(null, requests).should.eql(promise)
+    requests[0].should.eql(promise)
+  })
 })
