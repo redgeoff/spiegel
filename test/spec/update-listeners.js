@@ -113,8 +113,20 @@ describe('update-listeners', () => {
     }
   }
 
-  const createListeners = async (opts, fakeLastSeq = true, fakeOnChange = true) => {
+  const createListeners = async (
+    opts,
+    fakeLastSeq = true,
+    fakeOnChange = true,
+    clearSeq = false
+  ) => {
     listeners = new UpdateListeners(testUtils.spiegel, opts)
+
+    if (clearSeq) {
+      // We need to explicitly clear the lastSeq as the lastSeq is automatically updated when the
+      // UpdateListener is stopped
+      await clearLastSeq()
+    }
+
     spyOnProcessNextBatch()
     spyOnUpdates()
     spyOnChanges()
@@ -131,6 +143,10 @@ describe('update-listeners', () => {
     }
     await listeners.start()
     await createTestDBs()
+  }
+
+  const clearLastSeq = async () => {
+    await listeners._setGlobal('lastSeq', null)
   }
 
   before(async () => {
@@ -254,7 +270,7 @@ describe('update-listeners', () => {
   })
 
   it('should resume at lastSeq', async () => {
-    await createListeners({ batchSize: 1, batchTimeout: BATCH_TIMEOUT }, false)
+    await createListeners({ batchSize: 1, batchTimeout: BATCH_TIMEOUT }, false, true, true)
 
     // Wait for a couple updates
     await testUtils

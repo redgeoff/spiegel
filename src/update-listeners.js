@@ -157,13 +157,18 @@ class UpdateListeners {
     await this._globals.set(name, value)
   }
 
+  async _saveLastSeq () {
+    log.info('Saving lastSeq=', this._lastSeq)
+    await this._setGlobal('lastSeq', this._lastSeq)
+    this._seqLastSaved = new Date()
+  }
+
   // We save the lastSeq every so often so that we can avoid having to re-process all the updates in
   // the event that an UpdateListener is restarted or a new one starts up
   async _saveLastSeqIfNeeded () {
     // Is it time to save the lastSeq again?
     if (new Date().getTime() - this._seqLastSaved.getTime() >= this._saveSeqAfterSeconds * 1000) {
-      await this._setGlobal('lastSeq', this._lastSeq)
-      this._seqLastSaved = new Date()
+      await this._saveLastSeq()
     }
   }
 
@@ -180,7 +185,7 @@ class UpdateListeners {
     this._dbUpdatesIterator = this._changes({
       feed: 'continuous',
       heartbeat: true,
-      since: this._lastSeq,
+      since: this._lastSeq ? this._lastSeq : undefined,
 
       filter: '_view',
       view: this._spiegel._namespace + 'sieve/sieve',
@@ -235,11 +240,14 @@ class UpdateListeners {
     this._listen()
   }
 
-  stop () {
+  async stop () {
     this._stopped = true
     if (this._dbUpdatesIterator) {
       this._dbUpdatesIterator.abort()
     }
+
+    // Save the lastSeq so that we don't lose our place
+    await this._saveLastSeq()
   }
 }
 
