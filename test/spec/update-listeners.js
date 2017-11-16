@@ -357,7 +357,7 @@ describe('update-listeners', () => {
   })
 
   it('_matchAndDirtyFiltered should handle no filteredDBNames', async () => {
-    createListeners()
+    await createListeners()
 
     // Fake no DBs
     listeners._matchWithDBNames = sporks.resolveFactory([])
