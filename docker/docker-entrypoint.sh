@@ -16,6 +16,7 @@ declare -a params=(
   "save-seq-after"
   "type"
   "url"
+  "version"
 )
 
 if [ "$1" = '/usr/local/bin/spiegel' ]; then

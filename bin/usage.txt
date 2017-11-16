@@ -93,3 +93,5 @@ Options:
 
                             Applies to: change-listener, replicator
                             Default: 600
+
+  --version                 Output the version
