@@ -245,6 +245,10 @@ class ChangeListeners extends Process {
     })
   }
 
+  async _waitForRequests (requests) {
+    await Promise.all(requests)
+  }
+
   async _processChanges (listener, changes) {
     let chain = Promise.resolve()
 
@@ -262,7 +266,7 @@ class ChangeListeners extends Process {
     await chain
 
     // Wait for all API requests to complete
-    await Promise.all(requests)
+    await this._waitForRequests(requests)
   }
 
   _moreBatches (changes) {

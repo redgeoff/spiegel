@@ -109,14 +109,18 @@ class ChangeProcessor {
     return this._statusAwareRequest.apply(this, arguments)
   }
 
+  _requestAndPush (opts, requests) {
+    let r = this._request(opts)
+    // Push request promise so that the caller can track it
+    requests.push(r)
+    return r
+  }
+
   _makeDebouncedRequest (onChange, params, opts, requests) {
     // The resource depends on the URL and the params passed to the API
     let resource = onChange.url + JSON.stringify(params)
     return this._debounce(() => {
-      let r = this._request(opts)
-      // Push request promise so that the caller can track it
-      requests.push(r)
-      return r
+      return this._requestAndPush(opts, requests)
     }, resource)
   }
 
@@ -124,10 +128,7 @@ class ChangeProcessor {
     if (onChange.debounce) {
       return this._makeDebouncedRequest(onChange, params, opts, requests)
     } else {
-      let r = this._request(opts)
-      // Push request promise so that the caller can track it
-      requests.push(r)
-      return r
+      return this._requestAndPush(opts, requests)
     }
   }
 
