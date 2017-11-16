@@ -219,13 +219,13 @@ class ChangeListeners extends Process {
     }
   }
 
-  _processChange (change, dbName) {
-    return this._changeProcessor.process(change, dbName)
+  _processChange (change, dbName, requests) {
+    return this._changeProcessor.process(change, dbName, requests)
   }
 
-  _processChangeFactory (change, dbName) {
+  _processChangeFactory (change, dbName, requests) {
     return () => {
-      return this._processChange(change, dbName)
+      return this._processChange(change, dbName, requests)
     }
   }
 
@@ -248,14 +248,21 @@ class ChangeListeners extends Process {
   async _processChanges (listener, changes) {
     let chain = Promise.resolve()
 
+    // Array of promises used to ensure that all requests have completed before moving on to the
+    // next batch
+    let requests = []
+
     // Sequentially chain promises so that changes are processed in order and so that we don't
     // dominate the mem
     changes.results.forEach(change => {
-      chain = chain.then(this._processChangeFactory(change, listener.db_name))
+      chain = chain.then(this._processChangeFactory(change, listener.db_name, requests))
     })
 
     // Wait for all the changes to be processed
     await chain
+
+    // Wait for all API requests to complete
+    await Promise.all(requests)
   }
 
   _moreBatches (changes) {

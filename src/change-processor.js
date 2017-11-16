@@ -109,23 +109,29 @@ class ChangeProcessor {
     return this._statusAwareRequest.apply(this, arguments)
   }
 
-  _makeDebouncedRequest (onChange, params, opts) {
+  _makeDebouncedRequest (onChange, params, opts, requests) {
     // The resource depends on the URL and the params passed to the API
     let resource = onChange.url + JSON.stringify(params)
     return this._debounce(() => {
-      return this._request(opts)
+      let r = this._request(opts)
+      // Push request promise so that the caller can track it
+      requests.push(r)
+      return r
     }, resource)
   }
 
-  _makeDebouncedOrRegularRequest (onChange, params, opts) {
+  _makeDebouncedOrRegularRequest (onChange, params, opts, requests) {
     if (onChange.debounce) {
-      return this._makeDebouncedRequest(onChange, params, opts)
+      return this._makeDebouncedRequest(onChange, params, opts, requests)
     } else {
-      return this._request(opts)
+      let r = this._request(opts)
+      // Push request promise so that the caller can track it
+      requests.push(r)
+      return r
     }
   }
 
-  _buildAndMakeRequest (change, onChange, dbName) {
+  _buildAndMakeRequest (change, onChange, dbName, requests) {
     let params = this._buildParams(change, onChange, dbName)
 
     let method = this._getMethod(onChange)
@@ -137,12 +143,12 @@ class ChangeProcessor {
 
     this._setParams(method, opts, params)
 
-    return this._makeDebouncedOrRegularRequest(onChange, params, opts)
+    return this._makeDebouncedOrRegularRequest(onChange, params, opts, requests)
   }
 
-  async _makeRequest (change, onChange, dbName) {
+  async _makeRequest (change, onChange, dbName, requests) {
     // We don't await here as we only await below if the "block" option is being used
-    let req = this._buildAndMakeRequest(change, onChange, dbName)
+    let req = this._buildAndMakeRequest(change, onChange, dbName, requests)
 
     // Should we block until the next request?
     if (onChange.block) {
@@ -150,12 +156,12 @@ class ChangeProcessor {
     }
   }
 
-  async _makeRequests (change, onChanges, dbName) {
+  async _makeRequests (change, onChanges, dbName, requests) {
     let promises = []
 
     // Run OnChanges in parallel
     sporks.each(onChanges, onChange => {
-      promises.push(this._makeRequest(change, onChange, dbName))
+      promises.push(this._makeRequest(change, onChange, dbName, requests))
     })
 
     await Promise.all(promises)
@@ -165,9 +171,9 @@ class ChangeProcessor {
     return this._spiegel._onChanges.getMatchingOnChanges(dbName, change.doc)
   }
 
-  async process (change, dbName) {
+  async process (change, dbName, requests) {
     let onChanges = await this._getMatchingOnChanges(dbName, change)
-    await this._makeRequests(change, onChanges, dbName)
+    await this._makeRequests(change, onChanges, dbName, requests)
   }
 }
 

@@ -19,6 +19,7 @@ describe('change-processor', () => {
     doc
   }
   let origReq = null
+  let requests = null
 
   const spy = () => {
     calls = []
@@ -58,6 +59,7 @@ describe('change-processor', () => {
     spy()
     fake()
     requested = false
+    requests = []
   })
 
   afterEach(async () => {
@@ -128,7 +130,8 @@ describe('change-processor', () => {
         url: 'https://example.com'
       },
       params,
-      opts
+      opts,
+      requests
     )
   }
 
@@ -159,7 +162,7 @@ describe('change-processor', () => {
       url: 'https://example.com'
     }
 
-    await changeProcessor._makeDebouncedOrRegularRequest(onChange, params, opts)
+    await changeProcessor._makeDebouncedOrRegularRequest(onChange, params, opts, requests)
 
     calls._makeDebouncedRequest.length.should.eql(0)
     calls._request[0][0].should.eql(opts)
@@ -190,7 +193,7 @@ describe('change-processor', () => {
       }
     }
 
-    await changeProcessor._buildAndMakeRequest(change, onChange, 'test_db1')
+    await changeProcessor._buildAndMakeRequest(change, onChange, 'test_db1', requests)
 
     // Sanity tests
     calls._buildParams.length.should.eql(1)
@@ -220,7 +223,7 @@ describe('change-processor', () => {
 
   it('_makeRequest should not block', async () => {
     fakeLongRequest()
-    await changeProcessor._makeRequest(null, {})
+    await changeProcessor._makeRequest(null, {}, null, requests)
 
     // _makeRequest should have resolved before the request has finished
     requested.should.eql(false)
@@ -228,7 +231,7 @@ describe('change-processor', () => {
 
   it('_makeRequest should block', async () => {
     fakeLongRequest()
-    await changeProcessor._makeRequest(null, { block: true })
+    await changeProcessor._makeRequest(null, { block: true }, null, requests)
 
     // _makeRequest should have resolved after the request has finished
     requested.should.eql(true)
@@ -252,7 +255,7 @@ describe('change-processor', () => {
 
     let dbName = 'test_db1'
 
-    await changeProcessor._makeRequests(change, onChanges, dbName)
+    await changeProcessor._makeRequests(change, onChanges, dbName, requests)
 
     calls._makeRequest[0][0].should.eql(change)
     calls._makeRequest[0][1].should.eql(onChanges[0])
