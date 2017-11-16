@@ -15,7 +15,7 @@ describe('change-listeners', () => {
 
   const spy = () => {
     calls = []
-    testUtils.spy(listeners, ['_upsert', '_changesArray', '_onError'], calls)
+    testUtils.spy(listeners, ['_upsert', '_changesArray', '_onError', '_waitForRequests'], calls)
   }
 
   const fakeSlouchChangesArray = () => {
@@ -68,9 +68,11 @@ describe('change-listeners', () => {
   it('should process changes sequentially', async () => {
     // Fake long processChange so that we can ensure the changes are being processed sequentially
     let changesProcessed = []
-    listeners._processChange = change => {
+    listeners._processChange = (change, dbName, requests) => {
       changesProcessed.push(change)
-      return sporks.timeout(100)
+      let r = sporks.timeout(100)
+      requests.push(r)
+      return r
     }
 
     let changes = {
@@ -80,6 +82,9 @@ describe('change-listeners', () => {
     await listeners._processChanges({ db_name: 'test_db1' }, changes)
 
     changesProcessed.should.eql([{ doc: { thing: 'jam' } }, { doc: { thing: 'code' } }])
+
+    // Sanity check that we wait for all promises to resolve before batch is considered done
+    calls._waitForRequests[0][0].length.should.eql(2)
   })
 
   it('should _moreBatches', () => {
