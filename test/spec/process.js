@@ -463,6 +463,9 @@ describe('process', () => {
     let dbName = 'test_db3' + testUtils.nextSuffix()
     await testUtils.createDB(dbName)
 
+    // Note: we use getMergeUpsert below as we are changing data that may also be changed
+    // simultaneously by Spiegel
+
     // Note: assuming we are testing against CouchDB running in a Docker container, the port is
     // always 5984 as this is the local port as seen from within the container.
     let url =
@@ -482,14 +485,14 @@ describe('process', () => {
     })
 
     // Change the new doc
-    await testUtils.spiegel._slouch.doc.getMergeUpdate(dbName, {
+    await testUtils.spiegel._slouch.doc.getMergeUpsert(dbName, {
       _id: itemIds[0],
       new_data: new Date().toISOString(),
       dirty: true
     })
 
     // Change the old doc
-    await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
+    await testUtils.spiegel._slouch.doc.getMergeUpsert(testUtils.spiegel._dbName, {
       _id: itemIds[0],
       new_data: new Date().toISOString(),
       dirty: true
@@ -502,7 +505,7 @@ describe('process', () => {
     })
 
     // Update the old doc to trigger spiegel to process it
-    await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
+    await testUtils.spiegel._slouch.doc.getMergeUpsert(testUtils.spiegel._dbName, {
       _id: itemIds[0],
       new_data: new Date().toISOString(),
       dirty: true
@@ -510,6 +513,10 @@ describe('process', () => {
   }
 
   it('should clear conflicts', async () => {
+    // We need to ignore Spiegel errors as we are changing data that may also be modified
+    // simultaneously by Spiegel and this can very easily cause conflict errors
+    ignoreGlobalErrors()
+
     let dbNames = testDBNames()
 
     await proc.start()

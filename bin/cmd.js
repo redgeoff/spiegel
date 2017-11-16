@@ -59,6 +59,12 @@ if (!argv.type || !argv.url) {
       })
       // await spiegel.installIfNotInstalled()
       await spiegel.start()
+
+      // Gracefully handle SIGINT signals
+      process.on('SIGINT', async () => {
+        log.info('Stopping as received SIGNINT')
+        await spiegel.stop()
+      })
     } catch (err) {
       try {
         await spiegel.stop()
