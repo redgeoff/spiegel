@@ -8,6 +8,7 @@ describe('cl-params', () => {
   let params = null
   let emptyOpts = null
   let types = ['install', 'uninstall', 'update-listener', 'change-listener', 'replicator']
+  let url = 'https://admin:admin@example.com:5984'
   let passwordsFile = path.join(__dirname, '/../integration/change-listener-passwords.json')
   let passwords = {
     localhost: {
@@ -30,7 +31,7 @@ describe('cl-params', () => {
       types.map(async type => {
         let err = null
         try {
-          await params.toOpts(type, { 'invalid-param': true })
+          await params._toOpts({ type: type, 'invalid-param': true })
         } catch (_err) {
           err = _err
         }
@@ -42,7 +43,7 @@ describe('cl-params', () => {
   it('should detect invalid opts for other type', async () => {
     let err = null
     try {
-      await params.toOpts('update-listener', { 'passwords-file': true })
+      await params._toOpts({ type: 'update-listener', 'passwords-file': true })
     } catch (_err) {
       err = _err
     }
@@ -50,7 +51,10 @@ describe('cl-params', () => {
   })
 
   const shouldConvertInstallUninstallOpts = async type => {
-    let opts = await params.toOpts(type, {
+    let opts = await params._toOpts({
+      type: type,
+      url: url,
+      _: true, // should be ignored
       'db-name': 'my-db-name',
       namespace: 'my-namespace',
       'log-level': 'my-log-level'
@@ -59,6 +63,8 @@ describe('cl-params', () => {
     opts.should.eql(
       sporks.merge(emptyOpts, {
         common: {
+          type: type,
+          url: url,
           dbName: 'my-db-name',
           namespace: 'my-namespace',
           logLevel: 'my-log-level'
@@ -76,7 +82,8 @@ describe('cl-params', () => {
   })
 
   it('should convert update-listener opts', async () => {
-    let opts = await params.toOpts('update-listener', {
+    let opts = await params._toOpts({
+      type: 'update-listener',
       'db-name': 'my-db-name',
       'batch-size': 10,
       'batch-timeout': 10,
@@ -86,6 +93,7 @@ describe('cl-params', () => {
     opts.should.eql(
       sporks.merge(emptyOpts, {
         common: {
+          type: 'update-listener',
           dbName: 'my-db-name'
         },
         'update-listener': {
@@ -98,7 +106,8 @@ describe('cl-params', () => {
   })
 
   it('should convert change-listener opts', async () => {
-    let opts = await params.toOpts('change-listener', {
+    let opts = await params._toOpts({
+      type: 'change-listener',
       'db-name': 'my-db-name',
       'batch-size': 10,
       concurrency: 5,
@@ -110,6 +119,7 @@ describe('cl-params', () => {
     opts.should.eql(
       sporks.merge(emptyOpts, {
         common: {
+          type: 'change-listener',
           dbName: 'my-db-name'
         },
         'change-listener': {
@@ -124,7 +134,8 @@ describe('cl-params', () => {
   })
 
   it('should convert replicator opts', async () => {
-    let opts = await params.toOpts('replicator', {
+    let opts = await params._toOpts({
+      type: 'replicator',
       'db-name': 'my-db-name',
       concurrency: 5,
       'retry-after': 100,
@@ -135,6 +146,7 @@ describe('cl-params', () => {
     opts.should.eql(
       sporks.merge(emptyOpts, {
         common: {
+          type: 'replicator',
           dbName: 'my-db-name'
         },
         replicator: {
@@ -142,6 +154,24 @@ describe('cl-params', () => {
           retryAfterSeconds: 100,
           checkStalledSeconds: 1000,
           passwords: passwords
+        }
+      })
+    )
+  })
+
+  it('should merge common opts', async () => {
+    let opts = await params.toOpts({
+      type: 'replicator',
+      concurrency: 5
+    })
+
+    delete emptyOpts.common
+
+    opts.should.eql(
+      sporks.merge(emptyOpts, {
+        type: 'replicator',
+        replicator: {
+          concurrency: 5
         }
       })
     )

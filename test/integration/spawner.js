@@ -10,8 +10,12 @@ const JSONStream = require('JSONStream')
 class Spawner {
   constructor () {
     this._children = []
-    this._dbName = 'test_spiegel_integration'
-    this._namespace = 'test_spiegel_integration_'
+
+    // Prevent race conditions on the same DB
+    let time = new Date().getTime()
+
+    this._dbName = 'test_spiegel_integration' + time
+    this._namespace = 'test_spiegel_integration_' + time + '_'
 
     this._spiegel = new Spiegel(null, { dbName: this._dbName, namespace: this._namespace })
   }

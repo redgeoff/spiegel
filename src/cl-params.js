@@ -6,7 +6,13 @@ const fs = require('fs-extra')
 class CLParams {
   constructor () {
     this._names = {
-      common: { 'db-name': 'dbName', namespace: 'namespace', 'log-level': 'logLevel' },
+      common: {
+        type: 'type',
+        url: 'url',
+        'db-name': 'dbName',
+        namespace: 'namespace',
+        'log-level': 'logLevel'
+      },
       'update-listener': {
         'batch-size': 'batchSize',
         'batch-timeout': 'batchTimeout',
@@ -33,6 +39,9 @@ class CLParams {
       'change-listener': {},
       replicator: {}
     }
+
+    // Default params injected by yargs
+    this._ignoreNames = ['_', 'help', 'version', '$0']
   }
 
   _get (name, names) {
@@ -85,16 +94,33 @@ class CLParams {
     }
   }
 
-  async toOpts (type, params) {
+  _ignoreName (name) {
+    // Ignore any names automatically created by yargs. Also ignore any names with a capital letter,
+    // i.e. the camel case version of our param automatically injected by yargs.
+    return this._ignoreNames.indexOf(name) !== -1 || /[A-Z]/.test(name)
+  }
+
+  async _toOpts (params) {
     let promises = []
+    let type = params.type
 
     sporks.each(params, (value, name) => {
-      promises.push(this._toOpt(type, name, value))
+      if (!this._ignoreName(name)) {
+        promises.push(this._toOpt(type, name, value))
+      }
     })
 
     await Promise.all(promises)
 
     return this._opts
+  }
+
+  async toOpts (params) {
+    // Move common into the root level options
+    let opts = await this._toOpts(params)
+    opts = sporks.merge(opts, opts.common)
+    delete opts.common
+    return opts
   }
 }
 

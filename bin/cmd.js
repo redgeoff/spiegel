@@ -4,10 +4,12 @@
 
 'use strict'
 
-const fs = require('fs-extra')
 const argv = require('yargs').argv
 const utils = require('../src/utils')
 const log = require('../src/log')
+const CLParams = require('../src/cl-params')
+
+const clParams = new CLParams()
 
 // Missing the required attributes?
 if (!argv.type || !argv.url) {
@@ -20,43 +22,13 @@ if (!argv.type || !argv.url) {
 } else {
   const start = async () => {
     try {
+      let opts = await clParams.toOpts(argv)
+
       // Set CouchDB config
-      utils.setCouchDBConfig(argv.url)
-
-      let replicatorPasswords =
-        argv.type === 'replicator' && argv['passwords-file']
-          ? await fs.readJson(argv['passwords-file'])
-          : undefined
-
-      let changeListenerPasswords =
-        argv.type === 'change-listener' && argv['passwords-file']
-          ? await fs.readJson(argv['passwords-file'])
-          : undefined
+      utils.setCouchDBConfig(opts.url)
 
       const Spiegel = require('../src/spiegel')
-      let spiegel = new Spiegel(argv.type, {
-        dbName: argv['db-name'],
-        namespace: argv['namespace'],
-        logLevel: argv['log-level'],
-        updateListener: {
-          batchSize: argv['batch-size'],
-          batchTimeout: argv['batch-timeout'],
-          saveSeqAfterSeconds: argv['save-seq-after'],
-          concurrency: argv['concurrency'],
-          retryAfterSeconds: argv['retry-after'],
-          checkStalledSeconds: argv['check-stalled']
-        },
-        changeListener: {
-          passwords: changeListenerPasswords,
-          batchSize: argv['batch-size'],
-          concurrency: argv['concurrency'],
-          retryAfterSeconds: argv['retry-after'],
-          checkStalledSeconds: argv['check-stalled']
-        },
-        replicator: {
-          passwords: replicatorPasswords
-        }
-      })
+      let spiegel = new Spiegel(opts.type, opts)
       // await spiegel.installIfNotInstalled()
       await spiegel.start()
 
