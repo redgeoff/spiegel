@@ -84,7 +84,9 @@ Spiegel was designed to provide scalable replication and change listening for [Q
 8. [Create your `on_change` docs](https://github.com/redgeoff/spiegel/blob/master/DESIGN.md#on_change) in the `spiegel` DB
 9. [Create your `replicator` docs](https://github.com/redgeoff/spiegel/blob/master/DESIGN.md#replicator) in the `spiegel` DB
 
-Note: for extra security, use the [Docker Secrets](https://docs.docker.com/engine/swarm/secrets/#advanced-example-use-secrets-with-a-wordpress-service) to encrypt the URL parameter.
+Notes:
+- `yourapi.com` and `yourcouchdb.com` cannot be equal to `localhost` as you will be running the Spiegel processes from within docker containers, which means that localhost will refer to the VM's localhost. If you don't have a domain name to use then you can use the IP address of your host machine. Alternatively, you can also use defined entries in your host's hosts file if you use the `--network=host` when running `docker service create`.
+- For extra security, use the [Docker Secrets](https://docs.docker.com/engine/swarm/secrets/#advanced-example-use-secrets-with-a-wordpress-service) to encrypt the URL parameter.
 
 You can then scale up (or down), e.g.:
 
