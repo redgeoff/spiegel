@@ -66,9 +66,31 @@ class Process extends events.EventEmitter {
     })
   }
 
+  // Note: this view is currently not used, but it will be when we provide hooks for monitoring
+  // exporters that want to report the current number of dirty items
+  _createDirtyView () {
+    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
+      _id: '_design/dirty_' + this._type,
+      views: {
+        ['dirty_' + this._type]: {
+          map: [
+            'function(doc) {',
+            // Note: we use doc.dirty !== false as we also want to consider the item dirty when
+            // there is no dirty attribute
+            'if (doc.type === "' + this._type + '" && doc.dirty !== false) {',
+            'emit(doc._id, null);',
+            '}',
+            '}'
+          ].join(' ')
+        }
+      }
+    })
+  }
+
   async _createViews () {
     await this._createDirtyAndUnLockedView()
     await this._createLockedView()
+    await this._createDirtyView()
   }
 
   async _destroyViews () {
@@ -77,6 +99,7 @@ class Process extends events.EventEmitter {
       '_design/dirty_and_unlocked_' + this._type
     )
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/locked_' + this._type)
+    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_' + this._type)
   }
 
   _get (id) {

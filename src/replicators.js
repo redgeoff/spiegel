@@ -34,25 +34,6 @@ class Replicators extends Process {
     this._passwordInjector = new PasswordInjector(this._passwords)
   }
 
-  // Note: this view is currently not used, but it will be when we provide hooks for monitoring
-  // exporters that want to report the current number of dirty replicators
-  _createDirtyReplicatorsView () {
-    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
-      _id: '_design/dirty_replicators',
-      views: {
-        dirty_replicators: {
-          map: [
-            'function(doc) {',
-            'if (doc.type === "replicator" && doc.dirty) {',
-            'emit(doc._id, null);',
-            '}',
-            '}'
-          ].join(' ')
-        }
-      }
-    })
-  }
-
   _createCleanOrLockedReplicatorsByDBNameView () {
     return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
       _id: '_design/clean_or_locked_replicators_by_db_name',
@@ -76,7 +57,6 @@ class Replicators extends Process {
 
   async _createViews () {
     await super._createViews()
-    await this._createDirtyReplicatorsView()
     await this._createCleanOrLockedReplicatorsByDBNameView()
   }
 
@@ -86,7 +66,6 @@ class Replicators extends Process {
 
   async _destroyViews () {
     await super._destroyViews()
-    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_replicators')
     await this._slouch.doc.getAndDestroy(
       this._spiegel._dbName,
       '_design/clean_or_locked_replicators_by_db_name'
