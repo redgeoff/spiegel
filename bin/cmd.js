@@ -4,15 +4,21 @@
 
 'use strict'
 
-const argv = require('yargs').argv
+// version=false as the default handling of the version param by yargs doesn't work with docker
+const yargs = require('yargs').version(false)
+const argv = yargs.argv
 const utils = require('../src/utils')
 const log = require('../src/log')
 const CLParams = require('../src/cl-params')
+const fs = require('fs-extra')
 
 const clParams = new CLParams()
 
-// Missing the required attributes?
-if (!argv.type || !argv.url) {
+if (argv.version) {
+  const pkg = require('../package.json')
+  console.log(pkg.version)
+} else if (!argv.type || !argv.url) {
+  // Missing the required attributes?
   fs
     .createReadStream(__dirname + '/usage.txt')
     .on('close', function () {
