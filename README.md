@@ -186,10 +186,12 @@ Example with Docker:
     $ sudo npm install -g bunyan
     $ docker ps # to view list of containers
     $ docker logs -f <container> | bunyan
-    
+
 Example with NPM:
 
     $ sudo npm install -g bunyan
     $ spiegel --url=http://admin:admin@localhost:5984 --type=update-listener --log-level=debug | bunyan
 
 ## [Spiegel Design](DESIGN.md)
+
+## [Building](BUILDING.md)
