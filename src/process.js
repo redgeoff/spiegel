@@ -201,8 +201,10 @@ class Process extends events.EventEmitter {
 
   async _processAndUnlockIfError (item) {
     try {
-      let leaveDirty = await this._process(item)
+      // Clear conflicts before processing item so that a permanent error, e.g. a replication error
+      // where a DB is missing doesn't lead to a evergrowing list of conflicts
       await this._clearConflicts(item)
+      let leaveDirty = await this._process(item)
       return leaveDirty
     } catch (err) {
       // If an error is encountered when processing then leave the item dirty, but unlock it so that
