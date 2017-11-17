@@ -20,7 +20,10 @@ class Utils {
   }
 
   _newSpiegel () {
-    return new Spiegel(null, { dbName: 'test_spiegel', namespace: 'test_' })
+    // Prevent race conditions on the same DB
+    let time = new Date().getTime()
+
+    return new Spiegel(null, { dbName: 'test_spiegel' + time, namespace: 'test_' + time + '_' })
   }
 
   createSieve (suffix) {
