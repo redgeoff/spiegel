@@ -14,7 +14,8 @@ const fs = require('fs-extra')
 
 const clParams = new CLParams()
 
-if (argv.version) {
+// We need to check for undefined as otherwise we can't just use `-e VERSION` with Docker
+if (argv.version !== undefined) {
   const pkg = require('../package.json')
   console.log(pkg.version)
 } else if (!argv.type || !argv.url) {
