@@ -27,27 +27,6 @@ class ChangeListeners extends Process {
     this._changeProcessor = new ChangeProcessor(spiegel, opts)
   }
 
-  // Note: this view is currently not used, but it will be when we provide hooks for monitoring
-  // exporters that want to report the current number of dirty listeners
-  _createDirtyListenersView () {
-    var doc = {
-      _id: '_design/dirty_change_listeners',
-      views: {
-        dirty_change_listeners: {
-          map: [
-            'function(doc) {',
-            'if (doc.type === "change_listener" && doc.dirty) {',
-            'emit(doc._id, null);',
-            '}',
-            '}'
-          ].join(' ')
-        }
-      }
-    }
-
-    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
-  }
-
   _createListenersByDBNameView () {
     var doc = {
       _id: '_design/change_listeners_by_db_name',
@@ -69,13 +48,11 @@ class ChangeListeners extends Process {
 
   async _createViews () {
     await super._createViews()
-    await this._createDirtyListenersView()
     await this._createListenersByDBNameView()
   }
 
   async _destroyViews () {
     await super._destroyViews()
-    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_change_listeners')
     await this._slouch.doc.getAndDestroy(
       this._spiegel._dbName,
       '_design/change_listeners_by_db_name'
