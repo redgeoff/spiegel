@@ -1,6 +1,7 @@
 'use strict'
 
 const sporks = require('sporks')
+const fs = require('fs-extra')
 
 class CLParams {
   constructor () {
@@ -9,9 +10,7 @@ class CLParams {
       'update-listener': {
         'batch-size': 'batchSize',
         'batch-timeout': 'batchTimeout',
-        'save-seq-after': 'saveSeqAfterSeconds',
-        concurrency: 'concurrency',
-        'check-stalled': 'checkStalledSeconds'
+        'save-seq-after': 'saveSeqAfterSeconds'
       },
       'change-listener': {
         'batch-size': 'batchSize',
@@ -20,7 +19,12 @@ class CLParams {
         'check-stalled': 'checkStalledSeconds',
         'passwords-file': 'passwords'
       },
-      replicator: { 'retry-after': 'retryAfterSeconds', 'passwords-file': 'passwords' }
+      replicator: {
+        concurrency: 'concurrency',
+        'retry-after': 'retryAfterSeconds',
+        'check-stalled': 'checkStalledSeconds',
+        'passwords-file': 'passwords'
+      }
     }
 
     this._opts = {
@@ -31,9 +35,34 @@ class CLParams {
     }
   }
 
-  _toOpt (type, name, value) {
-    let found = false
+  _get (name, names) {
+    let item = null
 
+    sporks.each(names, (opts, type) => {
+      sporks.each(opts, (optName, clName) => {
+        if (name === clName) {
+          item = {
+            type: type,
+            optName: optName
+          }
+        }
+
+        if (item) {
+          // Break loop
+          return false
+        }
+      })
+
+      if (item) {
+        // Break loop
+        return false
+      }
+    })
+
+    return item
+  }
+
+  async _toOpt (type, name, value) {
     // Common names
     let names = { common: this._names.common }
 
@@ -42,29 +71,16 @@ class CLParams {
       names[type] = this._names[type]
     }
 
-    sporks.each(names, (opts, proc) => {
-      sporks.each(opts, (optName, clName) => {
-        if (name === clName) {
-          found = true
+    let item = this._get(name, names)
 
-          // TODO: passwords-files
-
-          this._opts[proc][optName] = value
-        }
-
-        if (found) {
-          // Break loop
-          return false
-        }
-      })
-
-      if (found) {
-        // Break loop
-        return false
+    if (item) {
+      if (name === 'passwords-file') {
+        // Get JSON content from file
+        value = await fs.readJson(value)
       }
-    })
 
-    if (!found) {
+      this._opts[item.type][item.optName] = value
+    } else {
       throw new Error('invalid parameter ' + name)
     }
   }
