@@ -177,9 +177,9 @@ For a complete list of options see [Usage](bin/usage.txt)
 
 Note: the Docker image's environment variables are equal to the uppercase snake case of the options available on the command line, e.g. use LOG_LEVEL instead of --log-level
 
-## Human Readable Logs
+## Human-Readable Logs
 
-Spiegel uses bunyan for logging and by default outputs entries in JSON, something that is useful when digesting log data programmatically, but not very readable for a human. Instead, you can pipe the output to bunyan for human readable logs.
+Spiegel uses bunyan for logging and by default outputs entries in JSON, something that is useful when digesting log data programmatically, but not very readable for a human. Instead, you can pipe the output to bunyan for human-readable logs.
 
 Example with Docker:
 
