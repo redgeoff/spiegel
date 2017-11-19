@@ -32,7 +32,7 @@
     "pouchdb": "^6.3.4",
     "pouchdb-adapter-memory": "^6.3.4",
     "request": "^2.81.0",
-    "sporks": "0.0.3",
+    "sporks": "0.0.4",
     "squadron": "0.0.4",
     "yargs": "^10.0.3"
   },
