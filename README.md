@@ -195,3 +195,5 @@ Example with NPM:
 ## [Spiegel Design](DESIGN.md)
 
 ## [Building](BUILDING.md)
+
+## [FAQs](https://github.com/redgeoff/spiegel/wiki/FAQs)
