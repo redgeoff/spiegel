@@ -37,6 +37,9 @@ Spiegel was designed to provide scalable replication and change listening for [Q
   locked_at: '<ISO Timestamp>|<null>'
 }
 ```
+Notes:
+- If a replication fails, e.g. due to a transient error, it will be retried
+- If a replication process is abruptly terminated, e.g. due to a replicator process being restarted, the replicator will eventually be considered stalled and will be retried.
 
 ### `on_change`
 ```js
@@ -67,7 +70,10 @@ Spiegel was designed to provide scalable replication and change listening for [Q
   debounce: <true|false> // Duplicate API requests as identifed by URL and params are ignored
 }
 ```
-Note: CouchDB can replay changes so your on_change rule must be idempotent, meaning that it can be run repeatedly or even run with an older change without causing harm.
+Notes:
+- CouchDB can replay changes so your on_change rule must be idempotent, meaning that it can be run repeatedly or even run with an older change without causing harm.
+- If an API request fails with a non-200 status code, it will be retried until it succeeds
+- If an API request is abruptly terminated, e.g. due to a change-listener process being restarted, the change-listener will eventually be considered stalled and will be retried.
 
 ## Spiegel Internal Docs
 
