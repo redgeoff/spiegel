@@ -67,6 +67,7 @@ Spiegel was designed to provide scalable replication and change listening for [Q
   debounce: <true|false> // Duplicate API requests as identifed by URL and params are ignored
 }
 ```
+Note: CouchDB can replay changes so your on_change rule must be idempotent, meaning that it can be run repeatedly or even run with an older change without causing harm.
 
 ## Spiegel Internal Docs
 
