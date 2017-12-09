@@ -47,6 +47,7 @@ Spiegel was designed to provide scalable replication and change listening for [Q
       -e URL='http://user:password@yourcouchdb.com:5984' \
       redgeoff/spiegel
     ```
+   Note: the system database `_global_changes` must exist. If it doesn't exist, create it.
 5. Create the Update Listener Service:
     ```
     $ docker service create \
@@ -121,6 +122,7 @@ You can then scale up (or down), e.g.:
       --type='install' \
       --url='http://user:password@yourcouchdb.com:5984'
     ```
+   Note: the system database `_global_changes` must exist. If it doesn't exist, create it.
 5. Run the Update Listener Process:
     ```
     $ spiegel \
