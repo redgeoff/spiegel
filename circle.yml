@@ -3,13 +3,15 @@
 #  version: 8.1.4
 
 machine:
+  environment:
+    NODE_VERSION: 8.1.4
   services:
     - docker
 
 dependencies:
   pre:
-    - nvm install 8.1.4
-    - nvm use 8.1.4 && npm install -g npm
+    - nvm install $NODE_VERSION
+    - nvm use $NODE_VERSION && npm install -g npm
 
     # Install CouchDB 2
     - docker run -d --name couchdb -p 15984:5984 -e COUCHDB_USER='admin' -e COUCHDB_PASSWORD='admin' redgeoff/couchdb
@@ -21,21 +23,21 @@ dependencies:
     - curl -X PUT http://admin:admin@db.quizster.dev:15984/_global_changes
 
     # Enable CORS
-    - nvm use 8.1.4 && npm install -g add-cors-to-couchdb
-    - nvm use 8.1.4 && add-cors-to-couchdb http://localhost:15984 -u admin -p admin
+    - nvm use $NODE_VERSION && npm install -g add-cors-to-couchdb
+    - nvm use $NODE_VERSION && add-cors-to-couchdb http://localhost:15984 -u admin -p admin
 
     # Change port so that it doesn't interfer with CircleCI running a CouchDB instance on port 5984
     - sed -i "s/5984/15984/g" src/config.json
 
   override:
-    - nvm use 8.1.4 && npm install
+    - nvm use $NODE_VERSION && npm install
 
 test:
   pre:
-    - nvm use 8.1.4 && npm run lint
+    - nvm use $NODE_VERSION && npm run lint
 
   override:
-    - nvm use 8.1.4 && npm run node-full-test
+    - nvm use $NODE_VERSION && npm run node-full-test
 
     # Test docker image
     - HOST_IP=`/sbin/ip route | awk '/eth0  proto/ { print $9 }'` && docker run -it -e URL="http://admin:admin@$HOST_IP:15984" -e TYPE="install" redgeoff/spiegel
