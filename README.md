@@ -89,11 +89,18 @@ Notes:
 - `yourapi.com` and `yourcouchdb.com` cannot be equal to `localhost` as you will be running the Spiegel processes from within docker containers, which means that localhost will refer to the VM's localhost. If you don't have a domain name to use then you can use the IP address of your host machine. Alternatively, you can also use defined entries in your host's hosts file if you use the `--network=host` when running `docker service create`.
 - For extra security, use the [Docker Secrets](https://docs.docker.com/engine/swarm/secrets/#advanced-example-use-secrets-with-a-wordpress-service) to encrypt the URL parameter.
 
-You can then scale up (or down), e.g.:
+#### You can then scale up (or down), e.g.:
 
     $ docker service scale update-listener=3
     $ docker service scale change-listener=3
     $ docker service scale replicator=3
+    
+#### To update to the latest version of Spiegel:
+
+    $ docker pull redgeoff/spiegel
+    $ docker service update --detach=true --image redgeoff/spiegel update-listener
+    $ docker service update --detach=true --image redgeoff/spiegel change-listener
+    $ docker service update --detach=true --image redgeoff/spiegel replicator
 
 ### Install via NPM
 1. Install via NPM
