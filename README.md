@@ -175,7 +175,9 @@ Usage: spiegel --type=type --url=couchdb-url options
 
 For a complete list of options see [Usage](bin/usage.txt)
 
-Note: the Docker image's environment variables are equal to the uppercase snake case of the options available on the command line, e.g. use LOG_LEVEL instead of --log-level
+Notes:
+- The Docker image's environment variables are equal to the uppercase snake case of the options available on the command line, e.g. use LOG_LEVEL instead of --log-level
+- To check the version via Docker use `docker run -it -e VERSION=true redgeoff/spiegel`
 
 ## Human-Readable Logs
 
