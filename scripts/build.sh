@@ -9,8 +9,8 @@
 # 5. Builds and pushes docker images
 
 # Change to script directory
-sd=`dirname $0`
-cd $sd
+cd `dirname $0`
+sd=`pwd`
 
 version=$1
 

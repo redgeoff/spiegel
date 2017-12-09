@@ -1,6 +1,6 @@
 {
   "name": "spiegel",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "description": "Scalable replication and change listening for CouchDB",
   "main": "index.js",
   "bin": {
