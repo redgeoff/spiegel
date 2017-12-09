@@ -27,12 +27,12 @@
   },
   "dependencies": {
     "bunyan": "^1.8.12",
-    "couch-slouch": "^0.1.7",
+    "couch-slouch": "^1.0.0",
     "fs-extra": "^4.0.2",
     "pouchdb": "^6.3.4",
     "pouchdb-adapter-memory": "^6.3.4",
     "request": "^2.81.0",
-    "sporks": "0.0.4",
+    "sporks": "^1.0.0",
     "squadron": "0.0.4",
     "yargs": "^10.0.3"
   },
