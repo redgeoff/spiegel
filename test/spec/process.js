@@ -539,7 +539,7 @@ describe('process', () => {
     calls._lockProcessUnlockLogError[3][0]._conflicts.length.should.eql(1)
 
     // Trigger another item
-    await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
+    await testUtils.spiegel._slouch.doc.getMergeUpsert(testUtils.spiegel._dbName, {
       _id: itemIds[0],
       new_data: new Date().toISOString(),
       dirty: true
