@@ -117,14 +117,11 @@ class UpdateListeners {
   }
 
   async _processBatchUnsynchronized () {
-    // // Make sure that nothing else is processed when we have stopped
-    // if (!this._stopped) {
     await this._processUpdatedDBs()
 
     this._resetForNextBatch()
 
     await this._saveLastSeqIfNeeded()
-    // }
   }
 
   async _processBatch () {
