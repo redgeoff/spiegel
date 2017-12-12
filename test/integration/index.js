@@ -13,7 +13,7 @@ describe('integration', function () {
   let docs2 = null
 
   // More time is needed for these tests
-  const TIMEOUT = 70000
+  const TIMEOUT = 120000
   this.timeout(TIMEOUT)
 
   const createTestDBs = async () => {
