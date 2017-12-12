@@ -105,8 +105,9 @@ Notes:
 ### Install via NPM
 1. Install via NPM
     ```
-    $ npm install -g spiegel
+    $ npm install -g spiegel --unsafe
     ```
+   Note: `--unsafe` is needed to properly install leveldown (a PouchDB dependency)
 2. Create a passwords file for your change_listeners, e.g. change-listener-passwords.json:
     ```
     {
