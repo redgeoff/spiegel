@@ -4,12 +4,16 @@ const Globals = require('./globals')
 const log = require('./log')
 const sporks = require('sporks')
 const utils = require('./utils')
+const Synchronizer = require('squadron').Synchronizer
 
 class UpdateListeners {
   constructor (spiegel, opts) {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
     this._globals = new Globals(spiegel)
+
+    // Used to synchronize calls so that batch processing is atomic
+    this._synchronizer = new Synchronizer()
 
     // The maximum number of updates that will be processed in this batch
     this._batchSize = utils.getOpt(opts, 'batchSize', 100)
@@ -25,6 +29,8 @@ class UpdateListeners {
     this._lastSeq = null
 
     this._stopped = false
+
+    this._resetForNextBatch()
   }
 
   // The sieve is primarily used to filter out:
@@ -73,9 +79,10 @@ class UpdateListeners {
     log.error(err)
   }
 
-  _startBatchTimeout (iterator) {
-    setTimeout(() => {
-      iterator.abort()
+  _startBatchTimeout () {
+    this._batchTimer = setTimeout(() => {
+      // The batch timer expired so process the batch
+      this._processBatch()
     }, this._batchTimeout)
   }
 
@@ -88,29 +95,62 @@ class UpdateListeners {
     this._updatedDBs[this._toDBName(update)] = true
   }
 
-  _dbUpdatesIteratorEach () {
-    let i = 0
+  async _resetForNextBatch () {
+    // Stop the batch timer
+    clearTimeout(this._batchTimer)
 
-    return this._dbUpdatesIterator.each(update => {
+    // Reset the counter
+    this._updateCount = 0
+
+    // Clear any previous batch of updates
+    this._updatedDBs = []
+  }
+
+  async _processUpdatedDBs () {
+    let dbNames = sporks.keys(this._updatedDBs)
+
+    // We use bulk operations to get and then dirty replicators so that replication can be delegated
+    // to one of the replicator processes.
+    await this._replicatorsDirtyIfCleanOrLocked(dbNames)
+
+    await this._matchAndDirtyFiltered(dbNames)
+  }
+
+  async _processBatchUnsynchronized () {
+    await this._processUpdatedDBs()
+
+    this._resetForNextBatch()
+
+    await this._saveLastSeqIfNeeded()
+  }
+
+  async _processBatch () {
+    await this._synchronizer.run(async () => {
+      await this._processBatchUnsynchronized()
+    })
+  }
+
+  _dbUpdatesIteratorEach () {
+    return this._dbUpdatesIterator.each(async update => {
       log.debug('Processing update ' + JSON.stringify(update))
 
       this._addToUpdatedDBs(update)
 
       this._lastSeq = update.seq
 
-      if (i === 0) {
+      if (this._updateCount === 0) {
         // The 1st update can take any amount of time, but after it is read, we want to start a
-        // timer. If the timer expires then we want to close the stream and consider the batch
-        // collected. We pass in the iterator as by the time the timeout completes we have already
-        // created a new _dbUpdatesIterator
-        this._startBatchTimeout(this._dbUpdatesIterator)
+        // timer. If the timer expires then we want to consider the batch collected.
+        this._startBatchTimeout()
       }
 
-      if (i === this._batchSize - 1) {
-        this._dbUpdatesIterator.abort()
+      if (this._updateCount === this._batchSize - 1) {
+        // Wait until the batch has been processed so that our listening on the _global_changes is
+        // paused until we are ready for the next set of changes.
+        await this._processBatch()
+      } else {
+        this._updateCount++
       }
-
-      i++
     })
   }
 
@@ -136,16 +176,6 @@ class UpdateListeners {
       // can be delegated to one of the ChangeListener processes.
       await this._changeListenersDirtyIfCleanOrLocked(filteredDBNames)
     }
-  }
-
-  async _processNextBatch () {
-    let dbNames = sporks.keys(this._updatedDBs)
-
-    // We use bulk operations to get and then dirty replicators so that replication can be delegated
-    // to one of the replicator processes.
-    await this._replicatorsDirtyIfCleanOrLocked(dbNames)
-
-    await this._matchAndDirtyFiltered(dbNames)
   }
 
   // Separate out for easier unit testing
@@ -178,31 +208,24 @@ class UpdateListeners {
     })
   }
 
-  async _listenToNextBatch () {
-    // Clear any previous batch of updates
-    this._updatedDBs = []
-
+  // Note: due to the resource leak described at https://github.com/apache/couchdb/issues/1063 the
+  // following logic has been modified so that it does not abort the continuous listening for each
+  // batch. This logic is in fact more efficient as it does not require a new request per batch.
+  // Also, using longpoll doesn't really work here as longpoll returns empty data sets when nothing
+  // changes.
+  async _listenToUpdates () {
     this._dbUpdatesIterator = this._changes({
       feed: 'continuous',
       heartbeat: true,
       since: this._lastSeq ? this._lastSeq : undefined,
 
       filter: '_view',
-      view: this._spiegel._namespace + 'sieve/sieve',
-
-      // Avoid reading more than we are willing to process in this batch
-      limit: this._batchSize
+      view: this._spiegel._namespace + 'sieve/sieve'
     })
 
     this._listenToIteratorErrors(this._dbUpdatesIterator)
 
     await this._dbUpdatesIteratorEach()
-
-    // Make sure that nothing else is processed when we have stopped
-    if (!this._stopped) {
-      await this._saveLastSeqIfNeeded()
-      await this._processNextBatch()
-    }
   }
 
   _logFatal (err) {
@@ -211,14 +234,7 @@ class UpdateListeners {
 
   async _listen () {
     try {
-      await this._listenToNextBatch()
-
-      // Make sure that nothing else is processed when we have stopped
-      if (!this._stopped) {
-        // We don't await here as we just want _listen to be called again and don't want to have to
-        // waste memory chaining the promises
-        this._listen()
-      }
+      await this._listenToUpdates()
     } catch (err) {
       // Log fatal error here as this is in our listening loop, which is detached from our starting
       // chain of promises

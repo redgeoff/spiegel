@@ -30,11 +30,11 @@ describe('update-listeners', () => {
     )
   }
 
-  const spyOnProcessNextBatch = () => {
+  const spyOnProcessUpdatedDBs = () => {
     batches = []
-    listeners._processNextBatch = function () {
+    listeners._processUpdatedDBs = function () {
       batches.push(this._updatedDBs)
-      return UpdateListeners.prototype._processNextBatch.apply(this, arguments)
+      return UpdateListeners.prototype._processUpdatedDBs.apply(this, arguments)
     }
   }
 
@@ -127,7 +127,7 @@ describe('update-listeners', () => {
       await clearLastSeq()
     }
 
-    spyOnProcessNextBatch()
+    spyOnProcessUpdatedDBs()
     spyOnUpdates()
     spyOnChanges()
     spyOnDirtyReplicators()
@@ -285,8 +285,13 @@ describe('update-listeners', () => {
     // First call to changes should be missing a "since"
     testUtils.shouldEqual(changeOpts[0].since, undefined)
 
+    // Stop the listeners and then start again to make sure that we resume from the lastSeq
+    await listeners.stop()
+    changeOpts = []
+    await listeners.start()
+
     // Second call should resume from lastSeq
-    changeOpts[1].since.should.eql(updates[0].seq)
+    changeOpts[0].since.should.eql(updates[updates.length - 1].seq)
   })
 
   it('should _matchAndDirtyFiltered', async () => {
@@ -329,7 +334,7 @@ describe('update-listeners', () => {
 
     // Fake error
     let err = new Error()
-    listeners._listenToNextBatch = sporks.promiseErrorFactory(err)
+    listeners._listenToUpdates = sporks.promiseErrorFactory(err)
 
     await listeners._listen()
 
