@@ -91,9 +91,9 @@ Notes:
 
 #### You can then scale up (or down), e.g.:
 
-    $ docker service scale update-listener=3
-    $ docker service scale change-listener=3
-    $ docker service scale replicator=3
+    $ docker service scale --detach=true update-listener=3
+    $ docker service scale --detach=true change-listener=3
+    $ docker service scale --detach=true replicator=3
     
 #### To update to the latest version of Spiegel:
 
