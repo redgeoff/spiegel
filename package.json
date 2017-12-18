@@ -53,7 +53,7 @@
     "koa-route": "^3.2.0",
     "mocha": "^4.0.0",
     "nyc": "^11.2.1",
-    "pouchdb-find": "^6.3.4",
+    "pouchdb-find": "^6.4.1",
     "prettier-eslint-cli": "^4.4.0"
   },
   "greenkeeper": {
