@@ -41,8 +41,3 @@ test:
 
     # Test docker image
     - HOST_IP=`/sbin/ip route | awk '/eth0  proto/ { print $9 }'` && docker run -it -e URL="http://admin:admin@$HOST_IP:15984" -e TYPE="install" redgeoff/spiegel
-
-  # TODO: remove as no longer needed as running CouchDB on port 15984, right?
-  # post:
-    # Stop CouchDB instance to prevent bind conflicts with subsequent test containers
-    # - docker stop couchdb
