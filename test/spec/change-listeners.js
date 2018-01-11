@@ -22,7 +22,7 @@ describe('change-listeners', () => {
     listeners._slouchChangesArray = sporks.resolveFactory()
   }
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     suffix = testUtils.nextSuffix()
     listeners = new ChangeListeners(testUtils.spiegel)
     listenerIds = []
@@ -30,7 +30,7 @@ describe('change-listeners', () => {
     spy()
   })
 
-  afterEach(async () => {
+  afterEach(async() => {
     if (listeners._spiegel._onChanges.isRunning()) {
       await listeners._spiegel._onChanges.stop()
     }
@@ -65,7 +65,7 @@ describe('change-listeners', () => {
     calls._changesArray[0][1].should.eql({ since: 'last-seq', include_docs: true, limit: 100 })
   })
 
-  it('should process changes sequentially', async () => {
+  it('should process changes sequentially', async() => {
     // Fake long processChange so that we can ensure the changes are being processed sequentially
     let changesProcessed = []
     listeners._processChange = (change, dbName, requests) => {
@@ -92,17 +92,17 @@ describe('change-listeners', () => {
     listeners._moreBatches({ pending: 10 }).should.eql(true)
   })
 
-  const createTestDBs = async () => {
+  const createTestDBs = async() => {
     await testUtils.createTestDBs(['test_db1' + suffix, 'test_db3' + suffix])
   }
 
-  const createListener = async () => {
+  const createListener = async() => {
     listener = await listeners._create({ db_name: 'test_db1' + suffix })
     listenerIds[listener.id] = true
     listener = await listeners._get(listener.id)
   }
 
-  const setUpForBatchOfChanges = async () => {
+  const setUpForBatchOfChanges = async() => {
     await listeners._spiegel._onChanges.start()
 
     await createListener()
@@ -123,7 +123,7 @@ describe('change-listeners', () => {
     await createTestDBs()
   }
 
-  it('should _processBatchOfChanges', async () => {
+  it('should _processBatchOfChanges', async() => {
     await setUpForBatchOfChanges()
 
     let moreBatches = await listeners._processBatchOfChanges(listener)
@@ -134,7 +134,7 @@ describe('change-listeners', () => {
     requests[0].should.eql({ url: 'https://example.com', method: 'GET', qs: {} })
   })
 
-  it('_processBatchOfChangesLogError should handle error', async () => {
+  it('_processBatchOfChangesLogError should handle error', async() => {
     // Fake error
     let err = new Error()
     listeners._processBatchOfChanges = sporks.promiseErrorFactory(err)
@@ -148,7 +148,7 @@ describe('change-listeners', () => {
     calls._onError[0][0].should.eql(err)
   })
 
-  it('should process', async () => {
+  it('should process', async() => {
     await setUpForBatchOfChanges()
 
     await listeners._process(listener)

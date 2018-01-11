@@ -9,7 +9,7 @@ const log = require('./log')
 const utils = require('./utils')
 
 class Spiegel {
-  constructor (type, opts) {
+  constructor(type, opts) {
     this._type = type
 
     this._slouch = slouch
@@ -26,12 +26,12 @@ class Spiegel {
     this._onChanges = new OnChanges(this)
   }
 
-  async _createDB () {
+  async _createDB() {
     await this._slouch.db.create(this._dbName)
     await this._slouch.security.onlyAdminCanView(this._dbName)
   }
 
-  async install () {
+  async install() {
     await this._createDB()
     await this._slouch.security.onlyAdminCanView(this._dbName)
     await this._updateListeners.install()
@@ -40,7 +40,7 @@ class Spiegel {
     await this._replicators.install()
   }
 
-  async uninstall () {
+  async uninstall() {
     await this._changeListeners.uninstall()
     await this._updateListeners.uninstall()
     await this._replicators.uninstall()
@@ -48,7 +48,7 @@ class Spiegel {
     await this._slouch.db.destroy(this._dbName)
   }
 
-  async start () {
+  async start() {
     switch (this._type) {
       case 'install':
         await this.install()
@@ -77,7 +77,7 @@ class Spiegel {
     }
   }
 
-  async stop () {
+  async stop() {
     switch (this._type) {
       case 'update-listener':
         await this._onChanges.stop()
@@ -95,11 +95,11 @@ class Spiegel {
     }
   }
 
-  _installed () {
+  _installed() {
     return this._slouch.db.exists(this._dbName)
   }
 
-  async _throwIfNotInstalled () {
+  async _throwIfNotInstalled() {
     let installed = await this._installed()
     if (!installed) {
       throw new Error('spiegel not installed')

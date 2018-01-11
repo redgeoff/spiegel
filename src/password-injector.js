@@ -3,11 +3,11 @@
 const url = require('url')
 
 class PasswordInjector {
-  constructor (passwords) {
+  constructor(passwords) {
     this._passwords = passwords
   }
 
-  addPassword (urlString) {
+  addPassword(urlString) {
     if (this._passwords) {
       let parts = url.parse(urlString)
 

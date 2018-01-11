@@ -43,7 +43,7 @@ describe('process', () => {
   }
 
   const listenForErrors = () => {
-    proc.once('err', function (err) {
+    proc.once('err', function(err) {
       globalError = err
     })
   }
@@ -53,16 +53,16 @@ describe('process', () => {
     proc.emit = () => {}
   }
 
-  before(async () => {
+  before(async() => {
     globalProc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds }, type)
     await globalProc._createViews()
   })
 
-  after(async () => {
+  after(async() => {
     await globalProc._destroyViews()
   })
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     proc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds }, type)
     itemIds = []
     spy()
@@ -71,12 +71,12 @@ describe('process', () => {
 
   // TODO: move to slouch
   const downsert = (dbName, id) => {
-    return testUtils.spiegel._slouch.doc._persistThroughConflicts(function () {
+    return testUtils.spiegel._slouch.doc._persistThroughConflicts(function() {
       return testUtils.spiegel._slouch.doc.getAndDestroy(dbName, id)
     })
   }
 
-  afterEach(async () => {
+  afterEach(async() => {
     await Promise.all(
       itemIds.map(async id => {
         // We need to use a downsert as we need to handle race conditions caused when we have
@@ -102,7 +102,7 @@ describe('process', () => {
     }
   }
 
-  const createTestItem = async () => {
+  const createTestItem = async() => {
     let rep = await createItem({
       source: 'https://example.com/test_db1'
     })
@@ -113,7 +113,7 @@ describe('process', () => {
     proc._process = sporks.resolveFactory()
   }
 
-  it('should lock item', async () => {
+  it('should lock item', async() => {
     // Create item
     let item = await createItem({
       source: 'https://example.com/test_db1'
@@ -162,11 +162,11 @@ describe('process', () => {
     savedItem2.should.eql(savedItem1)
   }
 
-  it('lock should throw when conflict', async () => {
+  it('lock should throw when conflict', async() => {
     await shouldThrowWhenConflict('_lock')
   })
 
-  it('unlock should throw when conflict', async () => {
+  it('unlock should throw when conflict', async() => {
     await shouldThrowWhenConflict('_unlock')
   })
 
@@ -207,11 +207,11 @@ describe('process', () => {
     savedItem2._rev.should.not.eql(savedItem1._rev)
   }
 
-  it('should upsert unlock', async () => {
+  it('should upsert unlock', async() => {
     await shouldUpsertUnlock()
   })
 
-  it('should upsert unlock when conflict', async () => {
+  it('should upsert unlock when conflict', async() => {
     await shouldUpsertUnlock(true)
   })
 
@@ -274,15 +274,15 @@ describe('process', () => {
     }
   }
 
-  it('should unlock and clean', async () => {
+  it('should unlock and clean', async() => {
     await shouldUnlockAndClean()
   })
 
-  it('should not unlock and clean when conflict', async () => {
+  it('should not unlock and clean when conflict', async() => {
     await shouldUnlockAndClean(true)
   })
 
-  it('_lockProcessUnlock should handle non-conflict error when locking', async () => {
+  it('_lockProcessUnlock should handle non-conflict error when locking', async() => {
     let item = await createTestItem()
 
     // Fake non-conflict error
@@ -298,7 +298,7 @@ describe('process', () => {
     calls._unlockAndCleanIfConflictJustUnlock.length.should.eql(0)
   })
 
-  it('_lockProcessUnlock should handle conflict when locking', async () => {
+  it('_lockProcessUnlock should handle conflict when locking', async() => {
     let item = await createTestItem()
 
     // Fake conflict error
@@ -312,7 +312,7 @@ describe('process', () => {
     calls._unlockAndCleanIfConflictJustUnlock.length.should.eql(0)
   })
 
-  it('_lockProcessUnlock should handle error when processing', async () => {
+  it('_lockProcessUnlock should handle error when processing', async() => {
     let item = await createTestItem()
 
     // Fake conflict error
@@ -329,7 +329,7 @@ describe('process', () => {
     calls._unlockAndCleanIfConflictJustUnlock.length.should.eql(0)
   })
 
-  it('_lockProcessUnlock should handle non-conflict error when cleaning', async () => {
+  it('_lockProcessUnlock should handle non-conflict error when cleaning', async() => {
     let item = await createTestItem()
 
     fakeSuccessfulProcessing()
@@ -348,7 +348,7 @@ describe('process', () => {
     calls._upsertUnlock.length.should.eql(0)
   })
 
-  it('_lockProcessUnlock should handle conflict error when cleaning', async () => {
+  it('_lockProcessUnlock should handle conflict error when cleaning', async() => {
     let item = await createTestItem()
 
     fakeSuccessfulProcessing()
@@ -365,7 +365,7 @@ describe('process', () => {
     calls._upsertUnlock.length.should.eql(1)
   })
 
-  it('should _lockProcessUnlock without errors', async () => {
+  it('should _lockProcessUnlock without errors', async() => {
     let item = await createTestItem()
 
     fakeSuccessfulProcessing()
@@ -419,7 +419,7 @@ describe('process', () => {
     )
   }
 
-  it('should start when proc already dirty', async () => {
+  it('should start when proc already dirty', async() => {
     let dbNames = testDBNames()
 
     await createItems(dbNames)
@@ -437,7 +437,7 @@ describe('process', () => {
     await proc.stop()
   })
 
-  it('should start with no proc dirty', async () => {
+  it('should start with no proc dirty', async() => {
     let dbNames = testDBNames()
 
     await proc.start()
@@ -458,7 +458,7 @@ describe('process', () => {
   // In production, conflicts will occur when the same doc is changed on different nodes
   // simultaneously and then these docs are replicated. The only reliable way to reproduce this case
   // in our tests is use replication.
-  const createConflictViaReplication = async () => {
+  const createConflictViaReplication = async() => {
     // Create DB that we can use for replication
     let dbName = 'test_db3' + testUtils.nextSuffix()
     await testUtils.createDB(dbName)
@@ -512,7 +512,7 @@ describe('process', () => {
     })
   }
 
-  it('should clear conflicts', async () => {
+  it('should clear conflicts', async() => {
     // We need to ignore Spiegel errors as we are changing data that may also be modified
     // simultaneously by Spiegel and this can very easily cause conflict errors
     ignoreGlobalErrors()
@@ -555,7 +555,7 @@ describe('process', () => {
     await proc.stop()
   })
 
-  it('should unstall', async () => {
+  it('should unstall', async() => {
     let dbNames = testDBNames()
 
     let item1 = await createItem({
@@ -608,7 +608,7 @@ describe('process', () => {
     item.should.eql({ dirty: true })
   })
 
-  it('_lockProcessUnlockLogError should handle error', async () => {
+  it('_lockProcessUnlockLogError should handle error', async() => {
     // Fake conflict error
     proc._lockProcessUnlock = sporks.promiseErrorFactory(conflictError)
 
@@ -634,11 +634,11 @@ describe('process', () => {
     calls._logFatal[0][0].should.eql(conflictError)
   })
 
-  it('should stop when not already started', async () => {
+  it('should stop when not already started', async() => {
     await proc.stop()
   })
 
-  it('_unlockAndThrowIfNotConflict should throw if not conflict', async () => {
+  it('_unlockAndThrowIfNotConflict should throw if not conflict', async() => {
     // Fake non-conflict error
     proc._unlock = sporks.promiseErrorFactory(nonConflictError)
 
@@ -647,14 +647,14 @@ describe('process', () => {
     }, nonConflictError)
   })
 
-  it('_unlockAndThrowIfNotConflict should not throw if conflict', async () => {
+  it('_unlockAndThrowIfNotConflict should not throw if conflict', async() => {
     // Fake non-conflict error
     proc._unlock = sporks.promiseErrorFactory(conflictError)
 
     await proc._unlockAndThrowIfNotConflict()
   })
 
-  it('_unlockStalledLogError should log errors', async () => {
+  it('_unlockStalledLogError should log errors', async() => {
     // Fake conflict error
     proc._unlockStalled = sporks.promiseErrorFactory(conflictError)
 
@@ -666,7 +666,7 @@ describe('process', () => {
     calls._onError[0][0].should.eql(conflictError)
   })
 
-  it('should log fatal errors when listening', async () => {
+  it('should log fatal errors when listening', async() => {
     // Fake error
     let err = new Error()
     proc._changes = () => {
@@ -678,7 +678,7 @@ describe('process', () => {
     calls._logFatal[0][0].should.eql(err)
   })
 
-  it('should get dirty and unlocked', async () => {
+  it('should get dirty and unlocked', async() => {
     let item1 = await createItem({})
 
     let item2 = await createItem({

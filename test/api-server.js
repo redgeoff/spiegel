@@ -5,12 +5,12 @@ const route = require('koa-route')
 const auth = require('koa-basic-auth')
 
 class Server {
-  constructor () {
+  constructor() {
     this.numRequests = 0
     this._server = null
   }
 
-  start () {
+  start() {
     let app = new Koa()
 
     app.use(auth({ name: 'user', pass: 'secret' }))
@@ -33,7 +33,7 @@ class Server {
     this._server = app.listen(3000)
   }
 
-  stop () {
+  stop() {
     this._server.close()
   }
 }

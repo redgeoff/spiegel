@@ -7,7 +7,7 @@ const PasswordInjector = require('./password-injector')
 const utils = require('./utils')
 
 class Replicators extends Process {
-  constructor (spiegel, opts) {
+  constructor(spiegel, opts) {
     super(
       spiegel,
       {
@@ -34,7 +34,7 @@ class Replicators extends Process {
     this._passwordInjector = new PasswordInjector(this._passwords)
   }
 
-  _createCleanOrLockedReplicatorsByDBNameView () {
+  _createCleanOrLockedReplicatorsByDBNameView() {
     return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
       _id: '_design/clean_or_locked_replicators_by_db_name',
       views: {
@@ -55,16 +55,16 @@ class Replicators extends Process {
     })
   }
 
-  async _createViews () {
+  async _createViews() {
     await super._createViews()
     await this._createCleanOrLockedReplicatorsByDBNameView()
   }
 
-  install () {
+  install() {
     return this._createViews()
   }
 
-  async _destroyViews () {
+  async _destroyViews() {
     await super._destroyViews()
     await this._slouch.doc.getAndDestroy(
       this._spiegel._dbName,
@@ -72,11 +72,11 @@ class Replicators extends Process {
     )
   }
 
-  uninstall () {
+  uninstall() {
     return this._destroyViews()
   }
 
-  async _getCleanOrLocked (dbNames) {
+  async _getCleanOrLocked(dbNames) {
     let response = await this._slouch.db.viewArray(
       this._spiegel._dbName,
       '_design/clean_or_locked_replicators_by_db_name',
@@ -87,7 +87,7 @@ class Replicators extends Process {
     return response.rows.map(row => row.doc)
   }
 
-  _dirty (replicators) {
+  _dirty(replicators) {
     replicators.forEach(replicator => {
       replicator.dirty = true
       this._setUpdatedAt(replicator)
@@ -96,7 +96,7 @@ class Replicators extends Process {
     return this._slouch.doc.bulkCreateOrUpdate(this._spiegel._dbName, replicators)
   }
 
-  _toDBName (source) {
+  _toDBName(source) {
     if (source) {
       var i = source.lastIndexOf('/')
       if (i !== -1) {
@@ -105,7 +105,7 @@ class Replicators extends Process {
     }
   }
 
-  async _dirtyAndGetConflictedDBNames (replicators) {
+  async _dirtyAndGetConflictedDBNames(replicators) {
     let response = await this._dirty(replicators)
 
     // Get a list of all the dbNames where we have conflicts. This can occur because the replicator
@@ -121,7 +121,7 @@ class Replicators extends Process {
     return conflictedDBNames
   }
 
-  async _attemptToDirtyIfCleanOrLocked (dbNames) {
+  async _attemptToDirtyIfCleanOrLocked(dbNames) {
     let replicators = await this._getCleanOrLocked(dbNames)
 
     // length can be zero if there is nothing to dirty
@@ -147,14 +147,14 @@ class Replicators extends Process {
   // that another UpdateListener dirties the same replicator. In this event, we'll detect the
   // conflicts. We'll then retry the get and dirty for these conflicted replicators. We'll repeat
   // this process until there are no more conflicts.
-  async dirtyIfCleanOrLocked (dbNames) {
+  async dirtyIfCleanOrLocked(dbNames) {
     let conflictedDBNames = await this._attemptToDirtyIfCleanOrLocked(dbNames)
     if (conflictedDBNames && conflictedDBNames.length > 0) {
       return this.dirtyIfCleanOrLocked(conflictedDBNames)
     }
   }
 
-  _toCouchDBReplicationParams (params) {
+  _toCouchDBReplicationParams(params) {
     // We choose to blacklist as oppossed to whitelist so that any future CouchDB replication
     // parameters will work without Spiegel being updated
     let couchParams = {}
@@ -167,19 +167,19 @@ class Replicators extends Process {
     return couchParams
   }
 
-  _addPassword (urlString) {
+  _addPassword(urlString) {
     return this._passwordInjector.addPassword(urlString)
   }
 
-  _censorPasswordInURL (url) {
+  _censorPasswordInURL(url) {
     return url ? utils.censorPasswordInURL(url) : url
   }
 
-  _slouchReplicate (params) {
+  _slouchReplicate(params) {
     return this._slouch.db.replicate(params)
   }
 
-  async _replicate (replicator) {
+  async _replicate(replicator) {
     let couchParams = this._toCouchDBReplicationParams(replicator)
 
     // Add passwords to URLs based on hostname and username so that passwords are not embedded in
@@ -197,7 +197,7 @@ class Replicators extends Process {
     log.info('Finished replication from', sourceNoPwd, 'to', targetNoPwd)
   }
 
-  async _process (item) {
+  async _process(item) {
     await this._replicate(item)
   }
 }

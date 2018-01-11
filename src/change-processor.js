@@ -29,7 +29,7 @@ const utils = require('./utils')
 // }
 
 class ChangeProcessor {
-  constructor (spiegel, opts) {
+  constructor(spiegel, opts) {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
 
@@ -42,7 +42,7 @@ class ChangeProcessor {
     this._passwordInjector = new PasswordInjector(utils.getOpt(opts, 'passwords'))
   }
 
-  _buildParams (change, onChange, dbName) {
+  _buildParams(change, onChange, dbName) {
     let params = {}
 
     if (onChange.params) {
@@ -65,15 +65,15 @@ class ChangeProcessor {
     return params
   }
 
-  _getMethod (onChange) {
+  _getMethod(onChange) {
     return onChange.method ? onChange.method.toUpperCase() : 'GET'
   }
 
-  _addPassword (url) {
+  _addPassword(url) {
     return this._passwordInjector.addPassword(url)
   }
 
-  _setParams (method, opts, params) {
+  _setParams(method, opts, params) {
     // Whether we use "qs" or "json" depends on the method
     if (method === 'DELETE' || method === 'GET') {
       opts.qs = params
@@ -82,13 +82,13 @@ class ChangeProcessor {
     }
   }
 
-  _debounce (promiseFactory, resource) {
+  _debounce(promiseFactory, resource) {
     return this._debouncer.run(promiseFactory, resource)
   }
 
   // Apparently, we cannot expect request to generate an error when we get a non-200 status code!
   // So, we need to create a wrapper.
-  async _statusAwareRequest () {
+  async _statusAwareRequest() {
     let response = await this._req.apply(this._req, arguments)
 
     // Status code error?
@@ -99,7 +99,7 @@ class ChangeProcessor {
     return response
   }
 
-  _request () {
+  _request() {
     let opts = sporks.clone(arguments[0])
     if (opts.url) {
       opts.url = utils.censorPasswordInURL(opts.url)
@@ -109,14 +109,14 @@ class ChangeProcessor {
     return this._statusAwareRequest.apply(this, arguments)
   }
 
-  _requestAndPush (opts, requests) {
+  _requestAndPush(opts, requests) {
     let r = this._request(opts)
     // Push request promise so that the caller can track it
     requests.push(r)
     return r
   }
 
-  _makeDebouncedRequest (onChange, params, opts, requests) {
+  _makeDebouncedRequest(onChange, params, opts, requests) {
     // The resource depends on the URL and the params passed to the API
     let resource = onChange.url + JSON.stringify(params)
     return this._debounce(() => {
@@ -124,7 +124,7 @@ class ChangeProcessor {
     }, resource)
   }
 
-  _makeDebouncedOrRegularRequest (onChange, params, opts, requests) {
+  _makeDebouncedOrRegularRequest(onChange, params, opts, requests) {
     if (onChange.debounce) {
       return this._makeDebouncedRequest(onChange, params, opts, requests)
     } else {
@@ -132,7 +132,7 @@ class ChangeProcessor {
     }
   }
 
-  _buildAndMakeRequest (change, onChange, dbName, requests) {
+  _buildAndMakeRequest(change, onChange, dbName, requests) {
     let params = this._buildParams(change, onChange, dbName)
 
     let method = this._getMethod(onChange)
@@ -147,7 +147,7 @@ class ChangeProcessor {
     return this._makeDebouncedOrRegularRequest(onChange, params, opts, requests)
   }
 
-  async _makeRequest (change, onChange, dbName, requests) {
+  async _makeRequest(change, onChange, dbName, requests) {
     // We don't await here as we only await below if the "block" option is being used
     let req = this._buildAndMakeRequest(change, onChange, dbName, requests)
 
@@ -157,7 +157,7 @@ class ChangeProcessor {
     }
   }
 
-  async _makeRequests (change, onChanges, dbName, requests) {
+  async _makeRequests(change, onChanges, dbName, requests) {
     let promises = []
 
     // Run OnChanges in parallel
@@ -168,11 +168,11 @@ class ChangeProcessor {
     await Promise.all(promises)
   }
 
-  _getMatchingOnChanges (dbName, change) {
+  _getMatchingOnChanges(dbName, change) {
     return this._spiegel._onChanges.getMatchingOnChanges(dbName, change.doc)
   }
 
-  async process (change, dbName, requests) {
+  async process(change, dbName, requests) {
     let onChanges = await this._getMatchingOnChanges(dbName, change)
     await this._makeRequests(change, onChanges, dbName, requests)
   }

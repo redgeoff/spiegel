@@ -15,7 +15,7 @@ describe('replicators-bulk', () => {
     docs.push(doc)
   }
 
-  const createReplicators = async () => {
+  const createReplicators = async() => {
     docs = []
 
     // Clean & unlocked
@@ -59,10 +59,10 @@ describe('replicators-bulk', () => {
     })
   }
 
-  const getReplicators = async () => {
+  const getReplicators = async() => {
     let reps = []
     await Promise.all(
-      docs.map(async (doc, i) => {
+      docs.map(async(doc, i) => {
         reps[i] = await testUtils.spiegel._slouch.doc.get(testUtils.spiegel._dbName, doc.id)
       })
     )
@@ -71,19 +71,19 @@ describe('replicators-bulk', () => {
 
   const spyOnDirty = () => {
     dirties = []
-    replicators._dirty = function (replicators) {
+    replicators._dirty = function(replicators) {
       dirties.push(replicators)
       return Replicators.prototype._dirty.apply(this, arguments)
     }
   }
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     replicators = new Replicators(testUtils.spiegel)
     spyOnDirty()
     await createReplicators()
   })
 
-  afterEach(async () => {
+  afterEach(async() => {
     await Promise.all(
       docs.map(async doc => {
         await testUtils.spiegel._slouch.doc.getAndDestroy(testUtils.spiegel._dbName, doc.id)
@@ -92,7 +92,7 @@ describe('replicators-bulk', () => {
   })
 
   // Simulate conflicts by updating the docs between the _getCleanOrLocked() and _dirty() calls
-  const simulateConflicts = async () => {
+  const simulateConflicts = async() => {
     await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
       _id: docs[4].id,
       foo: 'test_db5' // ensure something is changed
@@ -104,7 +104,7 @@ describe('replicators-bulk', () => {
     })
   }
 
-  it('should dirty', async () => {
+  it('should dirty', async() => {
     let reps = await getReplicators()
     testUtils.shouldEqual(reps[0].dirty, undefined)
     testUtils.shouldEqual(reps[2].dirty, undefined)
@@ -121,7 +121,7 @@ describe('replicators-bulk', () => {
     updatedReps[0].updated_at.should.not.eql(reps[0].updated_at)
   })
 
-  it('should get clean or locked', async () => {
+  it('should get clean or locked', async() => {
     let docs = await replicators._getCleanOrLocked([
       'test_db2',
       'test_db3',
@@ -135,7 +135,7 @@ describe('replicators-bulk', () => {
     dbNames.should.eql(['test_db3', 'test_db4', 'test_db5', 'test_db6', 'test_db7'])
   })
 
-  it('should dirty and get conflicted db names', async () => {
+  it('should dirty and get conflicted db names', async() => {
     let reps = await replicators._getCleanOrLocked([
       'test_db1',
       'test_db2',
@@ -151,10 +151,10 @@ describe('replicators-bulk', () => {
     conflictedDBNames.should.eql(['test_db5', 'test_db7'])
   })
 
-  it('should dirty if clean or locked', async () => {
+  it('should dirty if clean or locked', async() => {
     // Simulate conflicts
     let simulated = false
-    replicators._getCleanOrLocked = async function () {
+    replicators._getCleanOrLocked = async function() {
       let reps = await Replicators.prototype._getCleanOrLocked.apply(this, arguments)
 
       if (!simulated) {
@@ -183,7 +183,7 @@ describe('replicators-bulk', () => {
     dbNames2.should.eql(['test_db5', 'test_db7'])
   })
 
-  it('should dirty if clean or locked when nothing to dirty', async () => {
+  it('should dirty if clean or locked when nothing to dirty', async() => {
     await replicators.dirtyIfCleanOrLocked(['test_db2'])
     // test_db2 is already dirty so nothing should be dirtied
     dirties.should.eql([])

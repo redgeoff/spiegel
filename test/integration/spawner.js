@@ -8,7 +8,7 @@ const sporks = require('sporks')
 const JSONStream = require('JSONStream')
 
 class Spawner {
-  constructor () {
+  constructor() {
     this._children = []
 
     // Prevent race conditions on the same DB
@@ -20,7 +20,7 @@ class Spawner {
     this._spiegel = new Spiegel(null, { dbName: this._dbName, namespace: this._namespace })
   }
 
-  _spawn (opts) {
+  _spawn(opts) {
     opts.push('--db-name=' + this._dbName)
     opts.push('--namespace=' + this._namespace)
     opts.push('--url=' + utils.couchDBURL())
@@ -59,25 +59,25 @@ class Spawner {
     this._children.push({ child, closed })
   }
 
-  _startUpdateListener () {
+  _startUpdateListener() {
     this._spawn(['--type=update-listener'])
   }
 
-  _startReplicator () {
+  _startReplicator() {
     this._spawn([
       '--type=replicator',
       '--passwords-file=' + path.join(__dirname, '/replicator-passwords.json')
     ])
   }
 
-  _startChangeListener () {
+  _startChangeListener() {
     this._spawn([
       '--type=change-listener',
       '--passwords-file=' + path.join(__dirname, '/change-listener-passwords.json')
     ])
   }
 
-  async start () {
+  async start() {
     // Install spiegel so that there is no race condition installing it when we run the instances
     // below
     await this._spiegel.install()
@@ -91,7 +91,7 @@ class Spawner {
     this._startChangeListener()
   }
 
-  async stop () {
+  async stop() {
     // Stop all the processes
     this._children.forEach(child => {
       child.child.kill('SIGINT')

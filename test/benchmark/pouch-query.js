@@ -27,7 +27,7 @@ const fs = require('fs')
 //   * find w/ index:      27206ms        10ms      36M
 //   * query w/ view:     129035ms         3ms      36M
 
-describe('pouch-query', function () {
+describe('pouch-query', function() {
   this.timeout(100000000)
 
   let db = null
@@ -35,7 +35,7 @@ describe('pouch-query', function () {
   const N = 10000
   const DB_NAME = 'test_replicators'
 
-  const createDB = async () => {
+  const createDB = async() => {
     await slouch.db.create(DB_NAME)
     await createReplicatorsByDBNameView()
     await createDocs()
@@ -59,7 +59,7 @@ describe('pouch-query', function () {
   }
 
   const createDocFactory = i => {
-    return function () {
+    return function() {
       console.log('creating doc for i=', i)
       return slouch.doc.create(DB_NAME, {
         _id: 'replicator_' + i,
@@ -91,7 +91,7 @@ describe('pouch-query', function () {
 
   const startReplicating = () => {
     let before = new Date()
-    return new Promise(function (resolve, reject) {
+    return new Promise(function(resolve, reject) {
       from = db.replicate
         .from(utils.couchDBURL() + '/' + DB_NAME, {
           live: true,
@@ -103,7 +103,7 @@ describe('pouch-query', function () {
           console.log('took', after.getTime() - before.getTime(), 'ms to replicate')
           resolve()
         })
-        .on('error', function (err) {
+        .on('error', function(err) {
           reject(err)
         })
     })
@@ -126,20 +126,20 @@ describe('pouch-query', function () {
     }
   }
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     await createDB()
     db = new PouchDB(levelPath() + '/test_bm_replicators')
     await createPouchIndex()
     await startReplicating()
   })
 
-  afterEach(async () => {
+  afterEach(async() => {
     await stopReplicating()
     await db.destroy()
     await destroyDB()
   })
 
-  const find = async () => {
+  const find = async() => {
     let before = new Date()
 
     let docs = await db.find({
@@ -154,14 +154,14 @@ describe('pouch-query', function () {
     docs.docs.length.should.eql(1)
   }
 
-  it('should find', async () => {
+  it('should find', async() => {
     // let indexes = await db.getIndexes()
     // console.log('indexes=', indexes)
     await find()
     await find()
   })
 
-  const query = async () => {
+  const query = async() => {
     let before = new Date()
 
     let docs = await db.query('replicators_by_db_name', {
@@ -176,7 +176,7 @@ describe('pouch-query', function () {
     docs.rows.length.should.eql(1)
   }
 
-  it('should query with view', async () => {
+  it('should query with view', async() => {
     await query()
     await query()
   })
