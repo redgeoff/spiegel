@@ -44,7 +44,7 @@ describe('change-processor', () => {
 
   const fake = () => {
     origReq = changeProcessor._req
-    changeProcessor._req = async () => {
+    changeProcessor._req = async() => {
       // Add a little delay to simulate a request
       await sporks.timeout(10)
     }
@@ -54,7 +54,7 @@ describe('change-processor', () => {
     changeProcessor._req = origReq
   }
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     changeProcessor = new ChangeProcessor(testUtils.spiegel)
     spy()
     fake()
@@ -62,7 +62,7 @@ describe('change-processor', () => {
     requests = []
   })
 
-  afterEach(async () => {
+  afterEach(async() => {
     if (changeProcessor._spiegel._onChanges.isRunning()) {
       await changeProcessor._spiegel._onChanges.stop()
     }
@@ -124,7 +124,7 @@ describe('change-processor', () => {
     opts.should.eql({ qs: params })
   })
 
-  const makeDebouncedRequest = async () => {
+  const makeDebouncedRequest = async() => {
     await changeProcessor._makeDebouncedRequest(
       {
         url: 'https://example.com'
@@ -135,13 +135,13 @@ describe('change-processor', () => {
     )
   }
 
-  it('should _makeDebouncedRequest', async () => {
+  it('should _makeDebouncedRequest', async() => {
     await makeDebouncedRequest()
     calls._debounce[0][1].should.eql('https://example.com' + JSON.stringify(params))
     calls._request[0][0].should.eql(opts)
   })
 
-  it('should debounce', async () => {
+  it('should debounce', async() => {
     // This seems like overkill and is testing some functionality that is also tested in squadron,
     // however without this test it is possible for a tiny bug to break the debouncer at the Spiegel
     // layer.
@@ -157,7 +157,7 @@ describe('change-processor', () => {
     calls._request.length.should.eql(2)
   })
 
-  it('_makeDebouncedOrRegularRequest should make regular request', async () => {
+  it('_makeDebouncedOrRegularRequest should make regular request', async() => {
     let onChange = {
       url: 'https://example.com'
     }
@@ -168,7 +168,7 @@ describe('change-processor', () => {
     calls._request[0][0].should.eql(opts)
   })
 
-  it('_makeDebouncedOrRegularRequest should make debounced request', async () => {
+  it('_makeDebouncedOrRegularRequest should make debounced request', async() => {
     let onChange = {
       url: 'https://example.com',
       debounce: true
@@ -181,7 +181,7 @@ describe('change-processor', () => {
     calls._makeDebouncedRequest[0][2].should.eql(opts)
   })
 
-  it('should _buildAndMakeRequest', async () => {
+  it('should _buildAndMakeRequest', async() => {
     fakePasswords()
 
     let onChange = {
@@ -214,14 +214,14 @@ describe('change-processor', () => {
   })
 
   const fakeLongRequest = () => {
-    changeProcessor._request = async () => {
+    changeProcessor._request = async() => {
       // Wait a bit to simulate a long request
       await sporks.timeout(100)
       requested = true
     }
   }
 
-  it('_makeRequest should not block', async () => {
+  it('_makeRequest should not block', async() => {
     fakeLongRequest()
     await changeProcessor._makeRequest(null, {}, null, requests)
 
@@ -229,7 +229,7 @@ describe('change-processor', () => {
     requested.should.eql(false)
   })
 
-  it('_makeRequest should block', async () => {
+  it('_makeRequest should block', async() => {
     fakeLongRequest()
     await changeProcessor._makeRequest(null, { block: true }, null, requests)
 
@@ -237,7 +237,7 @@ describe('change-processor', () => {
     requested.should.eql(true)
   })
 
-  it('should _makeRequests', async () => {
+  it('should _makeRequests', async() => {
     let onChanges = [
       {
         url: 'https://user@example.com/foo',
@@ -265,7 +265,7 @@ describe('change-processor', () => {
     calls._makeRequest[1][2].should.eql(dbName)
   })
 
-  it('should process', async () => {
+  it('should process', async() => {
     // Sanity check
     await changeProcessor._spiegel._onChanges.start()
     await changeProcessor.process(change, 'test_db1')
@@ -273,7 +273,7 @@ describe('change-processor', () => {
     calls._makeRequests.length.should.eql(1)
   })
 
-  it('should request', async () => {
+  it('should request', async() => {
     unfake()
 
     let response = await changeProcessor._request({
@@ -283,7 +283,7 @@ describe('change-processor', () => {
     response[0].body.should.eql('Hello World')
   })
 
-  it('request should handle status codes', async () => {
+  it('request should handle status codes', async() => {
     unfake()
 
     let err = null
@@ -298,7 +298,7 @@ describe('change-processor', () => {
     err.message.should.eql('Error')
   })
 
-  it('should _requestAndPush', async () => {
+  it('should _requestAndPush', async() => {
     let promise = Promise.resolve()
     let requests = []
 

@@ -6,7 +6,7 @@ const ChangeProcessor = require('./change-processor')
 const utils = require('./utils')
 
 class ChangeListeners extends Process {
-  constructor (spiegel, opts) {
+  constructor(spiegel, opts) {
     super(
       spiegel,
       {
@@ -27,7 +27,7 @@ class ChangeListeners extends Process {
     this._changeProcessor = new ChangeProcessor(spiegel, opts)
   }
 
-  _createListenersByDBNameView () {
+  _createListenersByDBNameView() {
     var doc = {
       _id: '_design/change_listeners_by_db_name',
       views: {
@@ -46,12 +46,12 @@ class ChangeListeners extends Process {
     return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
   }
 
-  async _createViews () {
+  async _createViews() {
     await super._createViews()
     await this._createListenersByDBNameView()
   }
 
-  async _destroyViews () {
+  async _destroyViews() {
     await super._destroyViews()
     await this._slouch.doc.getAndDestroy(
       this._spiegel._dbName,
@@ -59,16 +59,16 @@ class ChangeListeners extends Process {
     )
   }
 
-  install () {
+  install() {
     return this._createViews()
   }
 
-  uninstall () {
+  uninstall() {
     return this._destroyViews()
   }
 
   // Prefix so that we can create a listener even when the id is reserved, e.g. _users
-  _toId (dbName) {
+  _toId(dbName) {
     return this._idPrefix + dbName
   }
 
@@ -76,13 +76,13 @@ class ChangeListeners extends Process {
   //   return this._slouch.doc.getIgnoreMissing(this._spiegel._dbName, this._toId(dbName))
   // }
 
-  _updateLastSeq (id, lastSeq) {
+  _updateLastSeq(id, lastSeq) {
     // Use getMergeUpsert as we want the lastSeq to be stored even if there is a conflict from say
     // another process dirtying this ChangeListener
     return this._slouch.doc.getMergeUpsert(this._spiegel._dbName, { _id: id, last_seq: lastSeq })
   }
 
-  async _getByDBNames (dbNames) {
+  async _getByDBNames(dbNames) {
     let response = await this._slouch.db.viewArray(
       this._spiegel._dbName,
       '_design/change_listeners_by_db_name',
@@ -93,7 +93,7 @@ class ChangeListeners extends Process {
     return response.rows.map(row => row.doc)
   }
 
-  async _getCleanLockedOrMissing (dbNames) {
+  async _getCleanLockedOrMissing(dbNames) {
     let listeners = await this._getByDBNames(dbNames)
 
     // Index by dbName for quick retrieval
@@ -119,14 +119,14 @@ class ChangeListeners extends Process {
     return lists
   }
 
-  _create (listener) {
+  _create(listener) {
     listener._id = this._toId(listener.db_name)
     listener.type = 'change_listener'
     this._setUpdatedAt(listener)
     return this._slouch.doc.create(this._spiegel._dbName, listener)
   }
 
-  _dirtyOrCreate (listeners) {
+  _dirtyOrCreate(listeners) {
     listeners.forEach(listener => {
       // Existing listener?
       if (listener._id) {
@@ -143,7 +143,7 @@ class ChangeListeners extends Process {
     return this._slouch.doc.bulkCreateOrUpdate(this._spiegel._dbName, listeners)
   }
 
-  async _dirtyAndGetConflictedDBNames (listeners) {
+  async _dirtyAndGetConflictedDBNames(listeners) {
     let response = await this._dirtyOrCreate(listeners)
 
     // Get a list of all the dbNames where we have conflicts. This can occur because the listener
@@ -159,7 +159,7 @@ class ChangeListeners extends Process {
     return conflictedDBNames
   }
 
-  async _attemptToDirtyIfCleanOrLocked (dbNames) {
+  async _attemptToDirtyIfCleanOrLocked(dbNames) {
     let listeners = await this._getCleanLockedOrMissing(dbNames)
 
     // length can be zero if there is nothing to dirty
@@ -189,32 +189,32 @@ class ChangeListeners extends Process {
   // possible that another UpdateListener dirties the same ChangeListener. In this event, we'll
   // detect the conflicts. We'll then retry the get and dirty for these conflicted ChangeListeners.
   // We'll repeat this process until there are no more conflicts.
-  async dirtyIfCleanOrLocked (dbNames) {
+  async dirtyIfCleanOrLocked(dbNames) {
     let conflictedDBNames = await this._attemptToDirtyIfCleanOrLocked(dbNames)
     if (conflictedDBNames && conflictedDBNames.length > 0) {
       return this.dirtyIfCleanOrLocked(conflictedDBNames)
     }
   }
 
-  _processChange (change, dbName, requests) {
+  _processChange(change, dbName, requests) {
     return this._changeProcessor.process(change, dbName, requests)
   }
 
-  _processChangeFactory (change, dbName, requests) {
+  _processChangeFactory(change, dbName, requests) {
     return () => {
       return this._processChange(change, dbName, requests)
     }
   }
 
-  _slouchChangesArray (dbName, opts) {
+  _slouchChangesArray(dbName, opts) {
     return this._slouch.db.changesArray(dbName, opts)
   }
 
-  _changesArray (dbName, opts) {
+  _changesArray(dbName, opts) {
     return this._slouchChangesArray(dbName, opts)
   }
 
-  _changesForListener (listener) {
+  _changesForListener(listener) {
     return this._changesArray(listener.db_name, {
       since: listener.last_seq || undefined,
       include_docs: true,
@@ -222,11 +222,11 @@ class ChangeListeners extends Process {
     })
   }
 
-  async _waitForRequests (requests) {
+  async _waitForRequests(requests) {
     await Promise.all(requests)
   }
 
-  async _processChanges (listener, changes) {
+  async _processChanges(listener, changes) {
     let chain = Promise.resolve()
 
     // Array of promises used to ensure that all requests have completed before moving on to the
@@ -246,11 +246,11 @@ class ChangeListeners extends Process {
     await this._waitForRequests(requests)
   }
 
-  _moreBatches (changes) {
+  _moreBatches(changes) {
     return !!changes.pending
   }
 
-  async _processBatchOfChanges (listener) {
+  async _processBatchOfChanges(listener) {
     let changes = await this._changesForListener(listener)
 
     await this._processChanges(listener, changes)
@@ -263,7 +263,7 @@ class ChangeListeners extends Process {
     return this._moreBatches(changes)
   }
 
-  async _processBatchOfChangesLogError (listener) {
+  async _processBatchOfChangesLogError(listener) {
     try {
       await this._processBatchOfChanges(listener)
     } catch (err) {
@@ -275,7 +275,7 @@ class ChangeListeners extends Process {
     }
   }
 
-  _process (listener) {
+  _process(listener) {
     return this._processBatchOfChangesLogError(listener)
   }
 }

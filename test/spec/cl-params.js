@@ -26,7 +26,7 @@ describe('cl-params', () => {
     }
   })
 
-  it('should detect invalid opts', async () => {
+  it('should detect invalid opts', async() => {
     await Promise.all(
       types.map(async type => {
         let err = null
@@ -40,7 +40,7 @@ describe('cl-params', () => {
     )
   })
 
-  it('should detect invalid opts for other type', async () => {
+  it('should detect invalid opts for other type', async() => {
     let err = null
     try {
       await params._toOpts({ type: 'update-listener', 'passwords-file': true })
@@ -73,15 +73,15 @@ describe('cl-params', () => {
     )
   }
 
-  it('should convert install opts', async () => {
+  it('should convert install opts', async() => {
     await shouldConvertInstallUninstallOpts('install')
   })
 
-  it('should convert uninstall opts', async () => {
+  it('should convert uninstall opts', async() => {
     await shouldConvertInstallUninstallOpts('uninstall')
   })
 
-  it('should convert update-listener opts', async () => {
+  it('should convert update-listener opts', async() => {
     let opts = await params._toOpts({
       type: 'update-listener',
       'db-name': 'my-db-name',
@@ -105,7 +105,7 @@ describe('cl-params', () => {
     )
   })
 
-  it('should convert change-listener opts', async () => {
+  it('should convert change-listener opts', async() => {
     let opts = await params._toOpts({
       type: 'change-listener',
       'db-name': 'my-db-name',
@@ -133,7 +133,7 @@ describe('cl-params', () => {
     )
   })
 
-  it('should convert replicator opts', async () => {
+  it('should convert replicator opts', async() => {
     let opts = await params._toOpts({
       type: 'replicator',
       'db-name': 'my-db-name',
@@ -159,7 +159,7 @@ describe('cl-params', () => {
     )
   })
 
-  it('should merge common opts', async () => {
+  it('should merge common opts', async() => {
     let opts = await params.toOpts({
       type: 'replicator',
       concurrency: 5

@@ -9,7 +9,7 @@ describe('password-injector', () => {
     injector = new PasswordInjector()
   })
 
-  it('should add passwords', function () {
+  it('should add passwords', function() {
     // Clear any passwords
     injector._passwords = null
 

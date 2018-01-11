@@ -7,7 +7,7 @@ const utils = require('./utils')
 const Synchronizer = require('squadron').Synchronizer
 
 class UpdateListeners {
-  constructor (spiegel, opts) {
+  constructor(spiegel, opts) {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
     this._globals = new Globals(spiegel)
@@ -43,7 +43,7 @@ class UpdateListeners {
   // The sieve can also be used to further speed up the processing of updates by filtering on just
   // specific DBs. Be careful when doing this as your sieve could block replications and change
   // listening if it is not configured properly.
-  _createSieve () {
+  _createSieve() {
     return this._slouch.doc.create('_global_changes', {
       _id: '_design/' + this._spiegel._namespace + 'sieve',
       views: {
@@ -60,42 +60,42 @@ class UpdateListeners {
     })
   }
 
-  _destroySieve () {
+  _destroySieve() {
     return this._slouch.doc.getAndDestroy(
       '_global_changes',
       '_design/' + this._spiegel._namespace + 'sieve'
     )
   }
 
-  install () {
+  install() {
     return this._createSieve()
   }
 
-  uninstall () {
+  uninstall() {
     return this._destroySieve()
   }
 
-  _onError (err) {
+  _onError(err) {
     log.error(err)
   }
 
-  _startBatchTimeout () {
+  _startBatchTimeout() {
     this._batchTimer = setTimeout(() => {
       // The batch timer expired so process the batch
       this._processBatch()
     }, this._batchTimeout)
   }
 
-  _toDBName (update) {
+  _toDBName(update) {
     return /:(.*)$/.exec(update.id)[1]
   }
 
-  _addToUpdatedDBs (update) {
+  _addToUpdatedDBs(update) {
     // We index by dbName to remove duplicates in the batch
     this._updatedDBs[this._toDBName(update)] = true
   }
 
-  async _resetForNextBatch () {
+  async _resetForNextBatch() {
     // Stop the batch timer
     clearTimeout(this._batchTimer)
 
@@ -106,7 +106,7 @@ class UpdateListeners {
     this._updatedDBs = []
   }
 
-  async _processUpdatedDBs () {
+  async _processUpdatedDBs() {
     let dbNames = sporks.keys(this._updatedDBs)
 
     // We use bulk operations to get and then dirty replicators so that replication can be delegated
@@ -116,7 +116,7 @@ class UpdateListeners {
     await this._matchAndDirtyFiltered(dbNames)
   }
 
-  async _processBatchUnsynchronized () {
+  async _processBatchUnsynchronized() {
     await this._processUpdatedDBs()
 
     this._resetForNextBatch()
@@ -124,13 +124,13 @@ class UpdateListeners {
     await this._saveLastSeqIfNeeded()
   }
 
-  async _processBatch () {
-    await this._synchronizer.run(async () => {
+  async _processBatch() {
+    await this._synchronizer.run(async() => {
       await this._processBatchUnsynchronized()
     })
   }
 
-  _dbUpdatesIteratorEach () {
+  _dbUpdatesIteratorEach() {
     return this._dbUpdatesIterator.each(async update => {
       log.debug('Processing update ' + JSON.stringify(update))
 
@@ -154,19 +154,19 @@ class UpdateListeners {
     })
   }
 
-  _replicatorsDirtyIfCleanOrLocked (dbNames) {
+  _replicatorsDirtyIfCleanOrLocked(dbNames) {
     return this._spiegel._replicators.dirtyIfCleanOrLocked(dbNames)
   }
 
-  _changeListenersDirtyIfCleanOrLocked (dbNames) {
+  _changeListenersDirtyIfCleanOrLocked(dbNames) {
     return this._spiegel._changeListeners.dirtyIfCleanOrLocked(dbNames)
   }
 
-  _matchWithDBNames (dbNames) {
+  _matchWithDBNames(dbNames) {
     return this._spiegel._onChanges.matchWithDBNames(dbNames)
   }
 
-  async _matchAndDirtyFiltered (dbNames) {
+  async _matchAndDirtyFiltered(dbNames) {
     // Filter dbNames by OnChanges and then only dirty the corresponding ChangeListeners
     let filteredDBNames = await this._matchWithDBNames(dbNames)
 
@@ -179,15 +179,15 @@ class UpdateListeners {
   }
 
   // Separate out for easier unit testing
-  _changes (opts) {
+  _changes(opts) {
     return this._slouch.db.changes('_global_changes', opts)
   }
 
-  async _setGlobal (name, value) {
+  async _setGlobal(name, value) {
     await this._globals.set(name, value)
   }
 
-  async _saveLastSeq () {
+  async _saveLastSeq() {
     log.info('Saving lastSeq=', this._lastSeq)
     await this._setGlobal('lastSeq', this._lastSeq)
     this._seqLastSaved = new Date()
@@ -195,14 +195,14 @@ class UpdateListeners {
 
   // We save the lastSeq every so often so that we can avoid having to re-process all the updates in
   // the event that an UpdateListener is restarted or a new one starts up
-  async _saveLastSeqIfNeeded () {
+  async _saveLastSeqIfNeeded() {
     // Is it time to save the lastSeq again?
     if (new Date().getTime() - this._seqLastSaved.getTime() >= this._saveSeqAfterSeconds * 1000) {
       await this._saveLastSeq()
     }
   }
 
-  _listenToIteratorErrors (iterator) {
+  _listenToIteratorErrors(iterator) {
     iterator.on('error', err => {
       this._onError(err)
     })
@@ -213,7 +213,7 @@ class UpdateListeners {
   // batch. This logic is in fact more efficient as it does not require a new request per batch.
   // Also, using longpoll doesn't really work here as longpoll returns empty data sets when nothing
   // changes.
-  async _listenToUpdates () {
+  async _listenToUpdates() {
     this._dbUpdatesIterator = this._changes({
       feed: 'continuous',
       heartbeat: true,
@@ -228,11 +228,11 @@ class UpdateListeners {
     await this._dbUpdatesIteratorEach()
   }
 
-  _logFatal (err) {
+  _logFatal(err) {
     log.fatal(err)
   }
 
-  async _listen () {
+  async _listen() {
     try {
       await this._listenToUpdates()
     } catch (err) {
@@ -242,11 +242,11 @@ class UpdateListeners {
     }
   }
 
-  _getLastSeq () {
+  _getLastSeq() {
     return this._globals.get('lastSeq')
   }
 
-  async start () {
+  async start() {
     this._lastSeq = await this._getLastSeq()
 
     // We haven't actually saved the lastSeq but we need to initialize the value here so that we
@@ -256,7 +256,7 @@ class UpdateListeners {
     this._listen()
   }
 
-  async stop () {
+  async stop() {
     this._stopped = true
     if (this._dbUpdatesIterator) {
       this._dbUpdatesIterator.abort()

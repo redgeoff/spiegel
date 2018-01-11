@@ -32,7 +32,7 @@ describe('update-listeners', () => {
 
   const spyOnProcessUpdatedDBs = () => {
     batches = []
-    listeners._processUpdatedDBs = function () {
+    listeners._processUpdatedDBs = function() {
       batches.push(this._updatedDBs)
       return UpdateListeners.prototype._processUpdatedDBs.apply(this, arguments)
     }
@@ -40,7 +40,7 @@ describe('update-listeners', () => {
 
   const spyOnUpdates = () => {
     updates = []
-    listeners._addToUpdatedDBs = function (update) {
+    listeners._addToUpdatedDBs = function(update) {
       updates.push(update)
       return UpdateListeners.prototype._addToUpdatedDBs.apply(this, arguments)
     }
@@ -48,7 +48,7 @@ describe('update-listeners', () => {
 
   const spyOnChanges = () => {
     changeOpts = []
-    listeners._changes = function (opts) {
+    listeners._changes = function(opts) {
       changeOpts.push(opts)
       return UpdateListeners.prototype._changes.apply(this, arguments)
     }
@@ -56,7 +56,7 @@ describe('update-listeners', () => {
 
   const spyOnDirtyReplicators = () => {
     dirtyReplicators = {}
-    listeners._replicatorsDirtyIfCleanOrLocked = function (dbNames) {
+    listeners._replicatorsDirtyIfCleanOrLocked = function(dbNames) {
       dbNames.forEach(dbName => {
         dirtyReplicators[dbName] = true
       })
@@ -65,7 +65,7 @@ describe('update-listeners', () => {
 
   const spyOnDirtyChangeListeners = () => {
     dirtyChangeListeners = {}
-    listeners._changeListenersDirtyIfCleanOrLocked = function (dbNames) {
+    listeners._changeListenersDirtyIfCleanOrLocked = function(dbNames) {
       dbNames.forEach(dbName => {
         dirtyChangeListeners[dbName] = true
       })
@@ -74,7 +74,7 @@ describe('update-listeners', () => {
 
   const spyOnSetGlobal = () => {
     globals = []
-    listeners._setGlobal = function (name, value) {
+    listeners._setGlobal = function(name, value) {
       globals.push({ name, value })
       return UpdateListeners.prototype._setGlobal.apply(this, arguments)
     }
@@ -103,17 +103,17 @@ describe('update-listeners', () => {
   //     })
   // }
 
-  const createTestDBs = async () => {
+  const createTestDBs = async() => {
     await testUtils.createTestDBs(['test_db1' + suffix, 'test_db3' + suffix])
   }
 
-  const fakeOnChanges = async () => {
-    listeners._matchWithDBNames = function (dbNames) {
+  const fakeOnChanges = async() => {
+    listeners._matchWithDBNames = function(dbNames) {
       return Promise.resolve(dbNames)
     }
   }
 
-  const createListeners = async (
+  const createListeners = async(
     opts,
     fakeLastSeq = true,
     fakeOnChange = true,
@@ -145,35 +145,35 @@ describe('update-listeners', () => {
     await createTestDBs()
   }
 
-  const clearLastSeq = async () => {
+  const clearLastSeq = async() => {
     await listeners._setGlobal('lastSeq', null)
   }
 
-  before(async () => {
+  before(async() => {
     // Destroy default sieve as we want a custom sieve so that our tests can filter out changes to
     // _global_changes that are from other tests
     let lists = new UpdateListeners(testUtils.spiegel)
     await lists._destroySieve()
   })
 
-  after(async () => {
+  after(async() => {
     // Restore default sieve
     let lists = new UpdateListeners(testUtils.spiegel)
     await lists._createSieve()
   })
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     suffix = testUtils.nextSuffix()
     await testUtils.createSieve(suffix)
   })
 
-  afterEach(async () => {
+  afterEach(async() => {
     await listeners.stop()
     await testUtils.destroySieve()
     await testUtils.destroyTestDBs()
   })
 
-  it('should listen', async () => {
+  it('should listen', async() => {
     await createListeners()
 
     await testUtils
@@ -187,7 +187,7 @@ describe('update-listeners', () => {
           ? true
           : undefined
       })
-      .catch(function (err) {
+      .catch(function(err) {
         console.log('batches=', batches)
         throw err
       })
@@ -202,7 +202,7 @@ describe('update-listeners', () => {
           ? true
           : undefined
       })
-      .catch(function (err) {
+      .catch(function(err) {
         console.log('dirtyReplicators=', dirtyReplicators)
         throw err
       })
@@ -217,13 +217,13 @@ describe('update-listeners', () => {
           ? true
           : undefined
       })
-      .catch(function (err) {
+      .catch(function(err) {
         console.log('dirtyChangeListeners=', dirtyChangeListeners)
         throw err
       })
   })
 
-  it('batch should complete based on batchSize', async () => {
+  it('batch should complete based on batchSize', async() => {
     await createListeners({ batchSize: 1, batchTimeout: BATCH_TIMEOUT })
 
     // The first batch should only be for a single DB
@@ -231,13 +231,13 @@ describe('update-listeners', () => {
       .waitFor(() => {
         return sporks.length(batches[0]) === 1 ? true : undefined
       })
-      .catch(function (err) {
+      .catch(function(err) {
         console.log('batches[0]=', batches[0])
         throw err
       })
   })
 
-  it('batch should complete based on batchTimeout', async () => {
+  it('batch should complete based on batchTimeout', async() => {
     await createListeners({ batchSize: 1000, batchTimeout: 1000 })
 
     // Wait until after the timeout expires, but the batch size has not been reached
@@ -263,13 +263,13 @@ describe('update-listeners', () => {
           ? true
           : undefined
       })
-      .catch(function (err) {
+      .catch(function(err) {
         console.log('batches=', batches)
         throw err
       })
   })
 
-  it('should resume at lastSeq', async () => {
+  it('should resume at lastSeq', async() => {
     await createListeners({ batchSize: 1, batchTimeout: BATCH_TIMEOUT }, false, true, true)
 
     // Wait for a couple updates
@@ -277,7 +277,7 @@ describe('update-listeners', () => {
       .waitFor(() => {
         return updates.length >= 2 ? true : undefined
       })
-      .catch(function (err) {
+      .catch(function(err) {
         console.log('updates=', updates)
         throw err
       })
@@ -294,11 +294,11 @@ describe('update-listeners', () => {
     changeOpts[0].since.should.eql(updates[updates.length - 1].seq)
   })
 
-  it('should _matchAndDirtyFiltered', async () => {
+  it('should _matchAndDirtyFiltered', async() => {
     await createListeners()
 
     // Fake filtering
-    listeners._matchWithDBNames = function () {
+    listeners._matchWithDBNames = function() {
       return Promise.resolve(['test_db1'])
     }
 
@@ -309,7 +309,7 @@ describe('update-listeners', () => {
     })
   })
 
-  it('should save lastSeq', async () => {
+  it('should save lastSeq', async() => {
     await createListeners(
       { batchSize: 1, batchTimeout: BATCH_TIMEOUT, saveSeqAfterSeconds: 0 },
       false
@@ -320,7 +320,7 @@ describe('update-listeners', () => {
       .waitFor(() => {
         return updates.length >= 2 ? true : undefined
       })
-      .catch(function (err) {
+      .catch(function(err) {
         console.log('updates=', updates)
         throw err
       })
@@ -329,7 +329,7 @@ describe('update-listeners', () => {
     globals[0].should.eql({ name: 'lastSeq', value: updates[0].seq })
   })
 
-  it('should log fatal errors when listening', async () => {
+  it('should log fatal errors when listening', async() => {
     await createListeners()
 
     // Fake error
@@ -341,7 +341,7 @@ describe('update-listeners', () => {
     calls._logFatal[0][0].should.eql(err)
   })
 
-  it('should _listenToIteratorErrors', async () => {
+  it('should _listenToIteratorErrors', async() => {
     await createListeners()
 
     let emitter = new EventEmitter()
@@ -356,12 +356,12 @@ describe('update-listeners', () => {
     calls._onError[0][0].should.eql(err)
   })
 
-  it('should stop when not already started', async () => {
+  it('should stop when not already started', async() => {
     let listeners2 = new UpdateListeners(testUtils.spiegel)
     await listeners2.stop()
   })
 
-  it('_matchAndDirtyFiltered should handle no filteredDBNames', async () => {
+  it('_matchAndDirtyFiltered should handle no filteredDBNames', async() => {
     await createListeners()
 
     // Fake no DBs

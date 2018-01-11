@@ -15,7 +15,7 @@ describe('on-changes', () => {
     testUtils.spy(onChanges, ['_onError'], calls)
   }
 
-  const createOnChanges = async () => {
+  const createOnChanges = async() => {
     let onChangesInit = new OnChanges(testUtils.spiegel)
     await onChangesInit._create({
       _id: '1',
@@ -36,11 +36,11 @@ describe('on-changes', () => {
     docIds.push('3')
   }
 
-  before(async () => {
+  before(async() => {
     await createOnChanges()
   })
 
-  after(async () => {
+  after(async() => {
     await Promise.all(
       docIds.map(async docId => {
         await testUtils.spiegel._slouch.doc.getAndDestroy(testUtils.spiegel._dbName, docId)
@@ -48,17 +48,17 @@ describe('on-changes', () => {
     )
   })
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     onChanges = new OnChanges(testUtils.spiegel)
     spy()
     await onChanges.start()
   })
 
-  afterEach(async () => {
+  afterEach(async() => {
     await onChanges.stop()
   })
 
-  it('should get all', async () => {
+  it('should get all', async() => {
     // let before = new Date()
 
     let docs = await onChanges.all()
@@ -73,7 +73,7 @@ describe('on-changes', () => {
     docs['3']._id.should.eql('3')
   })
 
-  it('should sync destruction', async () => {
+  it('should sync destruction', async() => {
     let docs = await onChanges.all()
 
     // Set up promise that resolve when change is received
@@ -90,7 +90,7 @@ describe('on-changes', () => {
     docs['3']._id.should.eql('3')
   })
 
-  it('should match with DB names', async () => {
+  it('should match with DB names', async() => {
     let dbNames = await onChanges.matchWithDBNames([
       '_test_db0',
       'test_db1',
@@ -129,9 +129,9 @@ describe('on-changes', () => {
   //   console.log('took', after.getTime() - before.getTime(), 'ms')
   // })
 
-  it('should get matching on-changes', async () => {
+  it('should get matching on-changes', async() => {
     // Fake all
-    onChanges.all = async () => {
+    onChanges.all = async() => {
       return {
         '0': {
           _id: '0',
@@ -206,7 +206,7 @@ describe('on-changes', () => {
     matchingOnChanges['3']._id.should.eql('3')
   })
 
-  it('should handle replication errors', async () => {
+  it('should handle replication errors', async() => {
     // Fake
     let emitter = new EventEmitter()
     onChanges._replicateFrom = () => emitter

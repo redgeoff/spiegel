@@ -13,7 +13,7 @@ const log = require('./log')
 // to iterate through all OnChanges as fast as possible
 
 class OnChanges extends events.EventEmitter {
-  constructor (spiegel) {
+  constructor(spiegel) {
     super()
 
     this._spiegel = spiegel
@@ -29,7 +29,7 @@ class OnChanges extends events.EventEmitter {
     this._running = false
   }
 
-  _createOnChangesView () {
+  _createOnChangesView() {
     var doc = {
       _id: '_design/on_changes',
       views: {
@@ -48,34 +48,34 @@ class OnChanges extends events.EventEmitter {
     return this._slouch.doc.createOrUpdate(this._spiegel._dbName, doc)
   }
 
-  _createViews () {
+  _createViews() {
     return this._createOnChangesView()
   }
 
-  _destroyViews () {
+  _destroyViews() {
     return this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/on_changes')
   }
 
-  install () {
+  install() {
     return this._createViews()
   }
 
-  uninstall () {
+  uninstall() {
     return this._destroyViews()
   }
 
-  _create (onChange) {
+  _create(onChange) {
     onChange.type = 'on_change'
     return this._slouch.doc.create(this._spiegel._dbName, onChange)
   }
 
-  _getAndDestroy (id) {
+  _getAndDestroy(id) {
     // We need to use markAsDestroyed() as PouchDB can only sync deletions when they are done using
     // the _deleted flag
     return this._slouch.doc.markAsDestroyed(this._spiegel._dbName, id)
   }
 
-  _setDoc (doc) {
+  _setDoc(doc) {
     if (doc._deleted) {
       delete this._docs[doc._id]
     } else {
@@ -83,41 +83,41 @@ class OnChanges extends events.EventEmitter {
     }
   }
 
-  async _loadAllDocs () {
+  async _loadAllDocs() {
     let docs = await this._db.allDocs({ include_docs: true })
     docs.rows.forEach(doc => {
       this._setDoc(doc.doc)
     })
   }
 
-  async _onPaused () {
+  async _onPaused() {
     await this._loadAllDocs()
 
     // Alert that the data has been loaded and is ready to be used
     this.emit('load')
   }
 
-  _setDocs (docs) {
+  _setDocs(docs) {
     docs.forEach(doc => {
       this._setDoc(doc)
     })
   }
 
-  isRunning () {
+  isRunning() {
     return this._running
   }
 
-  _onError (err) {
+  _onError(err) {
     // TODO: should an error be emitted so that spiegel layer can listen for it and also emit
     // it?
     log.error(err)
   }
 
-  _replicateFrom () {
+  _replicateFrom() {
     return this._db.replicate.from.apply(this._db.replicate, arguments)
   }
 
-  _startReplicatingFrom () {
+  _startReplicatingFrom() {
     let from = this._replicateFrom(utils.couchDBURL() + '/' + this._spiegel._dbName, {
       live: true,
       retry: true,
@@ -140,27 +140,27 @@ class OnChanges extends events.EventEmitter {
     return from
   }
 
-  start () {
+  start() {
     this._running = true
     this._from = this._startReplicatingFrom()
     return this._loaded
   }
 
-  async stop () {
+  async stop() {
     let completed = sporks.once(this._from, 'complete')
     this._from.cancel()
     await completed
     this._running = false
   }
 
-  async all () {
+  async all() {
     // all() is a promise so that we have the freedom to change up the storage mechanism in the
     // future, e.g. our future storage mechanism may require IO
     await this._loaded
     return this._docs
   }
 
-  async matchWithDBNames (dbNames) {
+  async matchWithDBNames(dbNames) {
     // TODO: if we want to speed up this function even more, we can instead build a single reg ex,
     // e.g. /(on-change-db-name-1)|(on-change-db-name-1)|(...)/ and do a single comparison. This
     // most likely will have little impact on the performance of the UpdateListener however as the
@@ -185,7 +185,7 @@ class OnChanges extends events.EventEmitter {
     return sporks.keys(matchingDBNames)
   }
 
-  async getMatchingOnChanges (dbName, doc) {
+  async getMatchingOnChanges(dbName, doc) {
     let onChanges = await this.all()
 
     let matchingOnChanges = {}

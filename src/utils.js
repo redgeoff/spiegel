@@ -4,7 +4,7 @@ const config = require('./config.json')
 const { URL } = require('url')
 
 class Utils {
-  couchDBURL () {
+  couchDBURL() {
     let u = new URL('http://example.com')
     u.protocol = config.couchdb.scheme
     u.hostname = config.couchdb.host
@@ -16,7 +16,7 @@ class Utils {
     return u.href.replace(/\/$/, '')
   }
 
-  setCouchDBConfig (couchDBURL) {
+  setCouchDBConfig(couchDBURL) {
     let u = new URL(couchDBURL)
     config.couchdb.scheme = u.protocol
     config.couchdb.host = u.hostname
@@ -25,7 +25,7 @@ class Utils {
     config.couchdb.password = u.password
   }
 
-  censorPasswordInURL (urlString) {
+  censorPasswordInURL(urlString) {
     let u = new URL(urlString)
     if (u.password) {
       u.password = '**********'
@@ -33,7 +33,7 @@ class Utils {
     return u.href
   }
 
-  getOpt (opts, name, def) {
+  getOpt(opts, name, def) {
     return opts && opts[name] !== undefined ? opts[name] : def
   }
 }

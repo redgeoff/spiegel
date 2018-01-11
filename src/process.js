@@ -7,7 +7,7 @@ const events = require('events')
 const utils = require('./utils')
 
 class Process extends events.EventEmitter {
-  constructor (spiegel, opts, type) {
+  constructor(spiegel, opts, type) {
     super()
 
     this._spiegel = spiegel
@@ -30,7 +30,7 @@ class Process extends events.EventEmitter {
     this._checkStalledSeconds = utils.getOpt(opts, 'checkStalledSeconds', 600)
   }
 
-  _createDirtyAndUnLockedView () {
+  _createDirtyAndUnLockedView() {
     return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
       _id: '_design/dirty_and_unlocked_' + this._type,
       views: {
@@ -49,7 +49,7 @@ class Process extends events.EventEmitter {
     })
   }
 
-  _createLockedView () {
+  _createLockedView() {
     return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
       _id: '_design/locked_' + this._type,
       views: {
@@ -68,7 +68,7 @@ class Process extends events.EventEmitter {
 
   // Note: this view is currently not used, but it will be when we provide hooks for monitoring
   // exporters that want to report the current number of dirty items
-  _createDirtyView () {
+  _createDirtyView() {
     return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
       _id: '_design/dirty_' + this._type,
       views: {
@@ -87,13 +87,13 @@ class Process extends events.EventEmitter {
     })
   }
 
-  async _createViews () {
+  async _createViews() {
     await this._createDirtyAndUnLockedView()
     await this._createLockedView()
     await this._createDirtyView()
   }
 
-  async _destroyViews () {
+  async _destroyViews() {
     await this._slouch.doc.getAndDestroy(
       this._spiegel._dbName,
       '_design/dirty_and_unlocked_' + this._type
@@ -102,21 +102,21 @@ class Process extends events.EventEmitter {
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_' + this._type)
   }
 
-  _get (id) {
+  _get(id) {
     return this._slouch.doc.get(this._spiegel._dbName, id)
   }
 
-  _getAndDestroy (id) {
+  _getAndDestroy(id) {
     return this._slouch.doc.getAndDestroy(this._spiegel._dbName, id)
   }
 
   // Useful for determining the last time a item was used
-  _setUpdatedAt (item) {
+  _setUpdatedAt(item) {
     item.updated_at = new Date().toISOString()
   }
 
   // TODO: refactor and move to Slouch?
-  async _getLastSeq () {
+  async _getLastSeq() {
     let lastSeq = null
     await this._changes({
       limit: 1,
@@ -129,15 +129,15 @@ class Process extends events.EventEmitter {
     return lastSeq
   }
 
-  _getMergeUpsert (item) {
+  _getMergeUpsert(item) {
     return this._slouch.doc.getMergeUpsert(this._spiegel._dbName, item)
   }
 
-  _update (item) {
+  _update(item) {
     return this._slouch.doc.update(this._spiegel._dbName, item)
   }
 
-  async _updateItem (item, getMergeUpsert) {
+  async _updateItem(item, getMergeUpsert) {
     let lockedItem = sporks.clone(item)
 
     this._setUpdatedAt(lockedItem)
@@ -154,7 +154,7 @@ class Process extends events.EventEmitter {
     return lockedItem
   }
 
-  async _lock (item) {
+  async _lock(item) {
     // We use an update instead of an upsert as we want there to be a conflict as we only want one
     // process to hold the lock at any given time
     let lockedItem = sporks.clone(item)
@@ -162,13 +162,13 @@ class Process extends events.EventEmitter {
     return this._updateItem(lockedItem, false)
   }
 
-  async _upsertUnlock (item) {
+  async _upsertUnlock(item) {
     // Use new doc with just the locked_at cleared as we only want to change the locked status
     let rep = { _id: item._id, locked_at: null }
     return this._updateItem(rep, true)
   }
 
-  _setDirty (item, leaveDirty) {
+  _setDirty(item, leaveDirty) {
     // Leave dirty? This can occur when we want to unlock without cleaning as we still have more
     // processing to do for this item
     if (!leaveDirty) {
@@ -176,7 +176,7 @@ class Process extends events.EventEmitter {
     }
   }
 
-  async _unlockAndClean (item, leaveDirty) {
+  async _unlockAndClean(item, leaveDirty) {
     this._setDirty(item, leaveDirty)
 
     item.locked_at = null
@@ -185,13 +185,13 @@ class Process extends events.EventEmitter {
     return this._updateItem(item, false)
   }
 
-  async _unlock (item) {
+  async _unlock(item) {
     // We do not upsert as we want the unlock to fail if the item has been updated
     item.locked_at = null
     return this._updateItem(item, false)
   }
 
-  async _lockAndThrowIfErrorAndNotConflict (item) {
+  async _lockAndThrowIfErrorAndNotConflict(item) {
     try {
       let rep = await this._lock(item)
 
@@ -207,11 +207,11 @@ class Process extends events.EventEmitter {
     }
   }
 
-  _process () {
+  _process() {
     // Abstract method to be implemented by derived class
   }
 
-  async _clearConflicts (item) {
+  async _clearConflicts(item) {
     // Are there conflicts?
     if (item._conflicts) {
       let destroys = []
@@ -222,7 +222,7 @@ class Process extends events.EventEmitter {
     }
   }
 
-  async _processAndUnlockIfError (item) {
+  async _processAndUnlockIfError(item) {
     try {
       // Clear conflicts before processing item so that a permanent error, e.g. a replication error
       // where a DB is missing doesn't lead to a evergrowing list of conflicts
@@ -237,7 +237,7 @@ class Process extends events.EventEmitter {
     }
   }
 
-  async _unlockAndCleanIfConflictJustUnlock (item, leaveDirty) {
+  async _unlockAndCleanIfConflictJustUnlock(item, leaveDirty) {
     try {
       await this._unlockAndClean(item, leaveDirty)
     } catch (err) {
@@ -252,7 +252,7 @@ class Process extends events.EventEmitter {
     }
   }
 
-  async _lockProcessUnlock (item) {
+  async _lockProcessUnlock(item) {
     // Lock and if conflict then ignore error as conflicts are expected when another item
     // process locks the same item
     let conflict = await this._lockAndThrowIfErrorAndNotConflict(item)
@@ -266,14 +266,14 @@ class Process extends events.EventEmitter {
     }
   }
 
-  async _onError (err) {
+  async _onError(err) {
     log.error(err)
 
     // The event name cannot be "error" or else it will conflict with other error handler logic
     this.emit('err', err)
   }
 
-  async _lockProcessUnlockLogError (item) {
+  async _lockProcessUnlockLogError(item) {
     try {
       await this._lockProcessUnlock(item)
     } catch (err) {
@@ -283,7 +283,7 @@ class Process extends events.EventEmitter {
     }
   }
 
-  _dirtyAndUnlocked () {
+  _dirtyAndUnlocked() {
     return this._slouch.db.view(
       this._spiegel._dbName,
       '_design/dirty_and_unlocked_' + this._type,
@@ -292,7 +292,7 @@ class Process extends events.EventEmitter {
     )
   }
 
-  async _processAllDirtyAndUnlocked () {
+  async _processAllDirtyAndUnlocked() {
     let iterator = this._dirtyAndUnlocked()
 
     await iterator.each(item => {
@@ -300,11 +300,11 @@ class Process extends events.EventEmitter {
     }, this._throttler)
   }
 
-  _changes (params) {
+  _changes(params) {
     return this._slouch.db.changes(this._spiegel._dbName, params)
   }
 
-  _listenToIteratorErrors (iterator) {
+  _listenToIteratorErrors(iterator) {
     iterator.on('error', err => {
       // Unexpected error. Errors should be handled at the Slouch layer and connections should be
       // persistent
@@ -312,14 +312,14 @@ class Process extends events.EventEmitter {
     })
   }
 
-  _logFatal (err) {
+  _logFatal(err) {
     log.fatal(err)
   }
 
   // Note: the changes feed with respect to the dirty_and_unlocked view will only get changes for
   // unlocked items. i.e. an item can be re-dirtied many times while it is processing, but it will
   // only be scheduled for processing (and scheduled once) when the item is unlocked
-  async _listen (lastSeq) {
+  async _listen(lastSeq) {
     try {
       this._iterator = this._changes({
         feed: 'continuous',
@@ -343,7 +343,7 @@ class Process extends events.EventEmitter {
     }
   }
 
-  async start () {
+  async start() {
     // Get the last seq so that we can use this as the starting point when listening for changes
     let lastSeq = await this._getLastSeq()
 
@@ -356,7 +356,7 @@ class Process extends events.EventEmitter {
     this._startUnstaller()
   }
 
-  async stop () {
+  async stop() {
     this._stopUnstaller()
 
     if (this._iterator) {
@@ -366,7 +366,7 @@ class Process extends events.EventEmitter {
     await this._throttler.allDone()
   }
 
-  _lockedItems () {
+  _lockedItems() {
     return this._slouch.db.view(
       this._spiegel._dbName,
       '_design/locked_' + this._type,
@@ -375,7 +375,7 @@ class Process extends events.EventEmitter {
     )
   }
 
-  _hasStalled (item) {
+  _hasStalled(item) {
     // A item can stall if an item is started and then the associated process crashes or is
     // terminated abruptly.
     return (
@@ -383,7 +383,7 @@ class Process extends events.EventEmitter {
     )
   }
 
-  async _unlockAndThrowIfNotConflict (doc) {
+  async _unlockAndThrowIfNotConflict(doc) {
     try {
       await this._unlock(doc)
     } catch (err) {
@@ -397,7 +397,7 @@ class Process extends events.EventEmitter {
     }
   }
 
-  async _unlockStalled () {
+  async _unlockStalled() {
     // Note: we cannot use a view to automatically track stalled processes as views with time
     // sensitive data like the current timestamp don't work as they are not refreshed as the
     // timestamp changes and if they were you'd loose the performance benefit of a view. Therefore,
@@ -411,7 +411,7 @@ class Process extends events.EventEmitter {
     })
   }
 
-  async _unlockStalledLogError () {
+  async _unlockStalledLogError() {
     try {
       await this._unlockStalled()
     } catch (err) {
@@ -420,13 +420,13 @@ class Process extends events.EventEmitter {
     }
   }
 
-  _startUnstaller () {
+  _startUnstaller() {
     this._unstaller = setInterval(() => {
       this._unlockStalledLogError()
     }, this._checkStalledSeconds * 1000)
   }
 
-  _stopUnstaller () {
+  _stopUnstaller() {
     clearInterval(this._unstaller)
   }
 }

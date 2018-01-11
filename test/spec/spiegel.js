@@ -18,18 +18,18 @@ describe('spiegel', () => {
     return new Spiegel(type, { dbName: 'test2_spiegel', namespace: 'test2_' })
   }
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     // test1_ is already taken by testUtils
     spiegel = newSpiegel(null)
     spy()
     await spiegel.install()
   })
 
-  afterEach(async () => {
+  afterEach(async() => {
     await spiegel.uninstall()
   })
 
-  it('must have _admin to access', async () => {
+  it('must have _admin to access', async() => {
     let slouch = new Slouch(testUtils.couchDBURLWithoutAuth())
     await sporks.shouldThrow(
       () => {
@@ -40,7 +40,7 @@ describe('spiegel', () => {
   })
 
   const fakeInstall = () => {
-    spiegel.install = async () => {
+    spiegel.install = async() => {
       calls.install.push(arguments)
     }
   }
@@ -69,7 +69,7 @@ describe('spiegel', () => {
   //   calls.install.length.should.eql(1)
   // })
 
-  it('_throwIfNotInstalled should throw if not installed', async () => {
+  it('_throwIfNotInstalled should throw if not installed', async() => {
     // Fake not installed
     spiegel._installed = sporks.resolveFactory(false)
 
@@ -105,23 +105,23 @@ describe('spiegel', () => {
     await spiegel2.stop()
   }
 
-  it('should start and stop update-listener', async () => {
+  it('should start and stop update-listener', async() => {
     await shouldStartAndStop('update-listener')
   })
 
-  it('should start and stop change-listener', async () => {
+  it('should start and stop change-listener', async() => {
     await shouldStartAndStop('change-listener')
   })
 
-  it('should start and stop replicator', async () => {
+  it('should start and stop replicator', async() => {
     await shouldStartAndStop('replicator')
   })
 
-  it('should start and stop install', async () => {
+  it('should start and stop install', async() => {
     await shouldStartAndStop('install')
   })
 
-  it('should start and stop uninstall', async () => {
+  it('should start and stop uninstall', async() => {
     await shouldStartAndStop('uninstall')
   })
 })

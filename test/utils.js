@@ -9,7 +9,7 @@ const log = require('../src/log')
 const config = require('../src/config.json')
 
 class Utils {
-  constructor () {
+  constructor() {
     this.spiegel = this._newSpiegel()
     this._slouch = this.spiegel._slouch
     this._dbNames = []
@@ -19,14 +19,14 @@ class Utils {
     this._suffixTimestamp = new Date().getTime()
   }
 
-  _newSpiegel () {
+  _newSpiegel() {
     // Prevent race conditions on the same DB
     let time = new Date().getTime()
 
     return new Spiegel(null, { dbName: 'test_spiegel' + time, namespace: 'test_' + time + '_' })
   }
 
-  createSieve (suffix) {
+  createSieve(suffix) {
     return this._slouch.doc.create('_global_changes', {
       _id: '_design/' + this.spiegel._namespace + 'sieve',
       views: {
@@ -43,20 +43,20 @@ class Utils {
     })
   }
 
-  destroySieve () {
+  destroySieve() {
     return this._slouch.doc.getAndDestroy(
       '_global_changes',
       '_design/' + this.spiegel._namespace + 'sieve'
     )
   }
 
-  async createDB (dbName) {
+  async createDB(dbName) {
     await this._slouch.db.create(dbName)
 
     this._dbNames.push(dbName)
   }
 
-  async createTestDB (dbName) {
+  async createTestDB(dbName) {
     await this.createDB(dbName)
 
     await this._slouch.doc.create(dbName, {
@@ -70,7 +70,7 @@ class Utils {
     })
   }
 
-  async createTestDBs (dbNames) {
+  async createTestDBs(dbNames) {
     await Promise.all(
       dbNames.map(async dbName => {
         await this.createTestDB(dbName)
@@ -78,7 +78,7 @@ class Utils {
     )
   }
 
-  async destroyTestDBs () {
+  async destroyTestDBs() {
     await Promise.all(
       this._dbNames.map(async dbName => {
         await this._slouch.db.destroy(dbName)
@@ -87,32 +87,32 @@ class Utils {
     this._dbNames = []
   }
 
-  shouldEqual (var1, var2) {
+  shouldEqual(var1, var2) {
     // prettier appears to find fault with notation like `(myVar === undefined).should.eql(true)` so
     // this helper function will keep things clean
     let eq = var1 === var2
     eq.should.eql(true)
   }
 
-  shouldNotEqual (var1, var2) {
+  shouldNotEqual(var1, var2) {
     // prettier appears to find fault with notation like `(myVar === undefined).should.eql(false)`
     // so this helper function will keep things clean
     let eq = var1 !== var2
     eq.should.eql(true)
   }
 
-  waitFor (poll, maxSleep, sleepMs) {
+  waitFor(poll, maxSleep, sleepMs) {
     return sporks.waitFor(poll, maxSleep || this.TIMEOUT - 2000, sleepMs)
   }
 
   // TODO: move to sporks?
-  spy (obj, funs, calls, skip) {
+  spy(obj, funs, calls, skip) {
     funs.forEach(fun => {
       let origFun = obj[fun]
 
       calls[fun] = []
 
-      obj[fun] = function () {
+      obj[fun] = function() {
         calls[fun].push(arguments)
         if (skip) {
           return Promise.resolve()
@@ -123,7 +123,7 @@ class Utils {
     })
   }
 
-  nextSuffix () {
+  nextSuffix() {
     // We need to define a suffix to append to the DB names so that they are unique across tests or
     // else CouchDB will sometimes give us unexpected results in the _global_changes DB. The
     // suffixTimestamp allows us to keep the namespaces different between runs of the entire test
@@ -133,14 +133,14 @@ class Utils {
     return this._suffix
   }
 
-  silenceLog () {
+  silenceLog() {
     let funs = ['fatal', 'error', 'warn', 'info', 'debug', 'trace']
     funs.forEach(fun => {
       log[fun] = () => {}
     })
   }
 
-  couchDBURLWithoutAuth () {
+  couchDBURLWithoutAuth() {
     return config.couchdb.scheme + '://' + config.couchdb.host + ':' + config.couchdb.port
   }
 }

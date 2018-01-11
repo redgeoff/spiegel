@@ -3,16 +3,16 @@
 const NAMESPACE = 'global_'
 
 class Globals {
-  constructor (spiegel) {
+  constructor(spiegel) {
     this._spiegel = spiegel
     this._slouch = this._spiegel._slouch
   }
 
-  _toId (name) {
+  _toId(name) {
     return NAMESPACE + name
   }
 
-  set (name, value) {
+  set(name, value) {
     return this._slouch.doc.upsert(this._spiegel._dbName, {
       _id: this._toId(name),
       type: 'global',
@@ -20,7 +20,7 @@ class Globals {
     })
   }
 
-  async get (name) {
+  async get(name) {
     let doc = await this._slouch.doc.getIgnoreMissing(this._spiegel._dbName, this._toId(name))
     return doc ? doc.value : undefined
   }

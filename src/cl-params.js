@@ -4,7 +4,7 @@ const sporks = require('sporks')
 const fs = require('fs-extra')
 
 class CLParams {
-  constructor () {
+  constructor() {
     this._names = {
       common: {
         type: 'type',
@@ -44,7 +44,7 @@ class CLParams {
     this._ignoreNames = ['_', 'help', 'version', '$0']
   }
 
-  _get (name, names) {
+  _get(name, names) {
     let item = null
 
     sporks.each(names, (opts, type) => {
@@ -71,7 +71,7 @@ class CLParams {
     return item
   }
 
-  async _toOpt (type, name, value) {
+  async _toOpt(type, name, value) {
     // Common names
     let names = { common: this._names.common }
 
@@ -94,13 +94,13 @@ class CLParams {
     }
   }
 
-  _ignoreName (name) {
+  _ignoreName(name) {
     // Ignore any names automatically created by yargs. Also ignore any names with a capital letter,
     // i.e. the camel case version of our param automatically injected by yargs.
     return this._ignoreNames.indexOf(name) !== -1 || /[A-Z]/.test(name)
   }
 
-  async _toOpts (params) {
+  async _toOpts(params) {
     let promises = []
     let type = params.type
 
@@ -115,7 +115,7 @@ class CLParams {
     return this._opts
   }
 
-  async toOpts (params) {
+  async toOpts(params) {
     // Move common into the root level options
     let opts = await this._toOpts(params)
     opts = sporks.merge(opts, opts.common)

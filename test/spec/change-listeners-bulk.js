@@ -16,7 +16,7 @@ describe('change-listeners-bulk', () => {
     docs.push(doc)
   }
 
-  const createListeners = async () => {
+  const createListeners = async() => {
     docs = []
 
     // Clean & unlocked
@@ -59,10 +59,10 @@ describe('change-listeners-bulk', () => {
     })
   }
 
-  const getListeners = async () => {
+  const getListeners = async() => {
     let lists = []
     await Promise.all(
-      docs.map(async (doc, i) => {
+      docs.map(async(doc, i) => {
         lists[i] = await testUtils.spiegel._slouch.doc.get(testUtils.spiegel._dbName, doc.id)
       })
     )
@@ -71,19 +71,19 @@ describe('change-listeners-bulk', () => {
 
   const spyOnDirty = () => {
     dirties = []
-    listeners._dirtyOrCreate = function (listeners) {
+    listeners._dirtyOrCreate = function(listeners) {
       dirties.push(listeners)
       return ChangeListeners.prototype._dirtyOrCreate.apply(this, arguments)
     }
   }
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     listeners = new ChangeListeners(testUtils.spiegel)
     spyOnDirty()
     await createListeners()
   })
 
-  afterEach(async () => {
+  afterEach(async() => {
     await Promise.all(
       docs.map(async doc => {
         await testUtils.spiegel._slouch.doc.getAndDestroy(testUtils.spiegel._dbName, doc.id)
@@ -92,7 +92,7 @@ describe('change-listeners-bulk', () => {
   })
 
   // Simulate conflicts by updating the docs between the _getCleanOrLocked() and _dirty() calls
-  const simulateConflicts = async () => {
+  const simulateConflicts = async() => {
     await testUtils.spiegel._slouch.doc.getMergeUpdate(testUtils.spiegel._dbName, {
       _id: docs[4].id,
       foo: 'test_db5' // ensure something is changed
@@ -109,7 +109,7 @@ describe('change-listeners-bulk', () => {
     })
   }
 
-  it('should dirty or create', async () => {
+  it('should dirty or create', async() => {
     let lists = await getListeners()
     testUtils.shouldEqual(lists[0].dirty, undefined)
     testUtils.shouldEqual(lists[2].dirty, undefined)
@@ -138,7 +138,7 @@ describe('change-listeners-bulk', () => {
     testUtils.shouldNotEqual(updatedLists[7].updated_at, undefined)
   })
 
-  it('should get by DB names', async () => {
+  it('should get by DB names', async() => {
     let _docs = await listeners._getByDBNames([
       'test_db2',
       'test_db3',
@@ -157,7 +157,7 @@ describe('change-listeners-bulk', () => {
     _docs[2].dirty.should.eql(true)
   })
 
-  it('should clean, locked or missing listeners', async () => {
+  it('should clean, locked or missing listeners', async() => {
     let lists = await listeners._getCleanLockedOrMissing([
       'test_db0',
       'test_db1',
@@ -187,7 +187,7 @@ describe('change-listeners-bulk', () => {
     missingDBNames.should.eql(['test_db0', 'test_db8'])
   })
 
-  it('should dirty and get conflicted db names', async () => {
+  it('should dirty and get conflicted db names', async() => {
     let lists = await listeners._getCleanLockedOrMissing([
       'test_db1',
       'test_db2',
@@ -204,10 +204,10 @@ describe('change-listeners-bulk', () => {
     conflictedDBNames.should.eql(['test_db5', 'test_db7', 'test_db8'])
   })
 
-  it('should dirty if clean or locked', async () => {
+  it('should dirty if clean or locked', async() => {
     // Simulate conflicts
     let simulated = false
-    listeners._getCleanLockedOrMissing = async function () {
+    listeners._getCleanLockedOrMissing = async function() {
       let lists = await ChangeListeners.prototype._getCleanLockedOrMissing.apply(this, arguments)
 
       if (!simulated) {
@@ -237,7 +237,7 @@ describe('change-listeners-bulk', () => {
     dbNames2.should.eql(['test_db5', 'test_db7', 'test_db8'])
   })
 
-  it('should dirty if clean or locked when nothing to dirty', async () => {
+  it('should dirty if clean or locked when nothing to dirty', async() => {
     await listeners.dirtyIfCleanOrLocked(['test_db2'])
     // test_db2 is already dirty so nothing should be dirtied
     dirties.should.eql([])

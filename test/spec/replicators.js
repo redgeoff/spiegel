@@ -15,7 +15,7 @@ describe('replicators', () => {
   conflictError.error = 'conflict'
 
   const listenForErrors = () => {
-    replicators.once('err', function (err) {
+    replicators.once('err', function(err) {
       globalError = err
     })
   }
@@ -29,7 +29,7 @@ describe('replicators', () => {
     )
   }
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     replicators = new Replicators(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds })
     calls = []
     spy()
@@ -37,7 +37,7 @@ describe('replicators', () => {
     listenForErrors()
   })
 
-  afterEach(async () => {
+  afterEach(async() => {
     await Promise.all(
       replicatorIds.map(async id => {
         await testUtils.spiegel._slouch.doc.getAndDestroy(testUtils.spiegel._dbName, id)
@@ -50,7 +50,7 @@ describe('replicators', () => {
     }
   })
 
-  it('should extract db name', function () {
+  it('should extract db name', function() {
     replicators._toDBName('http://example.com:5984/mydb').should.eql('mydb')
 
     // We don't really care about this case as we require the source to be a FQDN
@@ -61,7 +61,7 @@ describe('replicators', () => {
     testUtils.shouldEqual(replicators._toDBName(), undefined)
   })
 
-  it('should convert to CouchDB replication params', async () => {
+  it('should convert to CouchDB replication params', async() => {
     // Sanity test some params
     let params = {
       cancel: true,
@@ -90,13 +90,13 @@ describe('replicators', () => {
     testUtils.shouldEqual(replicators._censorPasswordInURL(null), null)
   })
 
-  it('should _replicate', async () => {
+  it('should _replicate', async() => {
     // Note: this test is needed as otherwise a race condition could lead to not having complete
     // test coverage of the replication
 
     // Fake
     calls._slouchReplicate = []
-    replicators._slouchReplicate = function () {
+    replicators._slouchReplicate = function() {
       calls._slouchReplicate.push(arguments)
       return Promise.resolve()
     }

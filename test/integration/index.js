@@ -6,7 +6,7 @@ const testUtils = require('../utils')
 const config = require('../../src/config.json')
 
 // A basic sanity test at the topmost layer to make sure that things are working
-describe('integration', function () {
+describe('integration', function() {
   let spawner = null
   let suffix = null
   let docs1 = null
@@ -16,7 +16,7 @@ describe('integration', function () {
   const TIMEOUT = 120000
   this.timeout(TIMEOUT)
 
-  const createTestDBs = async () => {
+  const createTestDBs = async() => {
     // Create DB and docs
     await testUtils.createTestDB('test_db1' + suffix)
 
@@ -24,7 +24,7 @@ describe('integration', function () {
     await testUtils.createDB('test_db2' + suffix)
   }
 
-  const createReplicator = async () => {
+  const createReplicator = async() => {
     // URL w/o the password. Note: assuming we are testing against CouchDB running in a Docker
     // container, the port is always 5984 as this is the local port as seen from within the
     // container.
@@ -38,7 +38,7 @@ describe('integration', function () {
     })
   }
 
-  const createOnChange = async () => {
+  const createOnChange = async() => {
     await spawner._spiegel._slouch.doc.create(spawner._spiegel._dbName, {
       type: 'on_change',
       db_name: 'test_db1' + suffix,
@@ -46,7 +46,7 @@ describe('integration', function () {
     })
   }
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     suffix = testUtils.nextSuffix()
 
     spawner = new Spawner()
@@ -59,19 +59,19 @@ describe('integration', function () {
     await createTestDBs()
   })
 
-  afterEach(async () => {
+  afterEach(async() => {
     await spawner.stop()
 
     await testUtils.destroyTestDBs()
   })
 
-  it('should replicate and listen to changes', async () => {
+  it('should replicate and listen to changes', async() => {
     // Reset the value so previous tests don't interfer
     server.numRequests = 0
 
     let waitForChangeListening = testUtils
       .waitFor(
-        async () => {
+        async() => {
           docs1 = await spawner._spiegel._slouch.doc.allArray('test_db1' + suffix, {
             include_docs: true
           })
