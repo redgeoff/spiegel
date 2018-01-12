@@ -40,7 +40,8 @@ class Spawner {
       }
     })
 
-    child.stderr.on('data', (/* data */) => {
+    child.stderr.on('data', data => {
+      console.error('spawner stderr=', data)
       throw new Error('should not get data on stderr ' + JSON.stringify(opts))
     })
 
