@@ -7,12 +7,16 @@ const Replicators = require('./replicators')
 const OnChanges = require('./on-changes')
 const log = require('./log')
 const utils = require('./utils')
+const Globals = require('./globals')
+const Migrator = require('./migrator')
 
 class Spiegel {
   constructor(type, opts) {
     this._type = type
 
     this._slouch = slouch
+    this._globals = new Globals(this)
+
     this._dbName = utils.getOpt(opts, 'dbName', 'spiegel')
 
     // Used to create a separate namespace for testing
@@ -24,6 +28,7 @@ class Spiegel {
     this._changeListeners = new ChangeListeners(this, utils.getOpt(opts, 'change-listener'))
     this._replicators = new Replicators(this, utils.getOpt(opts, 'replicator'))
     this._onChanges = new OnChanges(this)
+    this._migrator = new Migrator(this)
   }
 
   async _createDB() {
@@ -38,6 +43,7 @@ class Spiegel {
     await this._changeListeners.install()
     await this._onChanges.install()
     await this._replicators.install()
+    await this._migrator.saveCurrentVersion()
   }
 
   async uninstall() {

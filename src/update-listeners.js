@@ -10,7 +10,7 @@ class UpdateListeners {
   constructor(spiegel, opts) {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
-    this._globals = new Globals(spiegel)
+    this._globals = spiegel._globals
 
     // Used to synchronize calls so that batch processing is atomic
     this._synchronizer = new Synchronizer()
@@ -125,7 +125,7 @@ class UpdateListeners {
   }
 
   async _processBatch() {
-    await this._synchronizer.run(async() => {
+    await this._synchronizer.run(async () => {
       await this._processBatchUnsynchronized()
     })
   }
