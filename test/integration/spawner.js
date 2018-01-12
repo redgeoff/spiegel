@@ -41,7 +41,7 @@ class Spawner {
     })
 
     child.stderr.on('data', data => {
-      console.error('spawner stderr=', data)
+      console.error('spawner stderr=', String(data))
       throw new Error('should not get data on stderr ' + JSON.stringify(opts))
     })
 

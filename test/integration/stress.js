@@ -1,15 +1,13 @@
 'use strict'
 
-const server = require('../api-server')
 const Spawner = require('./spawner')
 const testUtils = require('../utils')
-const config = require('../../src/config.json')
 const utils = require('../../src/utils')
 const sporks = require('sporks')
 
 describe('stress', function() {
   const NUM_USERS = 3
-  const NUM_MESSAGES = 3
+  const NUM_MESSAGES = 1000
 
   this.timeout(120000)
 
@@ -20,13 +18,13 @@ describe('stress', function() {
   let received = null
   let userCount = null
 
-  const createUserDB = async () => {
+  const createUserDB = async() => {
     let dbName = 'user_' + userCount++
     await testUtils._slouch.db.create(dbName)
     userDBs.push(dbName)
   }
 
-  const createUserDBs = async () => {
+  const createUserDBs = async() => {
     let promises = []
     for (let i = 0; i < NUM_USERS; i++) {
       promises.push(createUserDB())
@@ -34,12 +32,12 @@ describe('stress', function() {
     await Promise.all(promises)
   }
 
-  const destroyUserDBs = async () => {
-    await Promise.all(userDBs.map(async dbName => await testUtils._slouch.db.destroy(dbName)))
+  const destroyUserDBs = async() => {
+    await Promise.all(userDBs.map(async dbName => testUtils._slouch.db.destroy(dbName)))
     userDBs = []
   }
 
-  const createReplicator = async (dbName1, dbName2) => {
+  const createReplicator = async(dbName1, dbName2) => {
     let replicator = await testUtils._slouch.doc.create(spawner._dbName, {
       type: 'replicator',
       source: utils.couchDBURL() + '/' + dbName1,
@@ -51,7 +49,7 @@ describe('stress', function() {
   // We will implement a very limited design that replicates all messages from user1 to all other
   // users and not vise-versa. In most applications you would not choose this design as it requires
   // a replicator per user pair and that simply will not scale well.
-  const createReplicators = async () => {
+  const createReplicators = async() => {
     let promises = []
     for (let i = 1; i < NUM_USERS; i++) {
       promises.push(createReplicator(userDBs[0], userDBs[i]))
@@ -70,7 +68,7 @@ describe('stress', function() {
   //   await Promise.all(replicatorIds.map(async id => await downsert(spawner._dbName, id)))
   // }
 
-  before(async () => {
+  before(async() => {
     replicatorIds = []
     spawner = new Spawner()
     await spawner.start()
@@ -78,18 +76,18 @@ describe('stress', function() {
     await createReplicators()
   })
 
-  after(async () => {
+  after(async() => {
     await spawner.stop()
     // await destroyReplicators()
     await destroyUserDBs()
   })
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     received = {}
     userCount = 1
   })
 
-  afterEach(async () => {
+  afterEach(async() => {
     if (sporks.length(received) !== NUM_USERS) {
       console.error('received=', received)
       console.error('userDBs=', userDBs)
@@ -99,7 +97,7 @@ describe('stress', function() {
     }
   })
 
-  const waitForMessages = async () => {
+  const waitForMessages = async() => {
     let iterator = testUtils._slouch.db.changes('_global_changes', {
       feed: 'continuous',
       heartbeat: true,
@@ -143,7 +141,7 @@ describe('stress', function() {
   }
 
   for (let i = 1; i <= NUM_MESSAGES; i++) {
-    it('trial ' + i + ': replicate messages to ' + (NUM_USERS - 1) + ' users', async () => {
+    it('trial ' + i + ': replicate messages to ' + (NUM_USERS - 1) + ' users', async() => {
       await sendMessage(i)
 
       if (i === NUM_MESSAGES) {
