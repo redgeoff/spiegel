@@ -110,15 +110,17 @@ class Replicators extends Process {
 
     // Get a list of all the dbNames where we have conflicts. This can occur because the replicator
     // was dirtied, locked or otherwise updated between the _getCleanOrLocked() and _dirty() calls
-    // above.
-    var conflictedDBNames = []
+    // above. We use an object instead of an array as we want to make sure that we only have a
+    // single entry per db or else we can end up with an infinitely growing list due to the
+    // recursion.
+    var conflictedDBNames = {}
     response.forEach((doc, i) => {
       if (this._slouch.doc.isConflictError(doc)) {
-        conflictedDBNames.push(this._toDBName(replicators[i].source))
+        conflictedDBNames[this._toDBName(replicators[i].source)] = true
       }
     })
 
-    return conflictedDBNames
+    return sporks.keys(conflictedDBNames)
   }
 
   async _attemptToDirtyIfCleanOrLocked(dbNames) {

@@ -113,4 +113,28 @@ describe('replicators', () => {
     calls._censorPasswordInURL.length.should.eql(2)
     calls._slouchReplicate[0][0].should.eql(params)
   })
+
+  it('should remove duplicate conflicted db names', async() => {
+    // Fake
+    replicators._dirty = function() {
+      return Promise.resolve([
+        {
+          error: 'conflict'
+        },
+        {
+          error: 'conflict'
+        }
+      ])
+    }
+
+    let dbNames = await replicators._dirtyAndGetConflictedDBNames([
+      {
+        source: 'https://example.com/db1'
+      },
+      {
+        source: 'https://example.com/db1'
+      }
+    ])
+    dbNames.should.eql(['db1'])
+  })
 })
