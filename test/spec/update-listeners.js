@@ -5,6 +5,7 @@ const testUtils = require('../utils')
 const sporks = require('sporks')
 // const Globals = require('../../src/globals')
 const EventEmitter = require('events').EventEmitter
+const sinon = require('sinon')
 
 describe('update-listeners', () => {
   let listeners = null
@@ -370,5 +371,25 @@ describe('update-listeners', () => {
     await listeners._matchAndDirtyFiltered()
 
     calls._changeListenersDirtyIfCleanOrLocked.length.should.eql(0)
+  })
+
+  it('should synchronize when processing batch', async() => {
+    await createListeners()
+
+    sinon.spy(listeners._synchronizer, 'run')
+
+    await listeners._processBatch()
+
+    listeners._synchronizer.run.calledOnce.should.eql(true)
+  })
+
+  it('should synchronize on update', async() => {
+    await createListeners()
+
+    sinon.spy(listeners._synchronizer, 'run')
+
+    await listeners._onUpdate({ id: 'update:db1' })
+
+    listeners._synchronizer.run.calledOnce.should.eql(true)
   })
 })
