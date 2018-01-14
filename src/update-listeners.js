@@ -130,27 +130,39 @@ class UpdateListeners {
     })
   }
 
+  async _onUpdateUnsynchronized(update) {
+    log.debug('Processing update ' + JSON.stringify(update))
+
+    this._addToUpdatedDBs(update)
+
+    this._lastSeq = update.seq
+
+    if (this._updateCount === 0) {
+      // The 1st update can take any amount of time, but after it is read, we want to start a
+      // timer. If the timer expires then we want to consider the batch collected.
+      this._startBatchTimeout()
+    }
+
+    if (this._updateCount === this._batchSize - 1) {
+      // Wait until the batch has been processed so that our listening on the _global_changes is
+      // paused until we are ready for the next set of changes.
+      await this._processBatchUnsynchronized()
+    } else {
+      this._updateCount++
+    }
+  }
+
+  async _onUpdate(update) {
+    // We need to synchronize _onUpdate with _processBatch as there is some shared memory, e.g.
+    // _updatedDBs, _updateCount, ...
+    await this._synchronizer.run(async() => {
+      await this._onUpdateUnsynchronized(update)
+    })
+  }
+
   _dbUpdatesIteratorEach() {
     return this._dbUpdatesIterator.each(async update => {
-      log.debug('Processing update ' + JSON.stringify(update))
-
-      this._addToUpdatedDBs(update)
-
-      this._lastSeq = update.seq
-
-      if (this._updateCount === 0) {
-        // The 1st update can take any amount of time, but after it is read, we want to start a
-        // timer. If the timer expires then we want to consider the batch collected.
-        this._startBatchTimeout()
-      }
-
-      if (this._updateCount === this._batchSize - 1) {
-        // Wait until the batch has been processed so that our listening on the _global_changes is
-        // paused until we are ready for the next set of changes.
-        await this._processBatch()
-      } else {
-        this._updateCount++
-      }
+      await this._onUpdate(update)
     })
   }
 
