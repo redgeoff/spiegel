@@ -1,6 +1,7 @@
 'use strict'
 
-const Spawner = require('./spawner')
+// const Spawner = require('./spawner')
+const Runner = require('./runner')
 const testUtils = require('../utils')
 const utils = require('../../src/utils')
 const sporks = require('sporks')
@@ -12,7 +13,7 @@ describe('stress', function() {
 
   this.timeout(TIMEOUT)
 
-  let spawner = null
+  let runner = null
   let userDBs = []
   let replicatorIds = null
   let totalMs = null
@@ -44,7 +45,7 @@ describe('stress', function() {
   }
 
   const createReplicator = async(dbName1, dbName2) => {
-    let replicator = await testUtils._slouch.doc.create(spawner._dbName, {
+    let replicator = await testUtils._slouch.doc.create(runner._dbName, {
       type: 'replicator',
       source: utils.couchDBURL() + '/' + dbName1,
       target: utils.couchDBURL() + '/' + dbName2
@@ -71,7 +72,7 @@ describe('stress', function() {
   // }
   //
   // const destroyReplicators = async () => {
-  //   await Promise.all(replicatorIds.map(async id => await downsert(spawner._dbName, id)))
+  //   await Promise.all(replicatorIds.map(async id => await downsert(runner._dbName, id)))
   // }
 
   // In order to avoid missing changes due to race conditions when setting up a listener per trial
@@ -85,30 +86,39 @@ describe('stress', function() {
 
     received = {}
 
-    iterator.each(item => {
-      let change = item.id.split(':')
+    iterator
+      .each(item => {
+        let change = item.id.split(':')
 
-      // Ignore any changes caused from creating the DB and not for the user DBs
-      if (change[0] === 'updated' && change[1].indexOf('user_') !== -1) {
-        received[change[1]] = true
+        // Ignore any changes caused from creating the DB and not for the user DBs
+        if (change[0] === 'updated' && change[1].indexOf('user_') !== -1) {
+          received[change[1]] = true
 
-        // console.log('received=', received)
-      }
+          // console.log('received=', received)
+        }
+      })
+      .catch(function(err) {
+        console.log('iterator err=', err)
+      })
+
+    iterator.on('error', function(err) {
+      console.log('iterator on err=', err)
     })
   }
 
   before(async() => {
     replicatorIds = []
-    spawner = new Spawner()
+    // runner = new Spawner()
+    runner = new Runner()
     listenForMessages()
-    await spawner.start()
+    await runner.start()
     await createUserDBs()
     await createReplicators()
   })
 
   after(async() => {
     iterator.abort()
-    await spawner.stop()
+    await runner.stop()
     // await destroyReplicators()
     await destroyUserDBs()
   })
@@ -141,10 +151,10 @@ describe('stress', function() {
     if (sporks.length(received) !== NUM_USERS) {
       console.error('received=', received)
       console.error('userDBs=', userDBs)
-      console.error('time is ', new Date())
+      console.error('time is', new Date())
       // console.error('num received', sporks.length(received))
-      console.log('EXITING...')
-      process.exit(-1)
+      // console.log('EXITING...')
+      // process.exit(-1)
     }
   })
 
@@ -175,11 +185,7 @@ describe('stress', function() {
     it('trial ' + i + ': replicate messages to ' + (NUM_USERS - 1) + ' users', async() => {
       n = i
 
-      try {
-        await sendMessage()
-      } catch (err) {
-        console.log('ERROR FROM sendMessage, err=', err)
-      }
+      await sendMessage()
 
       if (i === NUM_MESSAGES) {
         console.log('Took an average of %s ms to send a message', totalMs / NUM_MESSAGES)
