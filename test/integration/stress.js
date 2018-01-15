@@ -117,6 +117,11 @@ describe('stress', function() {
   })
 
   after(async() => {
+    // Wait for any remaining replications
+    await sporks.timeout(10000)
+
+    await checkNumDocs()
+
     iterator.abort()
     await runner.stop()
     // await destroyReplicators()
@@ -128,26 +133,22 @@ describe('stress', function() {
     userCount = 1
   })
 
-  const numDocsFactory = j => {
-    return async() => {
-      let user = await testUtils._slouch.db.get('user_' + j)
-      if (user.doc_count !== j) {
-        console.error('doc_count !=', j, 'user=', user)
-      }
+  const numDocs = async j => {
+    let user = await testUtils._slouch.db.get('user_' + j)
+    if (user.doc_count !== n) {
+      console.error(user.doc_count, '!=', n, 'user=', user)
     }
   }
 
   const checkNumDocs = async() => {
     let promises = []
     for (let j = 0; j < NUM_USERS; j++) {
-      promises.push(numDocsFactory(j))
+      promises.push(numDocs(j))
     }
     await Promise.all(promises)
   }
 
   afterEach(async() => {
-    await checkNumDocs()
-
     if (sporks.length(received) !== NUM_USERS) {
       console.error('received=', received)
       console.error('userDBs=', userDBs)
