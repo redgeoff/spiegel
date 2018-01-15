@@ -1,15 +1,16 @@
 'use strict'
 
-// const Spawner = require('./spawner')
+// const Spawner = require('../integration/spawner')
 const Runner = require('./runner')
 const testUtils = require('../utils')
 const utils = require('../../src/utils')
 const sporks = require('sporks')
+const Server = require('./server')
 
 describe('stress', function() {
-  const NUM_USERS = 5
-  const NUM_MESSAGES = 1000
-  const TIMEOUT = 3000000
+  const NUM_USERS = 3
+  const NUM_MESSAGES = 3
+  const TIMEOUT = 300000
 
   this.timeout(TIMEOUT)
 
@@ -21,6 +22,7 @@ describe('stress', function() {
   let userCount = null
   let n = 0
   let iterator = null
+  let server = null
 
   const createUserDB = async() => {
     let dbName = 'user_' + userCount++
@@ -110,8 +112,10 @@ describe('stress', function() {
     replicatorIds = []
     // runner = new Spawner()
     runner = new Runner()
+    server = new Server()
     listenForMessages()
     await runner.start()
+    server.start()
     await createUserDBs()
     await createReplicators()
   })
@@ -124,6 +128,7 @@ describe('stress', function() {
 
     iterator.abort()
     await runner.stop()
+    server.stop()
     // await destroyReplicators()
     await destroyUserDBs()
   })

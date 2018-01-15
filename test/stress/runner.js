@@ -10,8 +10,8 @@ class Runner {
     // Prevent race conditions on the same DB
     let time = new Date().getTime()
 
-    this._dbName = 'test_spiegel_integration' + time
-    this._namespace = 'test_spiegel_integration_' + time + '_'
+    this._dbName = 'test_spiegel_stress' + time
+    this._namespace = 'test_spiegel_stress_' + time + '_'
     this._url = utils.couchDBURL()
 
     this._updateListeners = []
@@ -60,7 +60,7 @@ class Runner {
   _createChangeListener() {
     return this._newSpiegel('change-listener', {
       'change-listener': {
-        passwords: path.join(__dirname, '/change-listener-passwords.json')
+        passwords: path.join(__dirname, '/../integration/change-listener-passwords.json')
       }
     })
   }
@@ -81,7 +81,7 @@ class Runner {
 
   _createReplicator() {
     return this._newSpiegel('replicator', {
-      replicator: { passwords: path.join(__dirname, '/replicator-passwords.json') }
+      replicator: { passwords: path.join(__dirname, '../integration/replicator-passwords.json') }
     })
   }
 
