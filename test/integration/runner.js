@@ -114,10 +114,10 @@ class Runner {
   }
 
   async stop() {
-    await this._uninstall()
     await this._stopUpdateListeners()
     await this._stopChangeListeners()
     await this._stopReplicators()
+    await this._uninstall()
   }
 }
 
