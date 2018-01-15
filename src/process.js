@@ -212,13 +212,24 @@ class Process extends events.EventEmitter {
   }
 
   async _clearConflicts(item) {
-    // Are there conflicts?
-    if (item._conflicts) {
-      let destroys = []
-      item._conflicts.forEach(rev => {
-        destroys.push(this._slouch.doc.destroy(this._spiegel._dbName, item._id, rev))
-      })
-      await Promise.all(destroys)
+    try {
+      // Are there conflicts?
+      if (item._conflicts) {
+        let destroys = []
+        item._conflicts.forEach(rev => {
+          destroys.push(this._slouch.doc.destroy(this._spiegel._dbName, item._id, rev))
+        })
+        await Promise.all(destroys)
+      }
+    } catch (err) {
+      if (this._slouch.doc.isConflictError(err)) {
+        // Conflicts are fairly common when there are multiple instances of the same type as both
+        // instances may try to clear the conflicts simultaneously. This is fine as the item will be
+        // left dirty and the scenario will be resolved on the next processing.
+        log.info('Ignoring common conflict when attempting to clear conflicts', err)
+      } else {
+        throw err
+      }
     }
   }
 
