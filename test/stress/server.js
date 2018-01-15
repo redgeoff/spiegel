@@ -1,14 +1,20 @@
 const Koa = require('koa')
 const route = require('koa-route')
+const koaBody = require('koa-body')
 
 class Server {
   constructor() {
     this._app = new Koa()
 
     this._app.use(
-      route.put('/message/after', ctx => {
-        // TODO
-        ctx.body = 'Success'
+      koaBody({
+        jsonLimit: '1kb'
+      })
+    )
+
+    this._app.use(
+      route.post('/message/after', ctx => {
+        console.log(ctx.request.body)
       })
     )
   }

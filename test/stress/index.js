@@ -16,7 +16,6 @@ describe('stress', function() {
 
   let runner = null
   let userDBs = []
-  let replicatorIds = null
   let totalMs = null
   let received = null
   let userCount = null
@@ -45,37 +44,6 @@ describe('stress', function() {
     await Promise.all(userDBs.map(async dbName => testUtils._slouch.db.destroy(dbName)))
     userDBs = []
   }
-
-  const createReplicator = async(dbName1, dbName2) => {
-    let replicator = await testUtils._slouch.doc.create(runner._dbName, {
-      type: 'replicator',
-      source: utils.couchDBURL() + '/' + dbName1,
-      target: utils.couchDBURL() + '/' + dbName2
-    })
-    replicatorIds.push(replicator.id)
-  }
-
-  // We will implement a very limited design that replicates all messages from user1 to all other
-  // users and not vise-versa. In most applications you would not choose this design as it requires
-  // a replicator per user pair and that simply will not scale well.
-  const createReplicators = async() => {
-    let promises = []
-    for (let i = 1; i < NUM_USERS; i++) {
-      promises.push(createReplicator(userDBs[0], userDBs[i]))
-    }
-    await Promise.all(promises)
-  }
-
-  // // TODO: move to slouch
-  // const downsert = (dbName, docId) => {
-  //   return testUtils._slouch.doc._persistThroughConflicts(() => {
-  //     return testUtils._slouch.doc.getAndDestroy(dbName, docId)
-  //   })
-  // }
-  //
-  // const destroyReplicators = async () => {
-  //   await Promise.all(replicatorIds.map(async id => await downsert(runner._dbName, id)))
-  // }
 
   // In order to avoid missing changes due to race conditions when setting up a listener per trial
   // we set up a single listener that will run for the duration of all our trials.
@@ -109,7 +77,6 @@ describe('stress', function() {
   }
 
   before(async() => {
-    replicatorIds = []
     // runner = new Spawner()
     runner = new Runner()
     server = new Server()
@@ -117,7 +84,6 @@ describe('stress', function() {
     await runner.start()
     server.start()
     await createUserDBs()
-    await createReplicators()
   })
 
   after(async() => {
@@ -137,6 +103,13 @@ describe('stress', function() {
     received = {}
     userCount = 1
   })
+
+  // TODO: move to slouch
+  const downsert = (dbName, docId) => {
+    return testUtils._slouch.doc._persistThroughConflicts(() => {
+      return testUtils._slouch.doc.getAndDestroy(dbName, docId)
+    })
+  }
 
   const numDocs = async j => {
     let user = await testUtils._slouch.db.get('user_' + j)
@@ -187,15 +160,95 @@ describe('stress', function() {
     totalMs += ms
   }
 
-  for (let i = 1; i <= NUM_MESSAGES; i++) {
-    it('trial ' + i + ': replicate messages to ' + (NUM_USERS - 1) + ' users', async() => {
-      n = i
+  const sendMessages = async() => {
+    for (let i = 1; i <= NUM_MESSAGES; i++) {
+      it('trial ' + i + ': replicate messages to ' + (NUM_USERS - 1) + ' users', async() => {
+        n = i
 
-      await sendMessage()
+        await sendMessage()
 
-      if (i === NUM_MESSAGES) {
-        console.log('Took an average of %s ms to send a message', totalMs / NUM_MESSAGES)
-      }
-    })
+        if (i === NUM_MESSAGES) {
+          console.log('Took an average of %s ms to send a message', totalMs / NUM_MESSAGES)
+        }
+      })
+    }
   }
+
+  describe('replicator', function() {
+    let replicatorIds = null
+
+    const createReplicator = async(dbName1, dbName2) => {
+      let replicator = await testUtils._slouch.doc.create(runner._dbName, {
+        type: 'replicator',
+        source: utils.couchDBURL() + '/' + dbName1,
+        target: utils.couchDBURL() + '/' + dbName2
+      })
+      replicatorIds.push(replicator.id)
+    }
+
+    // We will implement a very limited design that replicates all messages from user1 to all other
+    // users and not vise-versa. In most applications you would not choose this design as it
+    // requires a replicator per user pair and that simply will not scale well.
+    const createReplicators = async() => {
+      let promises = []
+      for (let i = 1; i < NUM_USERS; i++) {
+        promises.push(createReplicator(userDBs[0], userDBs[i]))
+      }
+      await Promise.all(promises)
+    }
+
+    const destroyReplicators = async() => {
+      await Promise.all(replicatorIds.map(async id => downsert(runner._dbName, id)))
+    }
+
+    before(async() => {
+      replicatorIds = []
+      await createReplicators()
+    })
+
+    after(async() => {
+      await destroyReplicators()
+    })
+
+    sendMessages()
+  })
+
+  describe('on-change', function() {
+    let onChange = null
+
+    // This will result in creating a change-listener per user DB, which will provide a great stress
+    // test for the change-listeners
+    const createOnChange = async() => {
+      onChange = await testUtils._slouch.doc.create(runner._dbName, {
+        type: 'on_change',
+
+        db_name: '^user_(.*)$',
+
+        url: 'http://localhost:3000/message/after',
+
+        params: {
+          change: '$change',
+          db_name: '$db_name',
+          num_users: NUM_USERS
+        },
+
+        method: 'POST',
+        debounce: true
+      })
+    }
+
+    const destroyOnChange = async() => {
+      await downsert(runner._dbName, onChange.id)
+    }
+
+    before(async() => {
+      await createOnChange()
+    })
+
+    after(async() => {
+      await destroyOnChange()
+    })
+
+    sendMessages()
+  })
 })
