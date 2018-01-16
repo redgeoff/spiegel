@@ -13,7 +13,7 @@ This will run the tests in node:
 You can also check for 100% code coverage using:
 
     $ npm run node-full-test
-    
+
 You can then view the test coverage by opening cache/coverage/node/lcov-report/index.html in a browser
 
 Run specific tests:
@@ -23,3 +23,9 @@ Run specific tests:
 Run specific tests and generate code coverage:
 
     $ npm run node-full-test -- -g 'some reg-ex'
+
+## Stress Test
+
+This will run the stress tests, which are not run on CircleCI as they take a long time to run and would slow down the CI pipeline. Instead, these tests should be run periodically or after any major changes. These tests are designed to stress Spiegel and reveal bugs like those caused by race conditions.
+
+    $ npm run stress-test
