@@ -157,4 +157,28 @@ describe('change-listeners', () => {
     requests.length.should.eql(1)
     requests[0].should.eql({ url: 'https://example.com', method: 'GET', qs: {} })
   })
+
+  it('should remove duplicate conflicted db names', async() => {
+    // Fake
+    listeners._dirtyOrCreate = function() {
+      return Promise.resolve([
+        {
+          error: 'conflict'
+        },
+        {
+          error: 'conflict'
+        }
+      ])
+    }
+
+    let dbNames = await listeners._dirtyAndGetConflictedDBNames([
+      {
+        db_name: 'db1'
+      },
+      {
+        db_name: 'db1'
+      }
+    ])
+    dbNames.should.eql(['db1'])
+  })
 })

@@ -118,7 +118,8 @@ describe('update-listeners', () => {
     opts,
     fakeLastSeq = true,
     fakeOnChange = true,
-    clearSeq = false
+    clearSeq = false,
+    start = true
   ) => {
     listeners = new UpdateListeners(testUtils.spiegel, opts)
 
@@ -142,7 +143,9 @@ describe('update-listeners', () => {
     if (fakeOnChange) {
       fakeOnChanges()
     }
-    await listeners.start()
+    if (start) {
+      await listeners.start()
+    }
     await createTestDBs()
   }
 
@@ -384,7 +387,10 @@ describe('update-listeners', () => {
   })
 
   it('should synchronize on update', async() => {
-    await createListeners()
+    // Don't automatically start as we don't want to interfer with the desired calledOnce
+    let start = false
+
+    await createListeners(null, true, true, false, start)
 
     sinon.spy(listeners._synchronizer, 'run')
 

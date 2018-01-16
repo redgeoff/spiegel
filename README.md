@@ -9,6 +9,9 @@ Spiegel was designed to provide scalable replication and change listening for [Q
 
 Like videos? Watch a [5 Minute Talk on Spiegel](https://medium.com/offline-camp/scalable-couchdb-replication-and-change-listening-with-spiegel-878e22901dcd).
 
+## [Getting Started With Spiegel: Scalable Replication and Change Listening for CouchDB](https://medium.com/offline-camp/getting-started-with-spiegel-scalable-replication-and-change-listening-for-couchdb-8d9711ac29f8)
+
+
 ## Problems Spiegel Solves:
 1. **Scalable Replication:** The _replicator database is a powerful tool, but in certain cases it does not scale well. Consider the example where we have users posting blog entries. Let's assume that we want to use PouchDB to sync data between the client and CouchDB. Let's also assume a design of a DB per user and an all_blog_posts database that stores the blog posts from all the users. In this design, we'd want to replicate all our user DBs to the all_blog_posts DB. At first glance, the obvious choice would be to use the _replicator database to perform these replications, but the big gotcha is that continuous replications via the _replicator database require a dedicated DB connection. Therefore, if we have say 10,000 users then we would need 10,000 concurrent database connections for these replications even though at any given time there may be at most 100 users making changes to their posts simultaneously. We can prevent this greedy use of resources by only replicating databases when a change occurs.
 2. **Real-time Replication Between Clusters**: The built-in clustering in CouchDB 2 isn't designed to be used across different regions of the world. Spiegel tracks changes in real-time and then only schedules replications for databases that have changed. You can therefore use Spiegel to efficiently keep clusters, located in different regions of the world, in sync.

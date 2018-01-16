@@ -148,15 +148,17 @@ class ChangeListeners extends Process {
 
     // Get a list of all the dbNames where we have conflicts. This can occur because the listener
     // was dirtied, locked or otherwise updated between the _getByDBNames() and _dirtyOrCreate()
-    // calls.
-    var conflictedDBNames = []
+    // calls. We use an object instead of an array as we want to make sure that we only have a
+    // single entry per db or else we can end up with an infinitely growing list due to the
+    // recursion.
+    var conflictedDBNames = {}
     response.forEach((doc, i) => {
       if (this._slouch.doc.isConflictError(doc)) {
-        conflictedDBNames.push(listeners[i].db_name)
+        conflictedDBNames[listeners[i].db_name] = true
       }
     })
 
-    return conflictedDBNames
+    return Object.keys(conflictedDBNames)
   }
 
   async _attemptToDirtyIfCleanOrLocked(dbNames) {
