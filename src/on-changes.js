@@ -19,7 +19,15 @@ class OnChanges extends events.EventEmitter {
     this._spiegel = spiegel
     this._slouch = spiegel._slouch
 
-    this._db = new PouchDB(this._spiegel._namespace + 'on_changes', { adapter: 'memory' })
+    // As per https://pouchdb.com/adapters.html, two PouchDB instances using the memory adapter with
+    // the same name share the same store and we need each instance to have its own store. In
+    // particular, this is needed when we are testing and are launching multiple instances of
+    // OnChanges from within the same node process. If we don't separate this namespace then race
+    // conditions can result in some OnChanges not receiving necessary changes.
+    this._id = OnChanges._getNextId()
+    this._db = new PouchDB(this._spiegel._namespace + 'on_changes_' + this._id, {
+      adapter: 'memory'
+    })
 
     this._docs = {}
 
@@ -217,6 +225,12 @@ class OnChanges extends events.EventEmitter {
 
     return matchingOnChanges
   }
+}
+
+OnChanges._nextId = 0
+
+OnChanges._getNextId = () => {
+  return OnChanges._nextId++
 }
 
 module.exports = OnChanges
