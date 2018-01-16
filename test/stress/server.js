@@ -16,7 +16,7 @@ class Server {
 
     this._app.use(
       route.post('/message/after', async ctx => {
-        console.log(ctx.request.body)
+        // console.log(ctx.request.body)
 
         // Replicate to the message to the next user. This would be silly in the real world as it is
         // very wasteful, but it makes for a good stress test.
@@ -33,6 +33,10 @@ class Server {
             keys: JSON.stringify(ctx.request.body.change._id)
           })
         }
+
+        // This data is arbitrary, but it must be supplied so that koa responds with a 200 status
+        // code
+        ctx.body = { status: 'success' }
       })
     )
   }
