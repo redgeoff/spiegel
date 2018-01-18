@@ -13,7 +13,7 @@ class Utils {
     this.spiegel = this._newSpiegel()
     this._slouch = this.spiegel._slouch
     this._dbNames = []
-    this.TIMEOUT = 25000
+    this.TIMEOUT = 35000
     this._suffixId = 0
     this._suffix = null
     this._suffixTimestamp = new Date().getTime()
