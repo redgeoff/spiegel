@@ -9,7 +9,7 @@ const Server = require('./server')
 
 describe('stress', function() {
   const NUM_USERS = 3
-  const NUM_MESSAGES = 3
+  const NUM_MESSAGES = 1000
   const TIMEOUT = 300000
 
   this.timeout(TIMEOUT)
