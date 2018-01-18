@@ -162,10 +162,15 @@ class Process extends events.EventEmitter {
     return this._updateItem(lockedItem, false)
   }
 
-  async _upsertUnlock(item) {
+  async _upsertUnlock(item, dirty) {
     // Use new doc with just the locked_at cleared as we only want to change the locked status
-    let rep = { _id: item._id, locked_at: null }
-    return this._updateItem(rep, true)
+    let unlockedItem = { _id: item._id, locked_at: null }
+
+    if (dirty) {
+      unlockedItem.dirty = true
+    }
+
+    return this._updateItem(unlockedItem, true)
   }
 
   _setDirty(item, leaveDirty) {
@@ -211,22 +216,56 @@ class Process extends events.EventEmitter {
     // Abstract method to be implemented by derived class
   }
 
+  async _destroyConflicts(item) {
+    let destroys = []
+    item._conflicts.forEach(rev => {
+      destroys.push(this._slouch.doc.destroy(this._spiegel._dbName, item._id, rev))
+    })
+    await Promise.all(destroys)
+  }
+
   async _clearConflicts(item) {
+    try {
+      await this._destroyConflicts(item)
+    } catch (err) {
+      if (this._slouch.doc.isConflictError(err)) {
+        // Conflicts are fairly common when there are multiple instances of the same type as both
+        // instances may try to clear the conflicts simultaneously. This is fine as the conflicts
+        // will be cleared on the next processing.
+        log.debug('Ignoring common conflict when attempting to clear conflicts', err)
+      } else {
+        throw err
+      }
+    }
+  }
+
+  async _upsertUnlockAndDirtyIfLocked(item) {
+    // If the item is locked and there are conflicts then we need to unlock and dirty the item.
+    // This will result in the item being processed multiple times, but this is fine as all
+    // processing must be idempotent as changes received from the _changes feed can be played back
+    // anyway. We do this because there exists a race condition with a multinode cluster where an
+    // item can remain locked even after it has been processed. This is due to the fact that at
+    // any given time nodes in the cluster can be out of sync. For example, assume that both nodes
+    // A and B believe the item to be locked. Then, the change-listener unlocks the item with node
+    // A. Immediately afterwards, and before B receives the lock, the update-listener dirties the
+    // item on node B. The winning item is now an item that is locked and dirty, but it has
+    // already been processed by the change-listener.
+    if (item.locked_at) {
+      // Unlock and dirty
+      await this._upsertUnlock(item, true)
+    }
+  }
+
+  async _resolveConflicts(item) {
     // Are there conflicts?
     if (item._conflicts) {
-      let destroys = []
-      item._conflicts.forEach(rev => {
-        destroys.push(this._slouch.doc.destroy(this._spiegel._dbName, item._id, rev))
-      })
-      await Promise.all(destroys)
+      await this._upsertUnlockAndDirtyIfLocked(item)
+      await this._clearConflicts(item)
     }
   }
 
   async _processAndUnlockIfError(item) {
     try {
-      // Clear conflicts before processing item so that a permanent error, e.g. a replication error
-      // where a DB is missing doesn't lead to a evergrowing list of conflicts
-      await this._clearConflicts(item)
       let leaveDirty = await this._process(item)
       return leaveDirty
     } catch (err) {
@@ -244,7 +283,7 @@ class Process extends events.EventEmitter {
       if (this._slouch.doc.isConflictError(err)) {
         // A conflict can occur because an UpdateListener may have re-dirtied this item. When this
         // happens we need to leave the item dirty and unlock it so that the item can be retried
-        log.trace('Ignoring common conflict', err)
+        log.debug('Ignoring common conflict', err)
         await this._upsertUnlock(item)
       } else {
         throw err
@@ -288,7 +327,7 @@ class Process extends events.EventEmitter {
       this._spiegel._dbName,
       '_design/dirty_and_unlocked_' + this._type,
       'dirty_and_unlocked_' + this._type,
-      { include_docs: true, conflicts: true }
+      { include_docs: true }
     )
   }
 
@@ -316,25 +355,29 @@ class Process extends events.EventEmitter {
     log.fatal(err)
   }
 
-  // Note: the changes feed with respect to the dirty_and_unlocked view will only get changes for
-  // unlocked items. i.e. an item can be re-dirtied many times while it is processing, but it will
-  // only be scheduled for processing (and scheduled once) when the item is unlocked
   async _listen(lastSeq) {
     try {
+      // Note: we use the dirty and not the dirty_and_unlocked view as this way we can use a single
+      // listener to both handle conflicts and process items
       this._iterator = this._changes({
         feed: 'continuous',
         heartbeat: true,
         since: lastSeq || undefined,
         filter: '_view',
-        view: 'dirty_and_unlocked_' + this._type + '/dirty_and_unlocked_' + this._type,
+        view: 'dirty_' + this._type + '/dirty_' + this._type,
         include_docs: true,
         conflicts: true
       })
 
       this._listenToIteratorErrors(this._iterator)
 
-      this._iterator.each(item => {
-        return this._lockProcessUnlockLogError(item.doc)
+      this._iterator.each(async item => {
+        await this._resolveConflicts(item.doc)
+
+        // We only process items that are unlocked
+        if (!item.doc.locked_at) {
+          await this._lockProcessUnlockLogError(item.doc)
+        }
       }, this._throttler)
     } catch (err) {
       // Log fatal error here as this is in our listening loop, which is detached from our starting

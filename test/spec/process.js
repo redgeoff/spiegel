@@ -36,7 +36,9 @@ describe('process', () => {
         '_unlockStalled',
         '_unlock',
         '_onError',
-        '_logFatal'
+        '_logFatal',
+        '_clearConflicts',
+        '_updateItem'
       ],
       calls
     )
@@ -457,7 +459,7 @@ describe('process', () => {
 
   // In production, conflicts will occur when the same doc is changed on different nodes
   // simultaneously and then these docs are replicated. The only reliable way to reproduce this case
-  // in our tests is use replication.
+  // in our tests is to use replication.
   const createConflictViaReplication = async() => {
     // Create DB that we can use for replication
     let dbName = 'test_db3' + testUtils.nextSuffix()
@@ -512,7 +514,7 @@ describe('process', () => {
     })
   }
 
-  it('should clear conflicts', async() => {
+  it('should resolve conflicts', async() => {
     // We need to ignore Spiegel errors as we are changing data that may also be modified
     // simultaneously by Spiegel and this can very easily cause conflict errors
     ignoreGlobalErrors()
@@ -525,18 +527,14 @@ describe('process', () => {
 
     await testUtils.createTestDBs(dbNames)
 
-    await testUtils.waitFor(() => {
-      return calls._lockProcessUnlockLogError.length === 2 ? true : undefined
-    })
-
     await createConflictViaReplication()
 
     await testUtils.waitFor(() => {
-      return calls._lockProcessUnlockLogError.length === 4 ? true : undefined
+      return calls._clearConflicts.length === 1 ? true : undefined
     })
 
     // Make sure a conflict was read
-    calls._lockProcessUnlockLogError[3][0]._conflicts.length.should.eql(1)
+    calls._clearConflicts[0][0]._conflicts.length.should.eql(1)
 
     // Trigger another item
     await testUtils.spiegel._slouch.doc.getMergeUpsert(testUtils.spiegel._dbName, {
@@ -546,13 +544,29 @@ describe('process', () => {
     })
 
     await testUtils.waitFor(() => {
-      return calls._lockProcessUnlockLogError.length === 5 ? true : undefined
+      return calls._lockProcessUnlockLogError.length >= 5 ? true : undefined
     })
 
     // Make sure the conflicts have been cleared
     testUtils.shouldEqual(calls._lockProcessUnlockLogError[4]._conflicts, undefined)
 
     await proc.stop()
+  })
+
+  it('should swallow conflict when clearing conflicts', async() => {
+    // Fake non-conflict error
+    proc._destroyConflicts = sporks.promiseErrorFactory(conflictError)
+
+    await proc._clearConflicts()
+  })
+
+  it('should throw error when clearing conflicts', async() => {
+    // Fake conflict error
+    proc._destroyConflicts = sporks.promiseErrorFactory(nonConflictError)
+
+    await sporks.shouldThrow(() => {
+      return proc._clearConflicts()
+    }, nonConflictError)
   })
 
   it('should unstall', async() => {
@@ -709,5 +723,24 @@ describe('process', () => {
     testUtils.shouldNotEqual(items[item1._id], undefined)
     testUtils.shouldNotEqual(items[item2._id], undefined)
     testUtils.shouldNotEqual(items[item4._id], undefined)
+  })
+
+  it('should upsert unlock and dirty when locked', async() => {
+    // Fake and spy
+    let calls = []
+    proc._updateItem = function() {
+      calls.push(arguments)
+    }
+
+    await proc._upsertUnlockAndDirtyIfLocked({ _id: '1', locked_at: new Date().toISOString() })
+
+    calls[0][0].should.eql({ _id: '1', locked_at: null, dirty: true })
+    calls[0][1].should.eql(true)
+  })
+
+  it('should not upsert unlock or dirty when not locked', async() => {
+    await proc._upsertUnlockAndDirtyIfLocked({ _id: '1', locked_at: null })
+
+    calls._updateItem.length.should.eql(0)
   })
 })
