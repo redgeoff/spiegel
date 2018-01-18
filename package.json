@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "bunyan": "^1.8.12",
-    "couch-slouch": "^1.0.0",
+    "couch-slouch": "^1.0.1",
     "fs-extra": "^5.0.0",
     "pouchdb": "^6.3.4",
     "pouchdb-adapter-memory": "^6.3.4",
