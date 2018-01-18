@@ -137,7 +137,7 @@ describe('stress', function() {
     if (sporks.length(received) !== NUM_USERS) {
       throw new Error(
         'Number of received is incorrect',
-        JSON.stringfy({
+        JSON.stringify({
           numReceived: sporks.length(received),
           received: received,
           userDBs: userDBs,
