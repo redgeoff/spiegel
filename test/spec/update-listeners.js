@@ -377,7 +377,13 @@ describe('update-listeners', () => {
   })
 
   it('should synchronize when processing batch', async() => {
-    await createListeners()
+    // Don't automatically start as we don't want to interfer with the desired calledOnce
+    let start = false
+
+    await createListeners(null, true, true, false, start)
+
+    // Fake
+    listeners._saveLastSeqIfNeeded = sporks.resolveFactory()
 
     sinon.spy(listeners._synchronizer, 'run')
 
