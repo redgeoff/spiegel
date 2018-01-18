@@ -120,6 +120,12 @@ describe('change-listeners', () => {
     })
     onChangeIds.push(onChange.id)
 
+    // Wait for PouchDB instance to receive OnChange
+    await testUtils.waitFor(() => {
+      let docs = listeners._spiegel._onChanges._docs
+      return sporks.length(docs) > 0 ? true : undefined
+    })
+
     await createTestDBs()
   }
 
