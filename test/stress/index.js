@@ -76,17 +76,18 @@ describe('stress', function() {
     })
   }
 
-  before(async() => {
+  const doBefore = async() => {
     // runner = new Spawner()
     runner = new Runner()
     server = new Server()
+    userCount = 0
     listenForMessages()
     await runner.start()
     server.start()
     await createUserDBs()
-  })
+  }
 
-  after(async() => {
+  const doAfter = async() => {
     // Wait for any remaining replications
     await sporks.timeout(10000)
 
@@ -97,11 +98,10 @@ describe('stress', function() {
     server.stop()
     // await destroyReplicators()
     await destroyUserDBs()
-  })
+  }
 
   beforeEach(async() => {
     received = {}
-    userCount = 1
   })
 
   // TODO: move to slouch
@@ -114,7 +114,14 @@ describe('stress', function() {
   const numDocs = async j => {
     let user = await testUtils._slouch.db.get('user_' + j)
     if (user.doc_count !== n) {
-      console.error(user.doc_count, '!=', n, 'user=', user)
+      throw new Error(
+        'Number of docs incorrect: ' +
+          JSON.stringify({
+            'user.doc_count': user.doc_count,
+            n: n,
+            user: user
+          })
+      )
     }
   }
 
@@ -128,10 +135,15 @@ describe('stress', function() {
 
   afterEach(async() => {
     if (sporks.length(received) !== NUM_USERS) {
-      console.error('received=', received)
-      console.error('userDBs=', userDBs)
-      console.error('time is', new Date())
-      // console.error('num received', sporks.length(received))
+      throw new Error(
+        'Number of received is incorrect',
+        JSON.stringfy({
+          numReceived: sporks.length(received),
+          received: received,
+          userDBs: userDBs,
+          time: new Date()
+        })
+      )
       // console.log('EXITING...')
       // process.exit(-1)
     }
@@ -202,12 +214,14 @@ describe('stress', function() {
     }
 
     before(async() => {
+      await doBefore()
       replicatorIds = []
       await createReplicators()
     })
 
     after(async() => {
       await destroyReplicators()
+      await doAfter()
     })
 
     sendMessages()
@@ -242,11 +256,13 @@ describe('stress', function() {
     }
 
     before(async() => {
+      await doBefore()
       await createOnChange()
     })
 
     after(async() => {
       await destroyOnChange()
+      await doAfter()
     })
 
     sendMessages()
