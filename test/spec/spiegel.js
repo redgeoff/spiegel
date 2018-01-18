@@ -8,6 +8,7 @@ const sporks = require('sporks')
 describe('spiegel', () => {
   let spiegel = null
   let calls = null
+  let time = null
 
   const spy = () => {
     calls = []
@@ -15,11 +16,13 @@ describe('spiegel', () => {
   }
 
   const newSpiegel = type => {
-    return new Spiegel(type, { dbName: 'test2_spiegel', namespace: 'test2_' })
+    return new Spiegel(type, { dbName: 'test_spiegel' + time, namespace: 'test_' + time + '_' })
   }
 
   beforeEach(async() => {
-    // test1_ is already taken by testUtils
+    // Prevent race conditions on the same DB
+    time = new Date().getTime()
+
     spiegel = newSpiegel(null)
     spy()
     await spiegel.install()
@@ -33,7 +36,7 @@ describe('spiegel', () => {
     let slouch = new Slouch(testUtils.couchDBURLWithoutAuth())
     await sporks.shouldThrow(
       () => {
-        return slouch.db.get('test2_spiegel')
+        return slouch.db.get(spiegel._dbName)
       },
       { name: 'NotAuthorizedError' }
     )
