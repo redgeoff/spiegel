@@ -527,10 +527,6 @@ describe('process', () => {
 
     await testUtils.createTestDBs(dbNames)
 
-    await testUtils.waitFor(() => {
-      return calls._lockProcessUnlockLogError.length === 2 ? true : undefined
-    })
-
     await createConflictViaReplication()
 
     await testUtils.waitFor(() => {
@@ -548,7 +544,7 @@ describe('process', () => {
     })
 
     await testUtils.waitFor(() => {
-      return calls._lockProcessUnlockLogError.length === 5 ? true : undefined
+      return calls._lockProcessUnlockLogError.length >= 5 ? true : undefined
     })
 
     // Make sure the conflicts have been cleared
