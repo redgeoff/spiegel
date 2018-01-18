@@ -27,12 +27,13 @@ class Spawner {
 
     // Uncomment for extra debugging
     // opts.push('--log-level=debug')
+    opts.push('--log-level=error')
 
     let child = spawn(path.join(__dirname, '/../../bin/cmd.js'), opts)
 
     child.stdout.pipe(JSONStream.parse()).on('data', logEntry => {
       // Uncomment for extra debugging
-      // console.log('logEntry=', logEntry, '\n')
+      console.log('logEntry=', JSON.stringify(logEntry), '\n')
 
       // An error entry? There shouldn't be any errors
       if (logEntry.level > 30) {
@@ -40,7 +41,8 @@ class Spawner {
       }
     })
 
-    child.stderr.on('data', (/* data */) => {
+    child.stderr.on('data', data => {
+      console.error('spawner stderr=', String(data))
       throw new Error('should not get data on stderr ' + JSON.stringify(opts))
     })
 
