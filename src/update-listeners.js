@@ -161,8 +161,11 @@ class UpdateListeners {
   }
 
   _dbUpdatesIteratorEach() {
+    let r = new RegExp(':' + this._spiegel._dbName + '$')
     return this._dbUpdatesIterator.each(async update => {
-      await this._onUpdate(update)
+      if (/:(.*)$/.test(update.id) && !r.test(update.id)) {
+        await this._onUpdate(update)
+      }
     })
   }
 
@@ -229,10 +232,18 @@ class UpdateListeners {
     this._dbUpdatesIterator = this._changes({
       feed: 'continuous',
       heartbeat: true,
-      since: this._lastSeq ? this._lastSeq : undefined,
+      since: this._lastSeq ? this._lastSeq : undefined
 
-      filter: '_view',
-      view: this._spiegel._namespace + 'sieve/sieve'
+      // Note: we no longer use the sieve view as views on the _global_changes database appear to be
+      // flaky when there is a significant amount of activity. Specifically, changes will never be
+      // reported by the _changes feed and this will result in replicators and change-listeners
+      // never being dirted. This becomes clear when running the stress tests with 1,000
+      // replicators.
+      //
+      // TODO: remove the sieve view?
+      //
+      // filter: '_view',
+      // view: this._spiegel._namespace + 'sieve/sieve'
     })
 
     this._listenToIteratorErrors(this._dbUpdatesIterator)
