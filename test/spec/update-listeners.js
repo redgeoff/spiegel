@@ -3,7 +3,7 @@
 const UpdateListeners = require('../../src/update-listeners')
 const testUtils = require('../utils')
 const sporks = require('sporks')
-// const Globals = require('../../src/globals')
+const Globals = require('../../src/globals')
 const EventEmitter = require('events').EventEmitter
 const sinon = require('sinon')
 
@@ -15,7 +15,7 @@ describe('update-listeners', () => {
   let dirtyReplicators = null
   let dirtyChangeListeners = null
   let globals = null
-  // let lastSeq
+  let lastSeq = null
   let suffix = null
   let calls = null
 
@@ -81,28 +81,28 @@ describe('update-listeners', () => {
     }
   }
 
-  // const fakeGlobals = async () => {
-  //   listeners._globals.get = function (name) {
-  //     if (name === 'lastSeq') {
-  //       return Promise.resolve(lastSeq)
-  //     } else {
-  //       return Globals.prototype.get.apply(this, arguments)
-  //     }
-  //   }
-  // }
+  const fakeGlobals = async() => {
+    listeners._globals.get = function(name) {
+      if (name === 'lastSeq') {
+        return Promise.resolve(lastSeq)
+      } else {
+        return Globals.prototype.get.apply(this, arguments)
+      }
+    }
+  }
 
-  // // Get the lastSeq as changes in _global_changes and run over from test to test and we want to
-  // // minimize the noise
-  // const getLastSeq = async () => {
-  //   await testUtils.spiegel._slouch.db
-  //     .changes(testUtils.spiegel._dbName, {
-  //       limit: 1,
-  //       descending: true
-  //     })
-  //     .each(change => {
-  //       lastSeq = change.seq
-  //     })
-  // }
+  // Get the lastSeq as changes in _global_changes and run over from test to test and we want to
+  // minimize the noise
+  const getLastSeq = async() => {
+    await testUtils.spiegel._slouch.db
+      .changes('_global_changes', {
+        limit: 1,
+        descending: true
+      })
+      .each(change => {
+        lastSeq = change.seq
+      })
+  }
 
   const createTestDBs = async() => {
     await testUtils.createTestDBs(['test_db1' + suffix, 'test_db3' + suffix])
@@ -137,9 +137,9 @@ describe('update-listeners', () => {
     spyOnSetGlobal()
     spy()
     if (fakeLastSeq) {
-      // fakeGlobals()
+      fakeGlobals()
     }
-    // await getLastSeq()
+    await getLastSeq()
     if (fakeOnChange) {
       fakeOnChanges()
     }
@@ -180,16 +180,21 @@ describe('update-listeners', () => {
   it('should listen', async() => {
     await createListeners()
 
+    // Race conditions on _global_changes means that we can sometimes get data from a previous
+    // test, which we have to ignore. Therefore, we only check for the existence of the values
+    // we need.
+    const shouldContain = item => {
+      return item['test_db1' + suffix] === true &&
+        item['test_db3' + suffix] === true &&
+        item['_dbs'] === true
+        ? true
+        : undefined
+    }
+
     await testUtils
       .waitFor(() => {
-        return sporks.isEqual(batches, [
-          {
-            ['test_db1' + suffix]: true,
-            ['test_db3' + suffix]: true
-          }
-        ])
-          ? true
-          : undefined
+        let lastBatch = batches.length > 0 ? batches[batches.length - 1] : {}
+        return shouldContain(lastBatch)
       })
       .catch(function(err) {
         console.log('batches=', batches)
@@ -199,12 +204,7 @@ describe('update-listeners', () => {
     // Make sure we dirtied the correct replicators
     await testUtils
       .waitFor(() => {
-        return sporks.isEqual(dirtyReplicators, {
-          ['test_db1' + suffix]: true,
-          ['test_db3' + suffix]: true
-        })
-          ? true
-          : undefined
+        return shouldContain(dirtyReplicators)
       })
       .catch(function(err) {
         console.log('dirtyReplicators=', dirtyReplicators)
@@ -214,12 +214,7 @@ describe('update-listeners', () => {
     // Make sure we dirtied the correct ChangeListeners
     await testUtils
       .waitFor(() => {
-        return sporks.isEqual(dirtyChangeListeners, {
-          ['test_db1' + suffix]: true,
-          ['test_db3' + suffix]: true
-        })
-          ? true
-          : undefined
+        return shouldContain(dirtyChangeListeners)
       })
       .catch(function(err) {
         console.log('dirtyChangeListeners=', dirtyChangeListeners)
@@ -252,18 +247,12 @@ describe('update-listeners', () => {
       foo: 'bar'
     })
 
-    // All the initial updates should be in a batch and the next batch should contain the new update
+    // All the initial updates should be batches and the last batch should contain the new update
     await testUtils
       .waitFor(() => {
-        return sporks.isEqual(batches, [
-          {
-            ['test_db1' + suffix]: true,
-            ['test_db3' + suffix]: true
-          },
-          {
-            ['test_db1' + suffix]: true
-          }
-        ])
+        return sporks.isEqual(batches.length > 0 ? batches[batches.length - 1] : null, {
+          ['test_db1' + suffix]: true
+        })
           ? true
           : undefined
       })
