@@ -255,7 +255,7 @@ describe('update-listeners', () => {
         })
           ? true
           : undefined
-      }, testUtils.TIMEOUT - 5000)
+      })
       .catch(function(err) {
         console.log('batches=', batches)
         throw err
