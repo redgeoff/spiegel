@@ -8,9 +8,9 @@ const sporks = require('sporks')
 const Server = require('./server')
 
 describe('stress', function() {
-  const NUM_USERS = 3
-  const NUM_MESSAGES = 1000
-  const TIMEOUT = 300000
+  const NUM_USERS = 1000
+  const NUM_MESSAGES = 5
+  const TIMEOUT = 6000000
 
   this.timeout(TIMEOUT)
 
