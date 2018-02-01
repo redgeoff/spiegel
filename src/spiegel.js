@@ -7,6 +7,7 @@ const Replicators = require('./replicators')
 const OnChanges = require('./on-changes')
 const log = require('./log')
 const utils = require('./utils')
+const pkg = require('../package.json')
 
 class Spiegel {
   constructor(type, opts) {
@@ -49,6 +50,8 @@ class Spiegel {
   }
 
   async start() {
+    log.info('Starting ' + this._type + ' v' + pkg.version)
+
     switch (this._type) {
       case 'install':
         await this.install()
