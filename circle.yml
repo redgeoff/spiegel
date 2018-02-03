@@ -18,9 +18,9 @@ dependencies:
     # Wait for DB to be ready
     - sleep 15
     # Create system DBs
-    - curl -X PUT http://admin:admin@db.quizster.dev:15984/_users
-    - curl -X PUT http://admin:admin@db.quizster.dev:15984/_replicator
-    - curl -X PUT http://admin:admin@db.quizster.dev:15984/_global_changes
+    - curl -X PUT http://admin:admin@localhost:15984/_users
+    - curl -X PUT http://admin:admin@localhost:15984/_replicator
+    - curl -X PUT http://admin:admin@localhost:15984/_global_changes
 
     # Enable CORS
     - nvm use $NODE_VERSION && npm install -g add-cors-to-couchdb
