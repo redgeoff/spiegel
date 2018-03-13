@@ -37,5 +37,5 @@ jobs:
       - run: npm run lint
       - run: npm run node-full-test
 
-      # Test docker image
-      - run: HOST_IP=`/sbin/ip route | awk '/eth0 proto/ { print $9 }'` && docker run -it -e URL="http://admin:admin@$HOST_IP:5984" -e TYPE="install" redgeoff/spiegel
+      # Sanity test docker image
+      - run: docker run -it -e VERSION=1 redgeoff/spiegel
