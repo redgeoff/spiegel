@@ -1,0 +1,41 @@
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: circleci/node:8.9.4-stretch-browsers
+      - image: redgeoff/couchdb
+        environment:
+        - COUCHDB_USER: admin
+        - COUCHDB_PASSWORD: admin
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "package.json" }}
+          - v1-dependencies-
+      - run: npm install
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "package.json" }}
+
+      - setup_remote_docker
+
+      # Install CouchDB 2
+      # Wait for DB to be ready
+      - run: sleep 15
+      # Create system DBs
+      - run: curl -X PUT http://admin:admin@localhost:5984/_users
+      - run: curl -X PUT http://admin:admin@localhost:5984/_replicator
+      - run: curl -X PUT http://admin:admin@localhost:5984/_global_changes
+
+      # Enable CORS
+      - run: sudo npm install -g add-cors-to-couchdb
+      - run: add-cors-to-couchdb http://localhost:5984 -u admin -p admin
+
+      - run: npm run lint
+      - run: npm run node-full-test
+
+      # Sanity test docker image
+      - run: docker run -it -e VERSION=1 redgeoff/spiegel
