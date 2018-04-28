@@ -41,6 +41,18 @@ Notes:
 - If a replication fails, e.g. due to a transient error, it will be retried
 - If a replication process is abruptly terminated, e.g. due to a replicator process being restarted, the replicator will eventually be considered stalled and will be retried.
 - Replicator docs are not design docs, therefore the id of a replicator doc can be anything that doesn't begin with `_design/`
+- You can use any of configurations supported by CouchDB's [`_replicate` API](http://docs.couchdb.org/en/2.1.1/api/server/common.html#replicate), e.g. you can used filtered replication:
+```
+{
+  _id: 'my-id',
+  source: 'https://db.example.com/mydb1',
+  target: 'https://db.example.com/mydb2',
+  filter: 'views/my_view',
+  query_params: {
+    someId: 'some-value'
+  }
+}
+```
 
 ### `on_change`
 ```js
