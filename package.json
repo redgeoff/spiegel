@@ -34,7 +34,7 @@
   "dependencies": {
     "bunyan": "^1.8.12",
     "couch-slouch": "^1.0.4",
-    "fs-extra": "^5.0.0",
+    "fs-extra": "^6.0.0",
     "pouchdb": "^6.3.4",
     "pouchdb-adapter-memory": "^6.3.4",
     "request": "^2.81.0",
@@ -55,14 +55,15 @@
     "eslint-plugin-standard": "^3.0.1",
     "istanbul": "^0.4.5",
     "koa": "^2.4.1",
-    "koa-basic-auth": "^2.0.0",
+    "koa-basic-auth": "^3.0.0",
     "koa-body": "^2.5.0",
     "koa-route": "^3.2.0",
     "mocha": "^5.0.4",
-    "nyc": "^11.2.1",
+    "nyc": "^12.0.1",
     "pouchdb-find": "^6.4.1",
     "prettier-eslint-cli": "^4.4.0",
-    "sinon": "^5.0.1"
+    "sinon": "^5.0.1",
+    "wait-on": "^2.1.0"
   },
   "greenkeeper": {
     "ignore": [

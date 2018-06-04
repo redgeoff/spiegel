@@ -24,7 +24,7 @@ jobs:
 
       # Install CouchDB 2
       # Wait for DB to be ready
-      - run: sleep 15
+      - run: ./node_modules/wait-on/bin/wait-on tcp:5984
       # Create system DBs
       - run: curl -X PUT http://admin:admin@localhost:5984/_users
       - run: curl -X PUT http://admin:admin@localhost:5984/_replicator
