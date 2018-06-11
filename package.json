@@ -62,7 +62,7 @@
     "nyc": "^12.0.2",
     "pouchdb-find": "^6.4.1",
     "prettier-eslint-cli": "^4.4.0",
-    "sinon": "^5.0.1",
+    "sinon": "^6.0.0",
     "wait-on": "^2.1.0"
   },
   "greenkeeper": {
