@@ -29,7 +29,7 @@ Like videos? Watch a [5 Minute Talk on Spiegel](https://medium.com/offline-camp/
 
 ### Install via Docker Swarm
 1. Install Docker Swarm: see the [official Docker documentation](https://docs.docker.com/engine/swarm/swarm-tutorial/) or [Installing Docker Swarm on Ubuntu](https://github.com/redgeoff/docker-ce-vagrant/blob/master/docker.sh)
-2. Create a passwords file for your change_listeners, e.g. change-listener-passwords.json:
+2. Create a [passwords file](DESIGN.md#passwords-config) for your change_listeners, e.g. change-listener-passwords.json:
     ```
     {
       "yourapi.com": {
@@ -37,7 +37,7 @@ Like videos? Watch a [5 Minute Talk on Spiegel](https://medium.com/offline-camp/
       }
     }
     ```
-3. Create a passwords file for your replicators, e.g. replicator-passwords.json:
+3. Create a [passwords file](DESIGN.md#passwords-config) for your replicators, e.g. replicator-passwords.json:
     ```
     {
       "yourcouchdb.com": {
