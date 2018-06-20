@@ -113,7 +113,7 @@ Notes:
     $ npm install -g spiegel --unsafe
     ```
    Note: `--unsafe` is needed to properly install leveldown (a PouchDB dependency)
-2. Create a passwords file for your change_listeners, e.g. change-listener-passwords.json:
+2. Create a [passwords file](DESIGN.md#passwords-config) for your change_listeners, e.g. change-listener-passwords.json:
     ```
     {
       "yourapi.com": {
@@ -121,7 +121,7 @@ Notes:
       }
     }
     ```
-3. Create a passwords file for your replicators, e.g. replicator-passwords.json:
+3. Create a [passwords file](DESIGN.md#passwords-config) for your replicators, e.g. replicator-passwords.json:
     ```
     {
       "yourcouchdb.com": {
