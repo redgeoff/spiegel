@@ -56,6 +56,10 @@ class ChangeProcessor {
             params[name] = change.doc
             break
 
+          case '$seq':
+            params[name] = change.seq
+            break
+
           default:
             params[name] = value
         }

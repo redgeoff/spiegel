@@ -15,7 +15,9 @@ describe('change-processor', () => {
     _rev: '1',
     thing: 'jam'
   }
+  let seq = '123-xyz'
   let change = {
+    seq,
     doc
   }
   let origReq = null
@@ -81,7 +83,8 @@ describe('change-processor', () => {
       params: {
         foo: 'bar',
         change: '$change',
-        db_name: '$db_name'
+        db_name: '$db_name',
+        seq: '$seq'
       }
     }
 
@@ -90,7 +93,8 @@ describe('change-processor', () => {
     params.should.eql({
       foo: 'bar',
       change: change.doc,
-      db_name: 'test_db1'
+      db_name: 'test_db1',
+      seq: change.seq
     })
   })
 
