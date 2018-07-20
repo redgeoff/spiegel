@@ -43,8 +43,8 @@ describe('spiegel', () => {
   })
 
   const fakeInstall = () => {
-    spiegel.install = async() => {
-      calls.install.push(arguments)
+    spiegel.install = async(...args) => {
+      calls.install.push(args)
     }
   }
 
