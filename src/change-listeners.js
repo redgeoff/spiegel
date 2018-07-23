@@ -4,6 +4,7 @@ const sporks = require('sporks')
 const Process = require('./process')
 const ChangeProcessor = require('./change-processor')
 const utils = require('./utils')
+const { DatabaseNotFoundError } = require('./errors')
 
 class ChangeListeners extends Process {
   constructor(spiegel, opts) {
@@ -13,7 +14,8 @@ class ChangeListeners extends Process {
         passwords: utils.getOpt(opts, 'passwords'),
         retryAfterSeconds: utils.getOpt(opts, 'retryAfterSeconds'),
         concurrency: utils.getOpt(opts, 'concurrency'),
-        checkStalledSeconds: utils.getOpt(opts, 'checkStalledSeconds')
+        checkStalledSeconds: utils.getOpt(opts, 'checkStalledSeconds'),
+        assumeDeletedAfterSeconds: utils.getOpt(opts, 'retryAfterSeconds')
       },
       'change_listener'
     )
@@ -198,6 +200,13 @@ class ChangeListeners extends Process {
     }
   }
 
+  async destroy(dbNames) {
+    let listeners = await this._getByDBNames(dbNames)
+    listeners.map(async (listener) => {
+      await this._getAndDestroy(listener._id)
+    })
+  }
+
   _processChange(change, dbName, requests) {
     return this._changeProcessor.process(change, dbName, requests)
   }
@@ -221,6 +230,11 @@ class ChangeListeners extends Process {
       since: listener.last_seq || undefined,
       include_docs: true,
       limit: this._batchSize
+    }).catch(err => {
+      if(err.error == 'not_found') {
+        throw new DatabaseNotFoundError(listener.db_name)
+      }
+      throw err
     })
   }
 
@@ -269,6 +283,9 @@ class ChangeListeners extends Process {
     try {
       await this._processBatchOfChanges(listener)
     } catch (err) {
+      if(err instanceof DatabaseNotFoundError) {
+        throw err
+      }
       // Log and emit error
       this._onError(err)
 
