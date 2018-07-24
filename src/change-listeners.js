@@ -200,13 +200,6 @@ class ChangeListeners extends Process {
     }
   }
 
-  async destroy(dbNames) {
-    let listeners = await this._getByDBNames(dbNames)
-    listeners.map(async (listener) => {
-      await this._getAndDestroy(listener._id)
-    })
-  }
-
   _processChange(change, dbName, requests) {
     return this._changeProcessor.process(change, dbName, requests)
   }
@@ -231,7 +224,7 @@ class ChangeListeners extends Process {
       include_docs: true,
       limit: this._batchSize
     }).catch(err => {
-      if(err.error == 'not_found') {
+      if (err.error === 'not_found') {
         throw new DatabaseNotFoundError(listener.db_name)
       }
       throw err
@@ -283,7 +276,7 @@ class ChangeListeners extends Process {
     try {
       await this._processBatchOfChanges(listener)
     } catch (err) {
-      if(err instanceof DatabaseNotFoundError) {
+      if (err instanceof DatabaseNotFoundError) {
         throw err
       }
       // Log and emit error

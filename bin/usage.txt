@@ -80,6 +80,13 @@ Options:
                             Applies to: change-listener, replicator
                             Default: 10800
 
+  --assume-deleted-after=secs
+                            Database not found errors that persist for this many seconds
+                            will result in the item document being deleted.
+
+                            Applies to: change-listener, replicator
+                            Default: 300
+
   --concurrency=num         The maximum number of items that will be processed concurrently.
                             Warning: setting this value too high can result in the process using a
                             lot of memory as it queues tasks.

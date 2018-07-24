@@ -274,7 +274,8 @@ class Process extends events.EventEmitter {
     //  replicated to our node yet.  Compromise by deleting the item
     //  if updated_at is long ago enough
     return (
-      new Date().getTime() - new Date(item.updated_at).getTime() > this._assumeDeletedAfterSeconds * 1000
+      new Date().getTime() - new Date(item.updated_at).getTime() >
+        this._assumeDeletedAfterSeconds * 1000
     )
   }
 
@@ -285,8 +286,7 @@ class Process extends events.EventEmitter {
     } catch (err) {
       // If an error is encountered when processing then leave the item dirty, but unlock it so that
       // the processing can be tried again
-      if(err instanceof DatabaseNotFoundError && this._isProbablyDeleted(item)) {
-        log.info('Destroying',item._id)
+      if (err instanceof DatabaseNotFoundError && this._isProbablyDeleted(item)) {
         await this._getAndDestroy(item._id)
       } else {
         await this._upsertUnlock(item)

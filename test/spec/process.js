@@ -1,11 +1,13 @@
 'use strict'
 
 const Process = require('../../src/process')
+const { DatabaseNotFoundError } = require('../../src/errors')
 const testUtils = require('../utils')
 const sporks = require('sporks')
 const utils = require('../../src/utils')
 const EventEmitter = require('events').EventEmitter
 const config = require('../../src/config.json')
+const sandbox = require('sinon').createSandbox()
 
 describe('process', () => {
   let globalProc = null
@@ -38,7 +40,8 @@ describe('process', () => {
         '_onError',
         '_logFatal',
         '_clearConflicts',
-        '_updateItem'
+        '_updateItem',
+        '_getAndDestroy'
       ],
       calls
     )
@@ -87,6 +90,8 @@ describe('process', () => {
       })
     )
     await testUtils.destroyTestDBs()
+
+    sandbox.restore()
 
     // Was there an error?
     if (globalError) {
@@ -742,5 +747,23 @@ describe('process', () => {
     await proc._upsertUnlockAndDirtyIfLocked({ _id: '1', locked_at: null })
 
     calls._updateItem.length.should.eql(0)
+  })
+
+  it('_processAndUnlockIfError should destroy item on DatabaseNotFoundError', () => {
+    let theItem = { _id: 'foo' }
+
+    sandbox.stub(proc, '_process')
+      .rejects(new DatabaseNotFoundError('fakeDb'))
+    sandbox.stub(proc, '_isProbablyDeleted')
+      .returns(true)
+    let destroyStub = sandbox.stub(proc, '_getAndDestroy')
+
+    return proc._processAndUnlockIfError(theItem)
+      .catch(err => {
+        err.should.instanceOf(DatabaseNotFoundError)
+      })
+      .then(() => {
+        sandbox.assert.calledWith(destroyStub, 'foo')
+      })
   })
 })

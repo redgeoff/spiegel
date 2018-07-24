@@ -23,12 +23,14 @@ class CLParams {
         concurrency: 'concurrency',
         'retry-after': 'retryAfterSeconds',
         'check-stalled': 'checkStalledSeconds',
+        'assume-deleted-after': 'assumeDeletedAfterSeconds',
         'passwords-file': 'passwords'
       },
       replicator: {
         concurrency: 'concurrency',
         'retry-after': 'retryAfterSeconds',
         'check-stalled': 'checkStalledSeconds',
+        'assume-deleted-after': 'assumeDeletedAfterSeconds',
         'passwords-file': 'passwords'
       }
     }
