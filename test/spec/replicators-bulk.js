@@ -112,7 +112,7 @@ describe('replicators-bulk', () => {
     let rep0 = sporks.clone(reps[0])
     let rep2 = sporks.clone(reps[2])
 
-    await replicators._dirty([rep0, rep2])
+    await replicators._dirty([rep0, rep2], new Date())
 
     let updatedReps = await getReplicators()
     updatedReps[0].dirty.should.eql(true)
@@ -147,7 +147,7 @@ describe('replicators-bulk', () => {
 
     await simulateConflicts()
 
-    let conflictedDBNames = await replicators._dirtyAndGetConflictedDBNames(reps)
+    let conflictedDBNames = await replicators._dirtyAndGetConflictedDBNames(reps, new Date())
     conflictedDBNames.should.eql(['test_db5', 'test_db7'])
   })
 
@@ -172,7 +172,7 @@ describe('replicators-bulk', () => {
       'test_db5',
       'test_db6',
       'test_db7'
-    ])
+    ], new Date())
 
     // 1st group of dirties
     let dbNames1 = dirties[0].map(doc => replicators._toDBName(doc.source))

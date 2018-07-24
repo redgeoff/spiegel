@@ -42,7 +42,8 @@ class Replicators extends Process {
           // See _toDBName for how the DB name is extracted from the source
           map: [
             'function(doc) {',
-            'if (doc.type === "replicator" && doc.source && (!doc.dirty || doc.locked_at)) {',
+            'if (doc.type === "replicator" && doc.source &&' +
+              ' ((!doc.dirty && !doc.dirty_at) || doc.locked_at)) {',
             'var i = doc.source.lastIndexOf("/");',
             'if (i !== -1) {',
             'emit(doc.source.substr(i + 1), null);',
@@ -87,9 +88,15 @@ class Replicators extends Process {
     return response.rows.map(row => row.doc)
   }
 
-  _dirty(replicators) {
+  _dirty(replicators, dirtyDate) {
     replicators.forEach(replicator => {
-      replicator.dirty = true
+      if (replicator.dirty_after_milliseconds > 0) {
+        let dirtyTime = new Date(dirtyDate.getTime() +
+          replicator.dirty_after_milliseconds).toISOString()
+        this._setDirtyAt(replicator, dirtyTime)
+      } else {
+        this._setDirty(replicator)
+      }
       this._setUpdatedAt(replicator)
     })
 
@@ -105,8 +112,8 @@ class Replicators extends Process {
     }
   }
 
-  async _dirtyAndGetConflictedDBNames(replicators) {
-    let response = await this._dirty(replicators)
+  async _dirtyAndGetConflictedDBNames(replicators, dirtyDate) {
+    let response = await this._dirty(replicators, dirtyDate)
 
     // Get a list of all the dbNames where we have conflicts. This can occur because the replicator
     // was dirtied, locked or otherwise updated between the _getCleanOrLocked() and _dirty() calls
@@ -123,12 +130,12 @@ class Replicators extends Process {
     return sporks.keys(conflictedDBNames)
   }
 
-  async _attemptToDirtyIfCleanOrLocked(dbNames) {
+  async _attemptToDirtyIfCleanOrLocked(dbNames, dirtyDate) {
     let replicators = await this._getCleanOrLocked(dbNames)
 
     // length can be zero if there is nothing to dirty
     if (replicators.length > 0) {
-      return this._dirtyAndGetConflictedDBNames(replicators)
+      return this._dirtyAndGetConflictedDBNames(replicators, dirtyDate)
     }
   }
 
@@ -149,11 +156,14 @@ class Replicators extends Process {
   // that another UpdateListener dirties the same replicator. In this event, we'll detect the
   // conflicts. We'll then retry the get and dirty for these conflicted replicators. We'll repeat
   // this process until there are no more conflicts.
-  async dirtyIfCleanOrLocked(dbNames) {
-    let conflictedDBNames = await this._attemptToDirtyIfCleanOrLocked(dbNames)
+  async dirtyIfCleanOrLocked(dbNames, dirtyDate) {
+    let conflictedDBNames = await this._attemptToDirtyIfCleanOrLocked(dbNames, dirtyDate)
     if (conflictedDBNames && conflictedDBNames.length > 0) {
-      return this.dirtyIfCleanOrLocked(conflictedDBNames)
+      return this.dirtyIfCleanOrLocked(conflictedDBNames, dirtyDate)
     }
+
+    // In case anything dirtied has dirty_after_milliseconds set
+    this._queueSoiler(0)
   }
 
   _toCouchDBReplicationParams(params) {
