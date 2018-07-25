@@ -5,6 +5,7 @@ const log = require('./log')
 const sporks = require('sporks')
 const events = require('events')
 const utils = require('./utils')
+const { DatabaseNotFoundError } = require('./errors')
 
 class Process extends events.EventEmitter {
   constructor(spiegel, opts, type) {
@@ -28,6 +29,10 @@ class Process extends events.EventEmitter {
     // retried. Be careful not make checkStalledSeconds too low though or else you'll waste a lot of
     // CPU cycles just checking for stalled processes.
     this._checkStalledSeconds = utils.getOpt(opts, 'checkStalledSeconds', 600)
+
+    // The longest we will ignore not_found errors for change listeners
+    //  before assuming it was deleted
+    this._assumeDeletedAfterSeconds = utils.getOpt(opts, 'assumeDeletedAfterSeconds', 300)
   }
 
   _createDirtyAndUnLockedView() {
@@ -264,6 +269,16 @@ class Process extends events.EventEmitter {
     }
   }
 
+  _isProbablyDeleted(item) {
+    // Can't really tell if a database has been deleted or just hasn't been
+    //  replicated to our node yet.  Compromise by deleting the item
+    //  if updated_at is long ago enough
+    return (
+      new Date().getTime() - new Date(item.updated_at).getTime() >
+        this._assumeDeletedAfterSeconds * 1000
+    )
+  }
+
   async _processAndUnlockIfError(item) {
     try {
       let leaveDirty = await this._process(item)
@@ -271,7 +286,11 @@ class Process extends events.EventEmitter {
     } catch (err) {
       // If an error is encountered when processing then leave the item dirty, but unlock it so that
       // the processing can be tried again
-      await this._upsertUnlock(item)
+      if (err instanceof DatabaseNotFoundError && this._isProbablyDeleted(item)) {
+        await this._getAndDestroy(item._id)
+      } else {
+        await this._upsertUnlock(item)
+      }
       throw err
     }
   }

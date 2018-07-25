@@ -1,11 +1,13 @@
 'use strict'
 
 const Process = require('../../src/process')
+const { DatabaseNotFoundError } = require('../../src/errors')
 const testUtils = require('../utils')
 const sporks = require('sporks')
 const utils = require('../../src/utils')
 const EventEmitter = require('events').EventEmitter
 const config = require('../../src/config.json')
+const sandbox = require('sinon').createSandbox()
 
 describe('process', () => {
   let globalProc = null
@@ -15,6 +17,7 @@ describe('process', () => {
   let globalError = false
   let retryAfterSeconds = 1
   let checkStalledSeconds = 1
+  let assumeDeletedAfterSeconds = 1
   let type = 'item'
 
   let conflictError = new Error()
@@ -38,7 +41,8 @@ describe('process', () => {
         '_onError',
         '_logFatal',
         '_clearConflicts',
-        '_updateItem'
+        '_updateItem',
+        '_getAndDestroy'
       ],
       calls
     )
@@ -56,7 +60,10 @@ describe('process', () => {
   }
 
   before(async() => {
-    globalProc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds }, type)
+    globalProc =
+      new Process(testUtils.spiegel,
+        { retryAfterSeconds, checkStalledSeconds, assumeDeletedAfterSeconds },
+        type)
     await globalProc._createViews()
   })
 
@@ -65,7 +72,10 @@ describe('process', () => {
   })
 
   beforeEach(async() => {
-    proc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds }, type)
+    proc =
+      new Process(testUtils.spiegel,
+        { retryAfterSeconds, checkStalledSeconds, assumeDeletedAfterSeconds },
+        type)
     itemIds = []
     spy()
     listenForErrors()
@@ -87,6 +97,8 @@ describe('process', () => {
       })
     )
     await testUtils.destroyTestDBs()
+
+    sandbox.restore()
 
     // Was there an error?
     if (globalError) {
@@ -742,5 +754,33 @@ describe('process', () => {
     await proc._upsertUnlockAndDirtyIfLocked({ _id: '1', locked_at: null })
 
     calls._updateItem.length.should.eql(0)
+  })
+
+  it('can tell if a database has probably been deleted', () => {
+    sandbox.stub(Date.prototype, 'getTime')
+      .onCall(0).returns(10000)
+      .onCall(1).returns(0)
+      .onCall(2).returns(500)
+      .onCall(3).returns(0)
+    proc._isProbablyDeleted({updated_at: '2018-07-25T13:06:55.681Z'}).should.eql(true)
+    proc._isProbablyDeleted({updated_at: '2018-07-25T13:06:55.681Z'}).should.eql(false)
+  })
+
+  it('_processAndUnlockIfError should destroy item on DatabaseNotFoundError', () => {
+    let theItem = { _id: 'foo' }
+
+    sandbox.stub(proc, '_process')
+      .rejects(new DatabaseNotFoundError('fakeDb'))
+    sandbox.stub(proc, '_isProbablyDeleted')
+      .returns(true)
+    let destroyStub = sandbox.stub(proc, '_getAndDestroy')
+
+    return proc._processAndUnlockIfError(theItem)
+      .catch(err => {
+        err.should.instanceOf(DatabaseNotFoundError)
+      })
+      .then(() => {
+        sandbox.assert.calledWith(destroyStub, 'foo')
+      })
   })
 })

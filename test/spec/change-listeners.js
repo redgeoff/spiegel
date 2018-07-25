@@ -1,8 +1,10 @@
 'use strict'
 
 const ChangeListeners = require('../../src/change-listeners')
+const { DatabaseNotFoundError } = require('../../src/errors')
 const testUtils = require('../utils')
 const sporks = require('sporks')
+const sandbox = require('sinon').createSandbox()
 
 describe('change-listeners', () => {
   let listeners = null
@@ -49,6 +51,8 @@ describe('change-listeners', () => {
     )
 
     await testUtils.destroyTestDBs()
+
+    sandbox.restore()
   })
 
   it('should get changes when last_seq undefined', () => {
@@ -63,6 +67,30 @@ describe('change-listeners', () => {
     fakeSlouchChangesArray()
     listeners._changesForListener({ db_name: 'test_db1', last_seq: 'last-seq' })
     calls._changesArray[0][1].should.eql({ since: 'last-seq', include_docs: true, limit: 100 })
+  })
+
+  it('should throw DatabaseNotFoundError for missing database', () => {
+    let throwStub = sandbox.stub(listeners, '_changesArray')
+    throwStub.rejects({'error': 'not_found'})
+    return listeners._processBatchOfChangesLogError({ db_name: 'test_db1' })
+      .then(() => {
+        throw new Error('should throw error')
+      })
+      .catch(err => {
+        err.should.instanceOf(DatabaseNotFoundError)
+      })
+  })
+
+  it('should not throw DatabaseNotFoundError for other errors', () => {
+    let throwStub = sandbox.stub(listeners, '_changesArray')
+    throwStub.rejects({'error': 'something_else'})
+    return listeners._processBatchOfChangesLogError({ db_name: 'test_db1' })
+      .then(() => {
+        throw new Error('should throw error')
+      })
+      .catch(err => {
+        err.should.not.instanceOf(DatabaseNotFoundError)
+      })
   })
 
   it('should process changes sequentially', async() => {
