@@ -60,7 +60,10 @@ describe('process', () => {
   }
 
   before(async() => {
-    globalProc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds, assumeDeletedAfterSeconds }, type)
+    globalProc =
+      new Process(testUtils.spiegel,
+        { retryAfterSeconds, checkStalledSeconds, assumeDeletedAfterSeconds },
+        type)
     await globalProc._createViews()
   })
 
@@ -69,7 +72,10 @@ describe('process', () => {
   })
 
   beforeEach(async() => {
-    proc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds, assumeDeletedAfterSeconds }, type)
+    proc =
+      new Process(testUtils.spiegel,
+        { retryAfterSeconds, checkStalledSeconds, assumeDeletedAfterSeconds },
+        type)
     itemIds = []
     spy()
     listenForErrors()
