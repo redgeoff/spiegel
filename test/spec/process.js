@@ -17,6 +17,7 @@ describe('process', () => {
   let globalError = false
   let retryAfterSeconds = 1
   let checkStalledSeconds = 1
+  let assumeDeletedAfterSeconds = 1
   let type = 'item'
 
   let conflictError = new Error()
@@ -59,7 +60,7 @@ describe('process', () => {
   }
 
   before(async() => {
-    globalProc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds }, type)
+    globalProc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds, assumeDeletedAfterSeconds }, type)
     await globalProc._createViews()
   })
 
@@ -68,7 +69,7 @@ describe('process', () => {
   })
 
   beforeEach(async() => {
-    proc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds }, type)
+    proc = new Process(testUtils.spiegel, { retryAfterSeconds, checkStalledSeconds, assumeDeletedAfterSeconds }, type)
     itemIds = []
     spy()
     listenForErrors()
@@ -747,6 +748,16 @@ describe('process', () => {
     await proc._upsertUnlockAndDirtyIfLocked({ _id: '1', locked_at: null })
 
     calls._updateItem.length.should.eql(0)
+  })
+
+  it('can tell if a database has probably been deleted', () => {
+    sandbox.stub(Date.prototype, 'getTime')
+      .onCall(0).returns(10000)
+      .onCall(1).returns(0)
+      .onCall(2).returns(500)
+      .onCall(3).returns(0)
+    proc._isProbablyDeleted({updated_at: '2018-07-25T13:06:55.681Z'}).should.eql(true)
+    proc._isProbablyDeleted({updated_at: '2018-07-25T13:06:55.681Z'}).should.eql(false)
   })
 
   it('_processAndUnlockIfError should destroy item on DatabaseNotFoundError', () => {

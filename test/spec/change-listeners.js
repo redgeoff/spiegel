@@ -72,12 +72,24 @@ describe('change-listeners', () => {
   it('should throw DatabaseNotFoundError for missing database', () => {
     let throwStub = sandbox.stub(listeners, '_changesArray')
     throwStub.rejects({'error': 'not_found'})
-    return listeners._changesForListener({ db_name: 'test_db1' })
+    return listeners._processBatchOfChangesLogError({ db_name: 'test_db1' })
       .then(() => {
         throw new Error('should throw error')
       })
       .catch(err => {
         err.should.instanceOf(DatabaseNotFoundError)
+      })
+  })
+
+  it('should not throw DatabaseNotFoundError for other errors', () => {
+    let throwStub = sandbox.stub(listeners, '_changesArray')
+    throwStub.rejects({'error': 'something_else'})
+    return listeners._processBatchOfChangesLogError({ db_name: 'test_db1' })
+      .then(() => {
+        throw new Error('should throw error')
+      })
+      .catch(err => {
+        err.should.not.instanceOf(DatabaseNotFoundError)
       })
   })
 

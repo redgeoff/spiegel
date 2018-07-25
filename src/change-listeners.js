@@ -225,7 +225,7 @@ class ChangeListeners extends Process {
       limit: this._batchSize
     }).catch(err => {
       if (err.error === 'not_found') {
-        throw new DatabaseNotFoundError(listener.db_name)
+        err = new DatabaseNotFoundError(listener.db_name)
       }
       throw err
     })
