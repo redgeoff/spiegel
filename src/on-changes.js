@@ -208,11 +208,15 @@ class OnChanges extends events.EventEmitter {
         if (onChange.if) {
           // Loop for each attribute
           sporks.each(onChange.if, (reStr, name) => {
-            let re = new RegExp(reStr)
+            if(reStr === null) {
+              ok = ok && (!(name in doc) || doc[name] === null)
+            } else {
+              let re = new RegExp(reStr)
 
-            // Condition failed?
-            if (!re.test(doc[name])) {
-              ok = false
+              // Condition failed?
+              if (!re.test(doc[name])) {
+                ok = false
+              }
             }
           })
         }

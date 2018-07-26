@@ -158,6 +158,30 @@ describe('on-changes', () => {
         '3': {
           _id: '3',
           db_name: 'bar'
+        },
+
+        '4': {
+          _id: '4',
+          db_name: 'foo',
+          if: {
+            missingField: null
+          }
+        },
+
+        '5': {
+          _id: '5',
+          db_name: 'foo',
+          if: {
+            nullField: null
+          }
+        },
+
+        '6': {
+          _id: '6',
+          db_name: 'foo',
+          if: {
+            type: null
+          }
         }
       }
     }
@@ -165,7 +189,8 @@ describe('on-changes', () => {
     let matchingOnChanges = await onChanges.getMatchingOnChanges('foo', {
       _id: 'some-id',
       type: 'work',
-      priority: 'high'
+      priority: 'high',
+      nullField: null
     })
     matchingOnChanges.should.eql({
       '0': {
@@ -188,14 +213,32 @@ describe('on-changes', () => {
           type: 'work',
           priority: 'medium|high'
         }
+      },
+
+      '4': {
+        _id: '4',
+        db_name: 'foo',
+        if: {
+          missingField: null
+        }
+      },
+
+      '5': {
+        _id: '5',
+        db_name: 'foo',
+        if: {
+          nullField: null
+        }
       }
     })
 
     matchingOnChanges = await onChanges.getMatchingOnChanges('foo', {
       type: 'work'
     })
-    sporks.length(matchingOnChanges).should.eql(1)
+    sporks.length(matchingOnChanges).should.eql(3)
     matchingOnChanges['0']._id.should.eql('0')
+    matchingOnChanges['4']._id.should.eql('4')
+    matchingOnChanges['5']._id.should.eql('5')
 
     matchingOnChanges = await onChanges.getMatchingOnChanges('bar', {
       _id: 'some-id',
