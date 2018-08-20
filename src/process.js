@@ -33,6 +33,8 @@ class Process extends events.EventEmitter {
     // The longest we will ignore not_found errors for change listeners
     //  before assuming it was deleted
     this._assumeDeletedAfterSeconds = utils.getOpt(opts, 'assumeDeletedAfterSeconds', 300)
+
+    this._soilerTime = null
   }
 
   _createDirtyAndUnLockedView() {
@@ -446,7 +448,7 @@ class Process extends events.EventEmitter {
     this._listen(lastSeq)
 
     this._startUnstaller()
-    this._queueSoiler(0)
+    this._listenToDirtyAtChanges()
   }
 
   async stop() {
@@ -523,12 +525,12 @@ class Process extends events.EventEmitter {
     clearInterval(this._unstaller)
   }
 
-  _dirtyAtItems() {
+  _dirtyAtItems(opts = {}) {
     return this._slouch.db.view(
       this._spiegel._dbName,
       '_design/dirty_at_' + this._type,
       'dirty_at_' + this._type,
-      { include_docs: true }
+      Object.assign({ include_docs: true }, opts)
     )
   }
 
@@ -559,20 +561,32 @@ class Process extends events.EventEmitter {
       return null
     }, this._throttler)
     if (minUnprocessedTimestamp) {
-      let delay = new Date(minUnprocessedTimestamp).getTime() - new Date().getTime()
-      this._queueSoiler(delay)
+      this._queueSoiler(minUnprocessedTimestamp)
     }
   }
 
-  _queueSoiler(delay) {
-    this._stopSoiler()
-    this._soiler = setTimeout(() => {
-      this._soilPendingItems()
-    }, delay | 0)
+  _queueSoiler(forTime) {
+    if (!this._soilerTime || forTime < this._soilerTime) {
+      this._stopSoiler()
+      this._soilerTime = forTime
+      let delay = new Date(forTime).getTime() - new Date().getTime()
+      this._soiler = setTimeout(() => {
+        this._soilerTime = null
+        this._soilPendingItems()
+      }, delay | 0)
+    }
   }
 
   _stopSoiler() {
     clearTimeout(this._soiler)
+    this._soilerTime = null
+  }
+
+  _listenToDirtyAtChanges() {
+    this._dirtyAtIterator = this._dirtyAtItems({ feed: 'continuous' })
+    this._dirtyAtIterator.each(change => {
+      this._queueSoiler(change.doc.dirty_at)
+    })
   }
 }
 

@@ -803,7 +803,8 @@ describe('process', () => {
   it('should try to soil items after appropriate delay', async() => {
     this.clock = sandbox.useFakeTimers()
 
-    proc._queueSoiler(100)
+    let d = new Date(new Date().getTime() + 100)
+    proc._queueSoiler(d.toISOString())
 
     calls._stopSoiler.length.should.eql(1)
     calls._soilPendingItems.length.should.eql(0)
@@ -813,6 +814,30 @@ describe('process', () => {
 
     this.clock.tick(1)
     calls._soilPendingItems.length.should.eql(1)
+
+    this.clock.restore()
+  })
+
+  it('should not requeue for a later delay, but should for an earlier one', async() => {
+    this.clock = sandbox.useFakeTimers()
+
+    let d = new Date(new Date().getTime() + 100)
+    proc._queueSoiler(d.toISOString())
+
+    calls._stopSoiler.length.should.eql(1)
+    calls._soilPendingItems.length.should.eql(0)
+
+    d = new Date(new Date().getTime() + 1000)
+    proc._queueSoiler(d.toISOString())
+
+    calls._stopSoiler.length.should.eql(1)
+    calls._soilPendingItems.length.should.eql(0)
+
+    d = new Date(new Date().getTime() + 50)
+    proc._queueSoiler(d.toISOString())
+
+    calls._stopSoiler.length.should.eql(2)
+    calls._soilPendingItems.length.should.eql(0)
 
     this.clock.restore()
   })
@@ -925,5 +950,29 @@ describe('process', () => {
       _id: 'item', dirty_at: null, dirty: true
     })
     stub.getCall(0).args[1].should.eql(true)
+  })
+
+  it('should run soiler', async() => {
+    let dirtyAt = new Date().toISOString()
+    let dbNames = testDBNames()
+
+    await createItem({
+      source: utils.couchDBURL() + '/' + dbNames[0],
+      target: utils.couchDBURL() + '/' + dbNames[0],
+      dirty_at: dirtyAt,
+      dirty: false
+    })
+
+    await testUtils.createTestDBs(dbNames)
+
+    await proc.start()
+
+    await testUtils.waitFor(() => {
+      return calls._queueSoiler.length === 1 ? true : undefined
+    })
+
+    calls._queueSoiler[0][0].should.eql(dirtyAt)
+
+    await proc.stop()
   })
 })
