@@ -746,7 +746,7 @@ describe('process', () => {
 
     await proc._upsertUnlockAndDirtyIfLocked({ _id: '1', locked_at: new Date().toISOString() })
 
-    calls[0][0].should.eql({ _id: '1', locked_at: null, dirty: true })
+    calls[0][0].should.eql({ _id: '1', locked_at: null, dirty: true, possibly_deleted_at: null })
     calls[0][1].should.eql(true)
   })
 
@@ -757,13 +757,25 @@ describe('process', () => {
   })
 
   it('can tell if a database has probably been deleted', () => {
-    sandbox.stub(Date.prototype, 'getTime')
-      .onCall(0).returns(10000)
-      .onCall(1).returns(0)
-      .onCall(2).returns(500)
-      .onCall(3).returns(0)
-    proc._isProbablyDeleted({updated_at: '2018-07-25T13:06:55.681Z'}).should.eql(true)
-    proc._isProbablyDeleted({updated_at: '2018-07-25T13:06:55.681Z'}).should.eql(false)
+    proc._isProbablyDeleted({possibly_deleted_at: null}).should.eql(false)
+
+    this.clock = sandbox.useFakeTimers()
+
+    let now = new Date()
+    let nowString = now.toISOString()
+
+    this.clock.tick(500)
+
+    proc._isProbablyDeleted({possibly_deleted_at: nowString}).should.eql(false)
+
+    this.clock.tick(501)
+
+    proc._isProbablyDeleted({possibly_deleted_at: nowString}).should.eql(true)
+
+    // We used to check updated_at, make sure it isn't referenced anymore
+    proc._isProbablyDeleted({updated_at: nowString}).should.eql(false)
+
+    this.clock.restore()
   })
 
   it('_processAndUnlockIfError should destroy item on DatabaseNotFoundError', () => {
@@ -782,5 +794,93 @@ describe('process', () => {
       .then(() => {
         sandbox.assert.calledWith(destroyStub, 'foo')
       })
+  })
+
+  it('_processAndUnlockIfError should set possibly_deleted_at on early DatabaseNotFoundError',
+    () => {
+      let theItem = { _id: 'foo' }
+
+      sandbox.stub(proc, '_process')
+        .rejects(new DatabaseNotFoundError('fakeDb'))
+      sandbox.stub(proc, '_isProbablyDeleted')
+        .returns(false)
+      let upsertStub = sandbox.stub(proc, '_upsertUnlockPossiblyDeleted')
+
+      return proc._processAndUnlockIfError(theItem)
+        .catch(err => {
+          err.should.instanceOf(DatabaseNotFoundError)
+        })
+        .then(() => {
+          sandbox.assert.calledWith(upsertStub, theItem)
+        })
+    })
+
+  it('_processAndUnlockIfError should set just unlock on other errors', () => {
+    let theItem = { _id: 'foo' }
+
+    sandbox.stub(proc, '_process')
+      .rejects(new Error('Some other error'))
+    let upsertStub = sandbox.stub(proc, '_upsertUnlock')
+
+    return proc._processAndUnlockIfError(theItem)
+      .catch(err => {
+        err.should.not.instanceOf(DatabaseNotFoundError)
+      })
+      .then(() => {
+        sandbox.assert.calledWith(upsertStub, theItem)
+      })
+  })
+
+  it('should set possibly_deleted_at in _upsertUnlockPossiblyDeleted iff not already set',
+    async() => {
+      this.clock = sandbox.useFakeTimers()
+      let theItem = { _id: 'foo' }
+
+      this.clock.tick(500)
+      let dateString = new Date().toISOString()
+
+      let updateStub = sandbox.stub(proc, '_updateItem')
+
+      await proc._upsertUnlockPossiblyDeleted(theItem)
+
+      updateStub.callCount.should.eql(1)
+      updateStub.calledWith({
+        _id: 'foo',
+        locked_at: null,
+        possibly_deleted_at: dateString
+      }).should.eql(true)
+
+      theItem.possibly_deleted_at = dateString
+
+      this.clock.tick(500)
+      await proc._upsertUnlockPossiblyDeleted(theItem)
+
+      updateStub.callCount.should.eql(2)
+      updateStub.calledWith({
+        _id: 'foo',
+        locked_at: null
+      }).should.eql(true)
+
+      this.clock.restore()
+    })
+
+  it('should clear possibly_deleted_at in _unlockAndClean', async() => {
+    sandbox.stub(proc, '_setDirty')
+    let stub = sandbox.stub(proc, '_updateItem')
+
+    await proc._unlockAndClean({ _id: 'foo', possibly_deleted_at: new Date().toISOString() })
+
+    stub.callCount.should.eql(1)
+    stub.calledWith({_id: 'foo', locked_at: null, possibly_deleted_at: null}).should.eql(true)
+  })
+
+  it('should clear possibly_deleted_at in _upsertUnlock', async() => {
+    sandbox.stub(proc, '_setDirty')
+    let stub = sandbox.stub(proc, '_updateItem')
+
+    await proc._upsertUnlock({ _id: 'foo', possibly_deleted_at: new Date().toISOString() })
+
+    stub.callCount.should.eql(1)
+    stub.calledWith({_id: 'foo', locked_at: null, possibly_deleted_at: null}).should.eql(true)
   })
 })
