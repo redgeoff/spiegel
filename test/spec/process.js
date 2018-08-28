@@ -1057,7 +1057,7 @@ describe('process', () => {
     })
 
   it('should clear possibly_deleted_at in _unlockAndClean', async() => {
-    sandbox.stub(proc, '_setDirty')
+    sandbox.stub(proc, '_setClean')
     let stub = sandbox.stub(proc, '_updateItem')
 
     await proc._unlockAndClean({ _id: 'foo', possibly_deleted_at: new Date().toISOString() })
