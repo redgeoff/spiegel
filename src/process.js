@@ -467,6 +467,8 @@ class Process extends events.EventEmitter {
   }
 
   async stop() {
+    this._stopSoiler()
+    this._stopListeningToDirtyAtChanges()
     this._stopUnstaller()
 
     if (this._iterator) {
@@ -602,6 +604,10 @@ class Process extends events.EventEmitter {
     this._dirtyAtIterator.each(change => {
       this._queueSoiler(change.doc.dirty_at)
     })
+  }
+
+  _stopListeningToDirtyAtChanges() {
+    this._dirtyAtIterator && this._dirtyAtIterator.abort()
   }
 }
 
