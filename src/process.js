@@ -191,10 +191,22 @@ class Process extends events.EventEmitter {
 
   async _upsertUnlock(item, dirty) {
     // Use new doc with just the locked_at cleared as we only want to change the locked status
-    let unlockedItem = { _id: item._id, locked_at: null }
+    let unlockedItem = { _id: item._id, locked_at: null, possibly_deleted_at: null }
 
     if (dirty) {
       unlockedItem.dirty = true
+    }
+
+    return this._updateItem(unlockedItem, true)
+  }
+
+  async _upsertUnlockPossiblyDeleted(item) {
+    let unlockedItem = {
+      _id: item._id,
+      locked_at: null
+    }
+    if (!item.possibly_deleted_at) {
+      unlockedItem.possibly_deleted_at = new Date().toISOString()
     }
 
     return this._updateItem(unlockedItem, true)
@@ -222,6 +234,7 @@ class Process extends events.EventEmitter {
     this._setClean(item, leaveDirty)
 
     item.locked_at = null
+    item.possibly_deleted_at = null
 
     // We do not upsert as we want the clean to fail if the item has been updated
     return this._updateItem(item, false)
@@ -304,9 +317,9 @@ class Process extends events.EventEmitter {
   _isProbablyDeleted(item) {
     // Can't really tell if a database has been deleted or just hasn't been
     //  replicated to our node yet.  Compromise by deleting the item
-    //  if updated_at is long ago enough
-    return (
-      new Date().getTime() - new Date(item.updated_at).getTime() >
+    //  if possibly_deleted_at is long ago enough
+    return !!item.possibly_deleted_at && (
+      new Date().getTime() - new Date(item.possibly_deleted_at).getTime() >
         this._assumeDeletedAfterSeconds * 1000
     )
   }
@@ -320,6 +333,8 @@ class Process extends events.EventEmitter {
       // the processing can be tried again
       if (err instanceof DatabaseNotFoundError && this._isProbablyDeleted(item)) {
         await this._getAndDestroy(item._id)
+      } else if (err instanceof DatabaseNotFoundError) {
+        await this._upsertUnlockPossiblyDeleted(item)
       } else {
         await this._upsertUnlock(item)
       }
