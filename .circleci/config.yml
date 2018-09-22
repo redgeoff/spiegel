@@ -4,7 +4,7 @@ jobs:
   build:
     docker:
       - image: circleci/node:8.9.4-stretch-browsers
-      - image: redgeoff/couchdb
+      - image: couchdb
         environment:
         - COUCHDB_USER: admin
         - COUCHDB_PASSWORD: admin
