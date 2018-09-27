@@ -286,7 +286,8 @@ class Process extends events.EventEmitter {
     // Can't really tell if a database has been deleted or just hasn't been
     //  replicated to our node yet.  Compromise by deleting the item
     //  if possibly_deleted_at is long ago enough
-    return !!item.possibly_deleted_at && (
+    return (
+      !!item.possibly_deleted_at &&
       new Date().getTime() - new Date(item.possibly_deleted_at).getTime() >
         this._assumeDeletedAfterSeconds * 1000
     )
