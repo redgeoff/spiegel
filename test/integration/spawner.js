@@ -96,7 +96,12 @@ class Spawner {
   async stop() {
     // Stop all the processes
     this._children.forEach(child => {
-      child.child.kill('SIGINT')
+      // PouchDB 7 appears to have introduced a bug where a listener is not cleaned up after a live
+      // replication is canceled (https://github.com/pouchdb/pouchdb/issues/6618). Until this is
+      // fixed we need to send a SIGTERM instead of a SIGINT or else our tests will just hang
+      // indefinitely.
+      // child.child.kill('SIGINT')
+      child.child.kill()
     })
 
     // Wait for all the processes to close

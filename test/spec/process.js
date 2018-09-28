@@ -64,10 +64,11 @@ describe('process', () => {
   }
 
   before(async() => {
-    globalProc =
-      new Process(testUtils.spiegel,
-        { retryAfterSeconds, checkStalledSeconds, assumeDeletedAfterSeconds },
-        type)
+    globalProc = new Process(
+      testUtils.spiegel,
+      { retryAfterSeconds, checkStalledSeconds, assumeDeletedAfterSeconds },
+      type
+    )
     await globalProc._createViews()
   })
 
@@ -76,10 +77,11 @@ describe('process', () => {
   })
 
   beforeEach(async() => {
-    proc =
-      new Process(testUtils.spiegel,
-        { retryAfterSeconds, checkStalledSeconds, assumeDeletedAfterSeconds },
-        type)
+    proc = new Process(
+      testUtils.spiegel,
+      { retryAfterSeconds, checkStalledSeconds, assumeDeletedAfterSeconds },
+      type
+    )
     itemIds = []
     spy()
     listenForErrors()
@@ -773,7 +775,7 @@ describe('process', () => {
   })
 
   it('can tell if a database has probably been deleted', () => {
-    proc._isProbablyDeleted({possibly_deleted_at: null}).should.eql(false)
+    proc._isProbablyDeleted({ possibly_deleted_at: null }).should.eql(false)
 
     this.clock = sandbox.useFakeTimers()
 
@@ -782,14 +784,14 @@ describe('process', () => {
 
     this.clock.tick(500)
 
-    proc._isProbablyDeleted({possibly_deleted_at: nowString}).should.eql(false)
+    proc._isProbablyDeleted({ possibly_deleted_at: nowString }).should.eql(false)
 
     this.clock.tick(501)
 
-    proc._isProbablyDeleted({possibly_deleted_at: nowString}).should.eql(true)
+    proc._isProbablyDeleted({ possibly_deleted_at: nowString }).should.eql(true)
 
     // We used to check updated_at, make sure it isn't referenced anymore
-    proc._isProbablyDeleted({updated_at: nowString}).should.eql(false)
+    proc._isProbablyDeleted({ updated_at: nowString }).should.eql(false)
 
     this.clock.restore()
   })
@@ -797,13 +799,12 @@ describe('process', () => {
   it('_processAndUnlockIfError should destroy item on DatabaseNotFoundError', () => {
     let theItem = { _id: 'foo' }
 
-    sandbox.stub(proc, '_process')
-      .rejects(new DatabaseNotFoundError('fakeDb'))
-    sandbox.stub(proc, '_isProbablyDeleted')
-      .returns(true)
+    sandbox.stub(proc, '_process').rejects(new DatabaseNotFoundError('fakeDb'))
+    sandbox.stub(proc, '_isProbablyDeleted').returns(true)
     let destroyStub = sandbox.stub(proc, '_getAndDestroy')
 
-    return proc._processAndUnlockIfError(theItem)
+    return proc
+      ._processAndUnlockIfError(theItem)
       .catch(err => {
         err.should.instanceOf(DatabaseNotFoundError)
       })
@@ -992,13 +993,12 @@ describe('process', () => {
     () => {
       let theItem = { _id: 'foo' }
 
-      sandbox.stub(proc, '_process')
-        .rejects(new DatabaseNotFoundError('fakeDb'))
-      sandbox.stub(proc, '_isProbablyDeleted')
-        .returns(false)
+      sandbox.stub(proc, '_process').rejects(new DatabaseNotFoundError('fakeDb'))
+      sandbox.stub(proc, '_isProbablyDeleted').returns(false)
       let upsertStub = sandbox.stub(proc, '_upsertUnlockPossiblyDeleted')
 
-      return proc._processAndUnlockIfError(theItem)
+      return proc
+        ._processAndUnlockIfError(theItem)
         .catch(err => {
           err.should.instanceOf(DatabaseNotFoundError)
         })
@@ -1010,11 +1010,11 @@ describe('process', () => {
   it('_processAndUnlockIfError should set just unlock on other errors', () => {
     let theItem = { _id: 'foo' }
 
-    sandbox.stub(proc, '_process')
-      .rejects(new Error('Some other error'))
+    sandbox.stub(proc, '_process').rejects(new Error('Some other error'))
     let upsertStub = sandbox.stub(proc, '_upsertUnlock')
 
-    return proc._processAndUnlockIfError(theItem)
+    return proc
+      ._processAndUnlockIfError(theItem)
       .catch(err => {
         err.should.not.instanceOf(DatabaseNotFoundError)
       })
@@ -1023,38 +1023,41 @@ describe('process', () => {
       })
   })
 
-  it('should set possibly_deleted_at in _upsertUnlockPossiblyDeleted iff not already set',
-    async() => {
-      this.clock = sandbox.useFakeTimers()
-      let theItem = { _id: 'foo' }
+  it('should set possibly_deleted_at in upsertUnlockPossiblyDeleted if not set', async() => {
+    this.clock = sandbox.useFakeTimers()
+    let theItem = { _id: 'foo' }
 
-      this.clock.tick(500)
-      let dateString = new Date().toISOString()
+    this.clock.tick(500)
+    let dateString = new Date().toISOString()
 
-      let updateStub = sandbox.stub(proc, '_updateItem')
+    let updateStub = sandbox.stub(proc, '_updateItem')
 
-      await proc._upsertUnlockPossiblyDeleted(theItem)
+    await proc._upsertUnlockPossiblyDeleted(theItem)
 
-      updateStub.callCount.should.eql(1)
-      updateStub.calledWith({
+    updateStub.callCount.should.eql(1)
+    updateStub
+      .calledWith({
         _id: 'foo',
         locked_at: null,
         possibly_deleted_at: dateString
-      }).should.eql(true)
+      })
+      .should.eql(true)
 
-      theItem.possibly_deleted_at = dateString
+    theItem.possibly_deleted_at = dateString
 
-      this.clock.tick(500)
-      await proc._upsertUnlockPossiblyDeleted(theItem)
+    this.clock.tick(500)
+    await proc._upsertUnlockPossiblyDeleted(theItem)
 
-      updateStub.callCount.should.eql(2)
-      updateStub.calledWith({
+    updateStub.callCount.should.eql(2)
+    updateStub
+      .calledWith({
         _id: 'foo',
         locked_at: null
-      }).should.eql(true)
+      })
+      .should.eql(true)
 
-      this.clock.restore()
-    })
+    this.clock.restore()
+  })
 
   it('should clear possibly_deleted_at in _unlockAndClean', async() => {
     sandbox.stub(proc, '_setClean')
@@ -1063,7 +1066,7 @@ describe('process', () => {
     await proc._unlockAndClean({ _id: 'foo', possibly_deleted_at: new Date().toISOString() })
 
     stub.callCount.should.eql(1)
-    stub.calledWith({_id: 'foo', locked_at: null, possibly_deleted_at: null}).should.eql(true)
+    stub.calledWith({ _id: 'foo', locked_at: null, possibly_deleted_at: null }).should.eql(true)
   })
 
   it('should clear possibly_deleted_at in _upsertUnlock', async() => {
@@ -1073,6 +1076,6 @@ describe('process', () => {
     await proc._upsertUnlock({ _id: 'foo', possibly_deleted_at: new Date().toISOString() })
 
     stub.callCount.should.eql(1)
-    stub.calledWith({_id: 'foo', locked_at: null, possibly_deleted_at: null}).should.eql(true)
+    stub.calledWith({ _id: 'foo', locked_at: null, possibly_deleted_at: null }).should.eql(true)
   })
 })
