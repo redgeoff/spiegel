@@ -175,7 +175,7 @@ describe('replicators', () => {
 
     let expectedDate = new Date(new Date().getTime() + 200).toISOString()
 
-    let item = {id: 'fred', dirty_after_milliseconds: 200}
+    let item = { id: 'fred', dirty_after_milliseconds: 200 }
     await replicators._dirty([item], new Date())
     dirtyAtStub.callCount.should.eql(1)
     dirtyStub.callCount.should.eql(0)
@@ -185,7 +185,7 @@ describe('replicators', () => {
     dirtyAtStub.reset()
     dirtyStub.reset()
 
-    item = {id: 'barney'}
+    item = { id: 'barney' }
     await replicators._dirty([item], new Date())
 
     dirtyAtStub.callCount.should.eql(0)
