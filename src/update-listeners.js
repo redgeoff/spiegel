@@ -44,7 +44,7 @@ class UpdateListeners {
   // specific DBs. Be careful when doing this as your sieve could block replications and change
   // listening if it is not configured properly.
   _createSieve() {
-    return this._slouch.doc.create('_global_changes', {
+    return this._slouch.doc.createOrUpdate('_global_changes', {
       _id: '_design/' + this._spiegel._namespace + 'sieve',
       views: {
         sieve: {
@@ -170,7 +170,7 @@ class UpdateListeners {
   }
 
   _replicatorsDirtyIfCleanOrLocked(dbNames) {
-    return this._spiegel._replicators.dirtyIfCleanOrLocked(dbNames)
+    return this._spiegel._replicators.dirtyIfCleanOrLocked(dbNames, new Date())
   }
 
   _changeListenersDirtyIfCleanOrLocked(dbNames) {

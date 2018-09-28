@@ -105,6 +105,23 @@ class Utils {
     return sporks.waitFor(poll, maxSleep || this.TIMEOUT - 2000, sleepMs)
   }
 
+  fakeIterator(elements) {
+    return {
+      elements,
+      each: f => new Promise((resolve, reject) => {
+        for (let i = 0; i < elements.length; i++) {
+          try {
+            f(elements[i])
+          } catch (err) {
+            reject(err)
+            return
+          }
+        }
+        resolve()
+      })
+    }
+  }
+
   // TODO: move to sporks?
   spy(obj, funs, calls, skip) {
     funs.forEach(fun => {

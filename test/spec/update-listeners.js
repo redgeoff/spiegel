@@ -5,7 +5,7 @@ const testUtils = require('../utils')
 const sporks = require('sporks')
 const Globals = require('../../src/globals')
 const EventEmitter = require('events').EventEmitter
-const sinon = require('sinon')
+const sandbox = require('sinon').createSandbox()
 
 describe('update-listeners', () => {
   let listeners = null
@@ -172,6 +172,7 @@ describe('update-listeners', () => {
   })
 
   afterEach(async() => {
+    sandbox.restore()
     await listeners.stop()
     await testUtils.destroySieve()
     await testUtils.destroyTestDBs()
@@ -374,7 +375,7 @@ describe('update-listeners', () => {
     // Fake
     listeners._saveLastSeqIfNeeded = sporks.resolveFactory()
 
-    sinon.spy(listeners._synchronizer, 'run')
+    sandbox.spy(listeners._synchronizer, 'run')
 
     await listeners._processBatch()
 
@@ -387,10 +388,32 @@ describe('update-listeners', () => {
 
     await createListeners(null, true, true, false, start)
 
-    sinon.spy(listeners._synchronizer, 'run')
+    sandbox.spy(listeners._synchronizer, 'run')
 
     await listeners._onUpdate({ id: 'update:db1' })
 
     listeners._synchronizer.run.calledOnce.should.eql(true)
+  })
+
+  it('should pass the current date to replicators when dirtying', async() => {
+    await createListeners()
+
+    // Undo spyOn
+    delete listeners._replicatorsDirtyIfCleanOrLocked
+
+    this.clock = sandbox.useFakeTimers()
+    this.clock.tick(200000)
+    let now = new Date()
+
+    let stub = sandbox.stub(testUtils.spiegel._replicators, 'dirtyIfCleanOrLocked')
+      .resolves()
+
+    await listeners._replicatorsDirtyIfCleanOrLocked(['fred', 'barney'])
+
+    stub.callCount.should.eql(1)
+    stub.getCall(0).args[0].should.eql(['fred', 'barney'])
+    stub.getCall(0).args[1].should.eql(now)
+
+    this.clock.restore()
   })
 })

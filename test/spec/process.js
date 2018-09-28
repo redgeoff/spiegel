@@ -42,7 +42,11 @@ describe('process', () => {
         '_logFatal',
         '_clearConflicts',
         '_updateItem',
-        '_getAndDestroy'
+        '_getAndDestroy',
+        '_stopSoiler',
+        '_queueSoiler',
+        '_soilPendingItems',
+        '_soilItem'
       ],
       calls
     )
@@ -630,10 +634,22 @@ describe('process', () => {
     await proc.stop()
   })
 
-  it('_setDirty should not clean when leaveDirty', () => {
+  it('_setClean should not clean when leaveDirty', () => {
     let item = { dirty: true }
-    proc._setDirty(item, true)
+    proc._setClean(item, true)
     item.should.eql({ dirty: true })
+  })
+
+  it('_setDirty should set dirty flag and clear dirty_at', () => {
+    let item = {}
+    proc._setDirty(item)
+    item.should.eql({ dirty: true, dirty_at: null })
+  })
+
+  it('_setDirtyAt should set dirty_at and clear the dirty flag', () => {
+    let item = {}
+    proc._setDirtyAt(item, 'theDate')
+    item.should.eql({ dirty: false, dirty_at: 'theDate' })
   })
 
   it('_lockProcessUnlockLogError should handle error', async() => {
@@ -797,22 +813,199 @@ describe('process', () => {
       })
   })
 
-  it('processAndUnlockIfError should set possibly_deleted_at early DatabaseNotFoundError', () => {
-    let theItem = { _id: 'foo' }
+  it('should try to soil items after appropriate delay', async() => {
+    this.clock = sandbox.useFakeTimers()
 
-    sandbox.stub(proc, '_process').rejects(new DatabaseNotFoundError('fakeDb'))
-    sandbox.stub(proc, '_isProbablyDeleted').returns(false)
-    let upsertStub = sandbox.stub(proc, '_upsertUnlockPossiblyDeleted')
+    let d = new Date(new Date().getTime() + 100)
+    proc._queueSoiler(d.toISOString())
 
-    return proc
-      ._processAndUnlockIfError(theItem)
-      .catch(err => {
-        err.should.instanceOf(DatabaseNotFoundError)
-      })
-      .then(() => {
-        sandbox.assert.calledWith(upsertStub, theItem)
-      })
+    calls._stopSoiler.length.should.eql(1)
+    calls._soilPendingItems.length.should.eql(0)
+
+    this.clock.tick(99)
+    calls._soilPendingItems.length.should.eql(0)
+
+    this.clock.tick(1)
+    calls._soilPendingItems.length.should.eql(1)
+
+    this.clock.restore()
   })
+
+  it('should not requeue for a later delay, but should for an earlier one', async() => {
+    this.clock = sandbox.useFakeTimers()
+
+    let d = new Date(new Date().getTime() + 100)
+    proc._queueSoiler(d.toISOString())
+
+    calls._stopSoiler.length.should.eql(1)
+    calls._soilPendingItems.length.should.eql(0)
+
+    d = new Date(new Date().getTime() + 1000)
+    proc._queueSoiler(d.toISOString())
+
+    calls._stopSoiler.length.should.eql(1)
+    calls._soilPendingItems.length.should.eql(0)
+
+    d = new Date(new Date().getTime() + 50)
+    proc._queueSoiler(d.toISOString())
+
+    calls._stopSoiler.length.should.eql(2)
+    calls._soilPendingItems.length.should.eql(0)
+
+    this.clock.restore()
+  })
+
+  it('should soil only those items that are ready', async() => {
+    this.clock = sandbox.useFakeTimers()
+
+    let nowTime = new Date().getTime()
+    let item1 = {
+      doc: {
+        _id: 'item1',
+        dirty_at: (new Date(nowTime - 1)).toISOString()
+      }
+    }
+    let item2 = {
+      doc: {
+        _id: 'item2',
+        dirty_at: (new Date(nowTime - 100000)).toISOString()
+      }
+    }
+
+    sandbox.stub(proc, '_dirtyAtItems').returns(testUtils.fakeIterator([
+      item1, item2
+    ]))
+    let stub = sandbox.stub(proc, '_soilItemLogError')
+
+    proc._soilPendingItems()
+
+    stub.callCount.should.eql(2)
+    stub.getCall(0).calledWith(item1)
+    stub.getCall(1).calledWith(item2)
+
+    this.clock.restore()
+  })
+
+  it('should requeue soiler if pending items remain', async() => {
+    this.clock = sandbox.useFakeTimers()
+
+    let nowTime = new Date().getTime()
+    let item1 = {
+      doc: {
+        _id: 'item1',
+        dirty_at: (new Date(nowTime - 1)).toISOString()
+      }
+    }
+    let item2 = {
+      doc: {
+        _id: 'item2',
+        dirty_at: (new Date(nowTime)).toISOString()
+      }
+    }
+    let item3 = {
+      doc: {
+        _id: 'item3',
+        dirty_at: (new Date(nowTime + 100)).toISOString()
+      }
+    }
+    let item4 = {
+      doc: {
+        _id: 'item4',
+        dirty_at: (new Date(nowTime + 1)).toISOString()
+      }
+    }
+    let item5 = {
+      doc: {
+        _id: 'item5',
+        dirty_at: (new Date(nowTime + 10)).toISOString()
+      }
+    }
+
+    sandbox.stub(proc, '_dirtyAtItems').returns(testUtils.fakeIterator([
+      item1, item2, item3, item4, item5
+    ]))
+    let soilStub = sandbox.stub(proc, '_soilItemLogError')
+    let queueStub = sandbox.stub(proc, '_queueSoiler')
+
+    await proc._soilPendingItems()
+
+    queueStub.callCount.should.eql(1)
+    queueStub.calledWith(1)
+
+    soilStub.callCount.should.eql(2)
+    soilStub.getCall(0).calledWith(item1)
+    soilStub.getCall(1).calledWith(item2)
+
+    this.clock.restore()
+  })
+
+  it('_soilItemLogError should handle error', async() => {
+    // Fake conflict error
+    proc._soilItem = sporks.promiseErrorFactory(conflictError)
+
+    ignoreGlobalErrors()
+
+    await proc._soilItemLogError()
+
+    // Make sure _onError was called
+    calls._onError[0][0].should.eql(conflictError)
+  })
+
+  it('should clear dirty_at and set dirty when soiling an item', async() => {
+    let stub = sandbox.stub(proc, '_updateItem')
+
+    await proc._soilItem({
+      _id: 'item'
+    })
+
+    stub.called.should.eql(true)
+    stub.getCall(0).args[0].should.eql({
+      _id: 'item', dirty_at: null, dirty: true
+    })
+    stub.getCall(0).args[1].should.eql(true)
+  })
+
+  it('should run soiler', async() => {
+    let dirtyAt = new Date().toISOString()
+    let dbNames = testDBNames()
+
+    await createItem({
+      source: utils.couchDBURL() + '/' + dbNames[0],
+      target: utils.couchDBURL() + '/' + dbNames[0],
+      dirty_at: dirtyAt,
+      dirty: false
+    })
+
+    await testUtils.createTestDBs(dbNames)
+
+    await proc.start()
+
+    await testUtils.waitFor(() => {
+      return calls._queueSoiler.length === 1 ? true : undefined
+    })
+
+    calls._queueSoiler[0][0].should.eql(dirtyAt)
+
+    await proc.stop()
+  })
+
+  it('_processAndUnlockIfError should set possibly_deleted_at on early DatabaseNotFoundError',
+    () => {
+      let theItem = { _id: 'foo' }
+
+      sandbox.stub(proc, '_process').rejects(new DatabaseNotFoundError('fakeDb'))
+      sandbox.stub(proc, '_isProbablyDeleted').returns(false)
+      let upsertStub = sandbox.stub(proc, '_upsertUnlockPossiblyDeleted')
+
+      return proc
+        ._processAndUnlockIfError(theItem)
+        .catch(err => {
+          err.should.instanceOf(DatabaseNotFoundError)
+        })
+        .then(() => {
+          sandbox.assert.calledWith(upsertStub, theItem)
+        })
+    })
 
   it('_processAndUnlockIfError should set just unlock on other errors', () => {
     let theItem = { _id: 'foo' }
@@ -867,7 +1060,7 @@ describe('process', () => {
   })
 
   it('should clear possibly_deleted_at in _unlockAndClean', async() => {
-    sandbox.stub(proc, '_setDirty')
+    sandbox.stub(proc, '_setClean')
     let stub = sandbox.stub(proc, '_updateItem')
 
     await proc._unlockAndClean({ _id: 'foo', possibly_deleted_at: new Date().toISOString() })

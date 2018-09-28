@@ -33,6 +33,8 @@ class Process extends events.EventEmitter {
     // The longest we will ignore not_found errors for change listeners
     //  before assuming it was deleted
     this._assumeDeletedAfterSeconds = utils.getOpt(opts, 'assumeDeletedAfterSeconds', 300)
+
+    this._soilerTime = null
   }
 
   _createDirtyAndUnLockedView() {
@@ -92,10 +94,29 @@ class Process extends events.EventEmitter {
     })
   }
 
+  _createDirtyAtView() {
+    return this._slouch.doc.createOrUpdate(this._spiegel._dbName, {
+      _id: '_design/dirty_at_' + this._type,
+      views: {
+        ['dirty_at_' + this._type]: {
+          map: [
+            'function(doc) {',
+            'if (doc.type === "' + this._type +
+              '" && doc.dirty === false && !doc.locked_at && !!doc.dirty_at) {',
+            'emit(doc._id, null);',
+            '}',
+            '}'
+          ].join(' ')
+        }
+      }
+    })
+  }
+
   async _createViews() {
     await this._createDirtyAndUnLockedView()
     await this._createLockedView()
     await this._createDirtyView()
+    await this._createDirtyAtView()
   }
 
   async _destroyViews() {
@@ -105,6 +126,7 @@ class Process extends events.EventEmitter {
     )
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/locked_' + this._type)
     await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_' + this._type)
+    await this._slouch.doc.getAndDestroy(this._spiegel._dbName, '_design/dirty_at_' + this._type)
   }
 
   _get(id) {
@@ -190,7 +212,17 @@ class Process extends events.EventEmitter {
     return this._updateItem(unlockedItem, true)
   }
 
-  _setDirty(item, leaveDirty) {
+  _setDirty(item) {
+    item.dirty = true
+    item.dirty_at = null
+  }
+
+  _setDirtyAt(item, dirtyAt) {
+    item.dirty_at = dirtyAt
+    item.dirty = false
+  }
+
+  _setClean(item, leaveDirty) {
     // Leave dirty? This can occur when we want to unlock without cleaning as we still have more
     // processing to do for this item
     if (!leaveDirty) {
@@ -199,7 +231,7 @@ class Process extends events.EventEmitter {
   }
 
   async _unlockAndClean(item, leaveDirty) {
-    this._setDirty(item, leaveDirty)
+    this._setClean(item, leaveDirty)
 
     item.locked_at = null
     item.possibly_deleted_at = null
@@ -432,9 +464,12 @@ class Process extends events.EventEmitter {
     this._listen(lastSeq)
 
     this._startUnstaller()
+    this._listenToDirtyAtChanges()
   }
 
   async stop() {
+    this._stopSoiler()
+    this._stopListeningToDirtyAtChanges()
     this._stopUnstaller()
 
     if (this._iterator) {
@@ -506,6 +541,74 @@ class Process extends events.EventEmitter {
 
   _stopUnstaller() {
     clearInterval(this._unstaller)
+  }
+
+  _dirtyAtItems(opts = {}) {
+    return this._slouch.db.view(
+      this._spiegel._dbName,
+      '_design/dirty_at_' + this._type,
+      'dirty_at_' + this._type,
+      Object.assign({ include_docs: true }, opts)
+    )
+  }
+
+  async _soilItem(item) {
+    let soiledItem = { _id: item._id, dirty_at: null, dirty: true }
+    return this._updateItem(soiledItem, true)
+  }
+
+  async _soilItemLogError(item) {
+    try {
+      await this._soilItem(item)
+    } catch (err) {
+      // Unknown error
+      this._onError(err)
+    }
+  }
+
+  async _soilPendingItems() {
+    let iterator = this._dirtyAtItems()
+    let minUnprocessedTimestamp = null
+    let currentTime = (new Date()).toISOString()
+    await iterator.each(item => {
+      if (item.doc.dirty_at <= currentTime) {
+        return this._soilItemLogError(item.doc)
+      } else if (!minUnprocessedTimestamp || minUnprocessedTimestamp > item.doc.dirty_at) {
+        minUnprocessedTimestamp = item.doc.dirty_at
+      }
+      return null
+    }, this._throttler)
+    if (minUnprocessedTimestamp) {
+      this._queueSoiler(minUnprocessedTimestamp)
+    }
+  }
+
+  _queueSoiler(forTime) {
+    if (!this._soilerTime || forTime < this._soilerTime) {
+      this._stopSoiler()
+      this._soilerTime = forTime
+      let delay = new Date(forTime).getTime() - new Date().getTime()
+      this._soiler = setTimeout(() => {
+        this._soilerTime = null
+        this._soilPendingItems()
+      }, delay | 0)
+    }
+  }
+
+  _stopSoiler() {
+    clearTimeout(this._soiler)
+    this._soilerTime = null
+  }
+
+  _listenToDirtyAtChanges() {
+    this._dirtyAtIterator = this._dirtyAtItems({ feed: 'continuous' })
+    this._dirtyAtIterator.each(change => {
+      this._queueSoiler(change.doc.dirty_at)
+    })
+  }
+
+  _stopListeningToDirtyAtChanges() {
+    this._dirtyAtIterator && this._dirtyAtIterator.abort()
   }
 }
 

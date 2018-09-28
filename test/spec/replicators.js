@@ -2,6 +2,7 @@
 
 const Replicators = require('../../src/replicators')
 const testUtils = require('../utils')
+const sandbox = require('sinon').createSandbox()
 
 describe('replicators', () => {
   let replicators = null
@@ -38,6 +39,8 @@ describe('replicators', () => {
   })
 
   afterEach(async() => {
+    sandbox.restore()
+
     await Promise.all(
       replicatorIds.map(async id => {
         await testUtils.spiegel._slouch.doc.getAndDestroy(testUtils.spiegel._dbName, id)
@@ -136,5 +139,57 @@ describe('replicators', () => {
       }
     ])
     dbNames.should.eql(['db1'])
+  })
+
+  it('should pass same date on recursive call to dirtyIfCleanOrLocked', async() => {
+    sandbox.stub(replicators, '_attemptToDirtyIfCleanOrLocked')
+      .onFirstCall().returns(['fred'])
+      .onSecondCall().returns([])
+
+    let spy = sandbox.spy(replicators, 'dirtyIfCleanOrLocked')
+
+    await replicators.dirtyIfCleanOrLocked(['fred'], 'passedInDate')
+
+    spy.callCount.should.eql(2)
+    spy.getCall(1).args[1].should.eql('passedInDate')
+  })
+
+  it('should queue soiler for immediate update after dirtying', async() => {
+    sandbox.stub(replicators, '_attemptToDirtyIfCleanOrLocked')
+      .onFirstCall().returns([])
+
+    let stub = sandbox.stub(replicators, '_queueSoiler')
+
+    await replicators.dirtyIfCleanOrLocked(['fred'], new Date())
+    stub.callCount.should.eql(1)
+    stub.getCall(0).args[0].should.eql(0)
+  })
+
+  it('should set dirtyAt only if dirty_after_milliseconds set', async() => {
+    let dirtyAtStub = sandbox.stub(replicators, '_setDirtyAt')
+    let dirtyStub = sandbox.stub(replicators, '_setDirty')
+    sandbox.stub(replicators, '_setUpdatedAt')
+    sandbox.stub(replicators._slouch.doc, 'bulkCreateOrUpdate')
+
+    this.clock = sandbox.useFakeTimers()
+
+    let expectedDate = new Date(new Date().getTime() + 200).toISOString()
+
+    let item = { id: 'fred', dirty_after_milliseconds: 200 }
+    await replicators._dirty([item], new Date())
+    dirtyAtStub.callCount.should.eql(1)
+    dirtyStub.callCount.should.eql(0)
+    dirtyAtStub.getCall(0).args[0].should.eql(item)
+    dirtyAtStub.getCall(0).args[1].should.eql(expectedDate)
+
+    dirtyAtStub.reset()
+    dirtyStub.reset()
+
+    item = { id: 'barney' }
+    await replicators._dirty([item], new Date())
+
+    dirtyAtStub.callCount.should.eql(0)
+    dirtyStub.callCount.should.eql(1)
+    dirtyStub.getCall(0).args[0].should.eql(item)
   })
 })
