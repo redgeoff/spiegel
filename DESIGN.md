@@ -88,7 +88,7 @@ Notes:
 - If an API request fails with a non-200 status code, it will be retried until it succeeds
 - If an API request is abruptly terminated, e.g. due to a change-listener process being restarted, the change-listener will eventually be considered stalled and will be retried.
 - on_change docs are not design docs, therefore the id of an on_change doc can be anything that doesn't begin with `_design/`
-- Specifying null instead of a '<reg-ex>' in the 'if' clause means 'property is null or missing'
+- Specifying `null` instead of a `'<reg-ex>'` in the `if` clause means _property is null or missing_
 
 ## Spiegel Internal Docs
 
