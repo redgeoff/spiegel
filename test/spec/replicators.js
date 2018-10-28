@@ -142,9 +142,12 @@ describe('replicators', () => {
   })
 
   it('should pass same date on recursive call to dirtyIfCleanOrLocked', async() => {
-    sandbox.stub(replicators, '_attemptToDirtyIfCleanOrLocked')
-      .onFirstCall().returns(['fred'])
-      .onSecondCall().returns([])
+    sandbox
+      .stub(replicators, '_attemptToDirtyIfCleanOrLocked')
+      .onFirstCall()
+      .returns(['fred'])
+      .onSecondCall()
+      .returns([])
 
     let spy = sandbox.spy(replicators, 'dirtyIfCleanOrLocked')
 
@@ -155,8 +158,10 @@ describe('replicators', () => {
   })
 
   it('should queue soiler for immediate update after dirtying', async() => {
-    sandbox.stub(replicators, '_attemptToDirtyIfCleanOrLocked')
-      .onFirstCall().returns([])
+    sandbox
+      .stub(replicators, '_attemptToDirtyIfCleanOrLocked')
+      .onFirstCall()
+      .returns([])
 
     let stub = sandbox.stub(replicators, '_queueSoiler')
 

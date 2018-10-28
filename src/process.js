@@ -101,7 +101,8 @@ class Process extends events.EventEmitter {
         ['dirty_at_' + this._type]: {
           map: [
             'function(doc) {',
-            'if (doc.type === "' + this._type +
+            'if (doc.type === "' +
+              this._type +
               '" && doc.dirty === false && !doc.locked_at && !!doc.dirty_at) {',
             'emit(doc._id, null);',
             '}',
@@ -569,7 +570,7 @@ class Process extends events.EventEmitter {
   async _soilPendingItems() {
     let iterator = this._dirtyAtItems()
     let minUnprocessedTimestamp = null
-    let currentTime = (new Date()).toISOString()
+    let currentTime = new Date().toISOString()
     await iterator.each(item => {
       if (item.doc.dirty_at <= currentTime) {
         return this._soilItemLogError(item.doc)

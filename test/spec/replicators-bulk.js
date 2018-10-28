@@ -165,14 +165,10 @@ describe('replicators-bulk', () => {
       return reps
     }
 
-    await replicators.dirtyIfCleanOrLocked([
-      'test_db1',
-      'test_db2',
-      'test_db4',
-      'test_db5',
-      'test_db6',
-      'test_db7'
-    ], new Date())
+    await replicators.dirtyIfCleanOrLocked(
+      ['test_db1', 'test_db2', 'test_db4', 'test_db5', 'test_db6', 'test_db7'],
+      new Date()
+    )
 
     // 1st group of dirties
     let dbNames1 = dirties[0].map(doc => replicators._toDBName(doc.source))

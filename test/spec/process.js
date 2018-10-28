@@ -862,19 +862,17 @@ describe('process', () => {
     let item1 = {
       doc: {
         _id: 'item1',
-        dirty_at: (new Date(nowTime - 1)).toISOString()
+        dirty_at: new Date(nowTime - 1).toISOString()
       }
     }
     let item2 = {
       doc: {
         _id: 'item2',
-        dirty_at: (new Date(nowTime - 100000)).toISOString()
+        dirty_at: new Date(nowTime - 100000).toISOString()
       }
     }
 
-    sandbox.stub(proc, '_dirtyAtItems').returns(testUtils.fakeIterator([
-      item1, item2
-    ]))
+    sandbox.stub(proc, '_dirtyAtItems').returns(testUtils.fakeIterator([item1, item2]))
     let stub = sandbox.stub(proc, '_soilItemLogError')
 
     proc._soilPendingItems()
@@ -893,37 +891,37 @@ describe('process', () => {
     let item1 = {
       doc: {
         _id: 'item1',
-        dirty_at: (new Date(nowTime - 1)).toISOString()
+        dirty_at: new Date(nowTime - 1).toISOString()
       }
     }
     let item2 = {
       doc: {
         _id: 'item2',
-        dirty_at: (new Date(nowTime)).toISOString()
+        dirty_at: new Date(nowTime).toISOString()
       }
     }
     let item3 = {
       doc: {
         _id: 'item3',
-        dirty_at: (new Date(nowTime + 100)).toISOString()
+        dirty_at: new Date(nowTime + 100).toISOString()
       }
     }
     let item4 = {
       doc: {
         _id: 'item4',
-        dirty_at: (new Date(nowTime + 1)).toISOString()
+        dirty_at: new Date(nowTime + 1).toISOString()
       }
     }
     let item5 = {
       doc: {
         _id: 'item5',
-        dirty_at: (new Date(nowTime + 10)).toISOString()
+        dirty_at: new Date(nowTime + 10).toISOString()
       }
     }
 
-    sandbox.stub(proc, '_dirtyAtItems').returns(testUtils.fakeIterator([
-      item1, item2, item3, item4, item5
-    ]))
+    sandbox
+      .stub(proc, '_dirtyAtItems')
+      .returns(testUtils.fakeIterator([item1, item2, item3, item4, item5]))
     let soilStub = sandbox.stub(proc, '_soilItemLogError')
     let queueStub = sandbox.stub(proc, '_queueSoiler')
 
@@ -960,7 +958,9 @@ describe('process', () => {
 
     stub.called.should.eql(true)
     stub.getCall(0).args[0].should.eql({
-      _id: 'item', dirty_at: null, dirty: true
+      _id: 'item',
+      dirty_at: null,
+      dirty: true
     })
     stub.getCall(0).args[1].should.eql(true)
   })
@@ -989,23 +989,22 @@ describe('process', () => {
     await proc.stop()
   })
 
-  it('_processAndUnlockIfError should set possibly_deleted_at on early DatabaseNotFoundError',
-    () => {
-      let theItem = { _id: 'foo' }
+  it('_processAndUnlockIfError set possibly_deleted_at on early DatabaseNotFoundError', () => {
+    let theItem = { _id: 'foo' }
 
-      sandbox.stub(proc, '_process').rejects(new DatabaseNotFoundError('fakeDb'))
-      sandbox.stub(proc, '_isProbablyDeleted').returns(false)
-      let upsertStub = sandbox.stub(proc, '_upsertUnlockPossiblyDeleted')
+    sandbox.stub(proc, '_process').rejects(new DatabaseNotFoundError('fakeDb'))
+    sandbox.stub(proc, '_isProbablyDeleted').returns(false)
+    let upsertStub = sandbox.stub(proc, '_upsertUnlockPossiblyDeleted')
 
-      return proc
-        ._processAndUnlockIfError(theItem)
-        .catch(err => {
-          err.should.instanceOf(DatabaseNotFoundError)
-        })
-        .then(() => {
-          sandbox.assert.calledWith(upsertStub, theItem)
-        })
-    })
+    return proc
+      ._processAndUnlockIfError(theItem)
+      .catch(err => {
+        err.should.instanceOf(DatabaseNotFoundError)
+      })
+      .then(() => {
+        sandbox.assert.calledWith(upsertStub, theItem)
+      })
+  })
 
   it('_processAndUnlockIfError should set just unlock on other errors', () => {
     let theItem = { _id: 'foo' }

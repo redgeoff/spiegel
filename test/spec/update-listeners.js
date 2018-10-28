@@ -405,8 +405,7 @@ describe('update-listeners', () => {
     this.clock.tick(200000)
     let now = new Date()
 
-    let stub = sandbox.stub(testUtils.spiegel._replicators, 'dirtyIfCleanOrLocked')
-      .resolves()
+    let stub = sandbox.stub(testUtils.spiegel._replicators, 'dirtyIfCleanOrLocked').resolves()
 
     await listeners._replicatorsDirtyIfCleanOrLocked(['fred', 'barney'])
 
