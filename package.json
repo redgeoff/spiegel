@@ -24,8 +24,8 @@
   "scripts": {
     "beautify": "prettier-eslint --write \"src/**/*.js\" \"test/**/*.js\"",
     "lint": "eslint test src",
-    "node-test": "mocha",
-    "node-full-test": "nyc mocha",
+    "node-test": "mocha --exit",
+    "node-full-test": "nyc mocha --exit",
     "test": "npm run lint && npm run node-full-test",
     "reset-db": "./scripts/reset-db.js",
     "benchmark-pouch-query": "node_modules/mocha/bin/_mocha test/benchmark/pouch-query.js",
