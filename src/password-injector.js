@@ -15,7 +15,14 @@ class PasswordInjector {
       if (this._passwords[parts.hostname] && this._passwords[parts.hostname][parts.username]) {
         let password = this._passwords[parts.hostname][parts.username]
         return (
-          parts.protocol + '//' + parts.username + ':' + password + '@' + parts.host + parts.pathname
+          parts.protocol +
+          '//' +
+          parts.username +
+          ':' +
+          password +
+          '@' +
+          parts.host +
+          parts.pathname
         )
       }
     }

@@ -91,8 +91,9 @@ class Replicators extends Process {
   _dirty(replicators, dirtyDate) {
     replicators.forEach(replicator => {
       if (replicator.dirty_after_milliseconds > 0) {
-        let dirtyTime = new Date(dirtyDate.getTime() +
-          replicator.dirty_after_milliseconds).toISOString()
+        let dirtyTime = new Date(
+          dirtyDate.getTime() + replicator.dirty_after_milliseconds
+        ).toISOString()
         this._setDirtyAt(replicator, dirtyTime)
       } else {
         this._setDirty(replicator)

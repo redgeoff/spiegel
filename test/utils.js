@@ -108,17 +108,18 @@ class Utils {
   fakeIterator(elements) {
     return {
       elements,
-      each: f => new Promise((resolve, reject) => {
-        for (let i = 0; i < elements.length; i++) {
-          try {
-            f(elements[i])
-          } catch (err) {
-            reject(err)
-            return
+      each: f =>
+        new Promise((resolve, reject) => {
+          for (let i = 0; i < elements.length; i++) {
+            try {
+              f(elements[i])
+            } catch (err) {
+              reject(err)
+              return
+            }
           }
-        }
-        resolve()
-      })
+          resolve()
+        })
     }
   }
 
