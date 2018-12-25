@@ -54,6 +54,14 @@ class ChangeProcessor {
             params[name] = change.doc
             break
 
+          case '$change.id':
+            params[name] = change.doc._id
+            break
+
+          case '$change.rev':
+            params[name] = change.doc._rev
+            break
+
           case '$seq':
             params[name] = change.seq
             break
