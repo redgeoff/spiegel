@@ -42,12 +42,10 @@ class ChangeProcessor {
     this._passwordInjector = new PasswordInjector(utils.getOpt(opts, 'passwords'))
   }
 
-  _buildParams(change, onChange, dbName) {
-    let params = {}
-
-    if (onChange.params) {
-      sporks.each(onChange.params, (value, name) => {
-        switch (value) {
+  _translateVars(change, inParams, params, dbName) {
+    if (inParams) {
+      sporks.each(inParams, (value, name) => {
+        switch (/^(\$?)\{?([^}]*)\}?$/.exec(value).slice(1).join('')) {
           case '$db_name':
             params[name] = dbName
             break
@@ -65,8 +63,21 @@ class ChangeProcessor {
         }
       })
     }
-
     return params
+  }
+
+  _buildParams(change, onChange, dbName) {
+    let params = {}
+
+    return this._translateVars(change, onChange.params, params, dbName)
+  }
+
+  _buildUrl(change, onChange, dbName) {
+    let params = [] 
+
+    if (onChange.url)
+      return this._translateVars(change, onChange.url.split(/(?=\$\{)|(?<=\})/), params, dbName).join('')
+    return onChange.url
   }
 
   _getMethod(onChange) {
@@ -142,7 +153,7 @@ class ChangeProcessor {
     let method = this._getMethod(onChange)
 
     let opts = {
-      url: this._addPassword(onChange.url),
+      url: this._addPassword(this._buildUrl(change, onChange, dbName)),
       method: method
     }
 
