@@ -83,6 +83,8 @@ describe('change-processor', () => {
       params: {
         foo: 'bar',
         change: '$change',
+        changeid: '$change.id',
+        changerev: '$change.rev',
         db_name: '$db_name',
         seq: '$seq'
       }
@@ -93,6 +95,8 @@ describe('change-processor', () => {
     params.should.eql({
       foo: 'bar',
       change: change.doc,
+      changeid: change.doc._id,
+      changerev: change.doc._rev,
       db_name: 'test_db1',
       seq: change.seq
     })
@@ -110,6 +114,17 @@ describe('change-processor', () => {
     changeProcessor
       ._addPassword('https://user@example.com/foo')
       .should.eql('https://user:password@example.com/foo')
+  })
+
+  it('should build url parameters', () => {
+    fakePasswords()
+    let onChange = {
+	    url: 'https://user@example.com/api/monitor_${db_name}/${seq}/${change.id}-${change.rev}'
+    }
+
+    let url = changeProcessor._addPassword(changeProcessor._buildUrl(change, onChange, 'test_db1'))
+
+    url.should.eql(`https://user:password@example.com/api/monitor_test_db1/${change.seq}/${change.doc._id}-${change.doc._rev}`)
   })
 
   it('should set params', () => {
