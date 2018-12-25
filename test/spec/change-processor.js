@@ -119,12 +119,14 @@ describe('change-processor', () => {
   it('should build url parameters', () => {
     fakePasswords()
     let onChange = {
-	    url: 'https://user@example.com/api/monitor_${db_name}/${seq}/${change.id}-${change.rev}'
+      /* eslint no-template-curly-in-string: "off" */
+      url: 'https://user@example.com/mon_${db_name}/${seq}/${change.id}-${change.rev}'
     }
 
     let url = changeProcessor._addPassword(changeProcessor._buildUrl(change, onChange, 'test_db1'))
 
-    url.should.eql(`https://user:password@example.com/api/monitor_test_db1/${change.seq}/${change.doc._id}-${change.doc._rev}`)
+    url.should.eql(`https://user:password@example.com/mon_test_db1/${change.seq}/${
+      change.doc._id}-${change.doc._rev}`)
   })
 
   it('should set params', () => {
