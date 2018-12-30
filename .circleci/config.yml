@@ -5,7 +5,8 @@ jobs:
     docker:
       # Leveldown currently requires node 8
       - image: circleci/node:8-stretch-browsers
-      - image: couchdb
+      # TODO: use latest CouchDB after https://github.com/apache/couchdb/issues/1810 is fixed
+      - image: couchdb:2.2
         environment:
         - COUCHDB_USER: admin
         - COUCHDB_PASSWORD: admin
