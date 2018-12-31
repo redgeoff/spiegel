@@ -82,9 +82,9 @@ describe('change-processor', () => {
     let onChange = {
       params: {
         foo: '{{bar}}',
-	badvar: '$unknownvar',
+        badvar: '$unknownvar',
         change: '${change}',
-	nottokenized: '${db_name}-${seq}',
+        nottokenized: '${db_name}-${seq}',
         changeid: '$change.id',
         changerev: '$change.rev',
         db_name: '$db_name',
