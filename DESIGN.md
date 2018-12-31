@@ -68,13 +68,17 @@ Notes:
     ...
   },
 
-  url: '<api-url>', // e.g. https://user@api.example.com. Passwords maintained via
-                    // passwords config
+  url: '<api-url>', // e.g. https://user@api.example.com/${db_name}
+                    // where:
+                    //   Passwords are maintained via passwords config
+                    //   ${variable} is supported for each $variable described in the params section
 
   // Parameters passed to API call
   params: {
     foo: 'bar',
     change: '$change'   // can use $change for change doc
+    change_id: '$change.id'   // can use $change.id for change doc's _id
+    change_rev: '$change.rev'   // can use $change.rev for change doc's _rev
     db_name: '$db_name' // $db_name is the name of matching DB
   },
 
