@@ -6,6 +6,8 @@ const sporks = require('sporks')
 const PasswordInjector = require('./password-injector')
 const log = require('./log')
 const utils = require('./utils')
+const URL_PARSE_RE = /(?=\$\{)|(?<=\})/
+const BRACE_FILTER_RE = /^(\$)\{(.*)\}$/
 
 // Example:
 // {
@@ -42,18 +44,24 @@ class ChangeProcessor {
     this._passwordInjector = new PasswordInjector(utils.getOpt(opts, 'passwords'))
   }
 
-  _buildParams(change, onChange, dbName) {
-    let params = {}
-
-    if (onChange.params) {
-      sporks.each(onChange.params, (value, name) => {
-        switch (value) {
+  _translateVars(change, inParams, params, dbName) {
+    if (inParams) {
+      sporks.each(inParams, (value, name) => {
+        switch (value.replace(BRACE_FILTER_RE, '$1$2')) {
           case '$db_name':
             params[name] = dbName
             break
 
           case '$change':
             params[name] = change.doc
+            break
+
+          case '$change.id':
+            params[name] = change.doc._id
+            break
+
+          case '$change.rev':
+            params[name] = change.doc._rev
             break
 
           case '$seq':
@@ -65,8 +73,22 @@ class ChangeProcessor {
         }
       })
     }
-
     return params
+  }
+
+  _buildParams(change, onChange, dbName) {
+    let params = {}
+
+    return this._translateVars(change, onChange.params, params, dbName)
+  }
+
+  _buildUrl(change, onChange, dbName) {
+    let params = []
+
+    if (!onChange.url) {
+      return onChange.url
+    }
+    return this._translateVars(change, onChange.url.split(URL_PARSE_RE), params, dbName).join('')
   }
 
   _getMethod(onChange) {
@@ -142,7 +164,7 @@ class ChangeProcessor {
     let method = this._getMethod(onChange)
 
     let opts = {
-      url: this._addPassword(onChange.url),
+      url: this._addPassword(this._buildUrl(change, onChange, dbName)),
       method: method
     }
 
