@@ -7,7 +7,7 @@ const PasswordInjector = require('./password-injector')
 const log = require('./log')
 const utils = require('./utils')
 const URL_PARSE_RE = /(?=\$\{)|(?<=\})/
-const VAR_PARSE_RE = /^(\$?)\{?([^}]*)\}?$/
+const BRACE_FILTER_RE = /^(\$)\{(.*)\}$/
 
 // Example:
 // {
@@ -47,7 +47,7 @@ class ChangeProcessor {
   _translateVars(change, inParams, params, dbName) {
     if (inParams) {
       sporks.each(inParams, (value, name) => {
-        switch (VAR_PARSE_RE.exec(value).slice(1).join('')) {
+        switch (value.replace(BRACE_FILTER_RE, '$1$2')) {
           case '$db_name':
             params[name] = dbName
             break

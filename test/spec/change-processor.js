@@ -81,8 +81,10 @@ describe('change-processor', () => {
   it('should build params', () => {
     let onChange = {
       params: {
-        foo: 'bar',
-        change: '$change',
+        foo: '{{bar}}',
+	badvar: '$unknownvar',
+        change: '${change}',
+	nottokenized: '${db_name}-${seq}',
         changeid: '$change.id',
         changerev: '$change.rev',
         db_name: '$db_name',
@@ -93,8 +95,10 @@ describe('change-processor', () => {
     let params = changeProcessor._buildParams(change, onChange, 'test_db1')
 
     params.should.eql({
-      foo: 'bar',
+      foo: '{{bar}}',
+      badvar: '$unknownvar',
       change: change.doc,
+      nottokenized: '${db_name}-${seq}',
       changeid: change.doc._id,
       changerev: change.doc._rev,
       db_name: 'test_db1',
