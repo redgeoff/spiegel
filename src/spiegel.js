@@ -79,8 +79,7 @@ class Spiegel {
         break
 
       default:
-        log.fatal('unknown type: ' + this._type + ' v' + pkg.version)
-        break
+        throw new Error('unknown type: ' + this._type)
     }
   }
 
