@@ -128,7 +128,7 @@ describe('spiegel', () => {
     await shouldStartAndStop('uninstall')
   })
 
-  it('should start and stop invalidcommand', async() => {
+  it('should throw for start invalidcommand', async() => {
     let err = null
     try {
       await shouldStartAndStop('invalidcommand')
