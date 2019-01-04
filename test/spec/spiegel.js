@@ -129,13 +129,11 @@ describe('spiegel', () => {
   })
 
   it('should throw for start invalidcommand', async() => {
-    let err = null
-    try {
-      await shouldStartAndStop('invalidcommand')
-    } catch (_err) {
-      err = _err
-    }
-
-    testUtils.shouldNotEqual(err, null)
+    await sporks.shouldThrow(
+      () => {
+        return shouldStartAndStop('invalidcommand')
+      },
+      { name: 'Error' }
+    )
   })
 })
