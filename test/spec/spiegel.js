@@ -127,4 +127,13 @@ describe('spiegel', () => {
   it('should start and stop uninstall', async() => {
     await shouldStartAndStop('uninstall')
   })
+
+  it('should throw for start invalidcommand', async() => {
+    await sporks.shouldThrow(
+      () => {
+        return shouldStartAndStop('invalidcommand')
+      },
+      { name: 'Error' }
+    )
+  })
 })

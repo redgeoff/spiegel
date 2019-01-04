@@ -77,6 +77,9 @@ class Spiegel {
       case 'uninstall':
         await this.uninstall()
         break
+
+      default:
+        throw new Error('unknown type: ' + this._type)
     }
   }
 
