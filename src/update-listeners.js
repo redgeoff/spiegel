@@ -4,6 +4,7 @@ const Globals = require('./globals')
 const log = require('./log')
 const sporks = require('sporks')
 const utils = require('./utils')
+const urlsafe = require('querystring').escape
 const Synchronizer = require('squadron').Synchronizer
 
 class UpdateListeners {
@@ -87,7 +88,8 @@ class UpdateListeners {
   }
 
   _toDBName(update) {
-    return /:(.*)$/.exec(update.id)[1]
+    //return URL safe DB name to avoid issues with slashes in db names
+    return urlsafe(/:(.*)$/.exec(update.id)[1])
   }
 
   _addToUpdatedDBs(update) {
