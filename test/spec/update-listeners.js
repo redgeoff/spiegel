@@ -105,7 +105,7 @@ describe('update-listeners', () => {
   }
 
   const createTestDBs = async() => {
-    await testUtils.createTestDBs(['test_db1' + suffix, 'test_db3' + suffix])
+    await testUtils.createTestDBs(['test_db1' + suffix, 'test_db3' + suffix, 'account/1/2'])
   }
 
   const fakeOnChanges = async() => {
@@ -301,6 +301,23 @@ describe('update-listeners', () => {
     dirtyChangeListeners.should.eql({
       test_db1: true
     })
+  })
+
+  it('should handle dbnames with slashes', async() => {
+    await createListeners()
+
+    let DBNameWithSlashes = {}
+    DBNameWithSlashes = listeners._toDBName({
+      id: 'updated:account/09/62/c39dc899db4aa6f4596339b955c8'
+    })
+
+    let DBNameWithoutSlashes = {}
+    DBNameWithoutSlashes = listeners._toDBName({
+      id: 'updated:acdc'
+    })
+
+    DBNameWithSlashes.should.eql('account%2F09%2F62%2Fc39dc899db4aa6f4596339b955c8')
+    DBNameWithoutSlashes.should.eql('acdc')
   })
 
   it('should save lastSeq', async() => {
