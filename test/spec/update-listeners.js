@@ -303,6 +303,21 @@ describe('update-listeners', () => {
     })
   })
 
+  it('should handle dbnames with slashes', async() => {
+    let dbNameWithSlashes = {}
+    dbNameWithSlashes = listeners._toDBName({
+      id: 'updated:account/09/62/c39dc899db4aa6f4596339b955c8'
+    })
+
+    let dbNameWithoutSlashes = {}
+    dbNameWithoutSlashes = listeners._toDBName({
+      id: 'updated:acdc'
+    })
+
+    dbNameWithSlashes.should.eql('account%2F09%2F62%2Fc39dc899db4aa6f4596339b955c8')
+    dbNameWithoutSlashes.should.eql('acdc')
+  })
+
   it('should save lastSeq', async() => {
     await createListeners(
       { batchSize: 1, batchTimeout: BATCH_TIMEOUT, saveSeqAfterSeconds: 0 },
