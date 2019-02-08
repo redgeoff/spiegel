@@ -308,6 +308,51 @@ describe('change-processor', () => {
     response[0].body.should.eql('Hello World')
   })
 
+  it('should request with follow of GET redirects', async() => {
+    unfake()
+
+    let response = await changeProcessor._request({
+      url: 'http://user:secret@localhost:3000/redirect'
+    })
+
+    response[0].statusCode.should.eql(200)
+  })
+
+  it('should request with 2xx statusCodes', async() => {
+    unfake()
+
+    let response = await changeProcessor._request({
+      url: 'http://user:secret@localhost:3000/new',
+      method: 'PUT'
+    })
+
+    response[0].statusCode.should.eql(201)
+  })
+
+  it('should request and not follow non-GET redirects', async() => {
+    unfake()
+
+    let response = await changeProcessor._request({
+      url: 'http://user:secret@localhost:3000/redirect',
+      method: 'PUT'
+    })
+
+    response[0].statusCode.should.eql(302)
+  })
+
+  it('should follow non-GET redirects with followAllRedirects', async() => {
+    unfake()
+
+    let response = await changeProcessor._request({
+      url: 'http://user:secret@localhost:3000/redirect',
+      followAllRedirects: true,
+      followOriginalHttpMethod: true,
+      method: 'PUT'
+    })
+
+    response[0].statusCode.should.eql(201)
+  })
+
   it('request should handle status codes', async() => {
     unfake()
 
