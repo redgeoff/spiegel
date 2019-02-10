@@ -337,7 +337,7 @@ describe('change-processor', () => {
       method: 'PUT'
     })
 
-    response[0].statusCode.should.eql(302)
+    response[0].statusCode.should.eql(307)
   })
 
   it('should follow non-GET redirects with followAllRedirects', async() => {
@@ -346,7 +346,6 @@ describe('change-processor', () => {
     let response = await changeProcessor._request({
       url: 'http://user:secret@localhost:3000/redirect',
       followAllRedirects: true,
-      followOriginalHttpMethod: true,
       method: 'PUT'
     })
 
