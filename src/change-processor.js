@@ -119,7 +119,7 @@ class ChangeProcessor {
 
     // Status code error?
     if (response && response[0] &&
-      (response[0].statusCode >= 400 || response[0].statusCode < 200)) {
+      (response[0].statusCode >= 300 || response[0].statusCode < 200)) {
       throw new Error(response[0].body)
     }
 

@@ -41,6 +41,7 @@ class Server {
       route.put('/redirect', async ctx => {
         this.numRequests++
         ctx.redirect('/new')
+        ctx.body = 'redirecting put to /new'
         ctx.status = 307
       })
     )

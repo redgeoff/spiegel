@@ -329,15 +329,20 @@ describe('change-processor', () => {
     response[0].statusCode.should.eql(201)
   })
 
-  it('should request and not follow non-GET redirects', async() => {
+  it('should handle request and not follow non-GET redirects', async() => {
     unfake()
 
-    let response = await changeProcessor._request({
-      url: 'http://user:secret@localhost:3000/redirect',
-      method: 'PUT'
-    })
+    let err = null
+    try {
+      await changeProcessor._request({
+        url: 'http://user:secret@localhost:3000/redirect',
+        method: 'PUT'
+      })
+    } catch (_err) {
+      err = _err
+    }
 
-    response[0].statusCode.should.eql(307)
+    err.message.should.eql('redirecting put to /new')
   })
 
   it('should follow non-GET redirects with followAllRedirects', async() => {
