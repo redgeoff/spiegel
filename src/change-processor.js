@@ -118,7 +118,8 @@ class ChangeProcessor {
     let response = await this._req.apply(this._req, arguments)
 
     // Status code error?
-    if (response && response[0] && response[0].statusCode !== 200) {
+    if (response && response[0] &&
+      (response[0].statusCode >= 300 || response[0].statusCode < 200)) {
       throw new Error(response[0].body)
     }
 

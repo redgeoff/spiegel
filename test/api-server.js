@@ -23,6 +23,30 @@ class Server {
     )
 
     app.use(
+      route.get('/redirect', async ctx => {
+        this.numRequests++
+        ctx.redirect('/foo')
+      })
+    )
+
+    app.use(
+      route.put('/new', async ctx => {
+        this.numRequests++
+        ctx.body = 'created a Hello World'
+        ctx.status = 201
+      })
+    )
+
+    app.use(
+      route.put('/redirect', async ctx => {
+        this.numRequests++
+        ctx.redirect('/new')
+        ctx.body = 'redirecting put to /new'
+        ctx.status = 307
+      })
+    )
+
+    app.use(
       route.get('/womp-womp', async ctx => {
         this.numRequests++
         // This will return an Error (400). We use a 400 error so that nothing is logged to stdout
