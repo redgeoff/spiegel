@@ -58,7 +58,7 @@
     "koa-basic-auth": "^3.0.0",
     "koa-body": "^4.0.5",
     "koa-route": "^3.2.0",
-    "mocha": "^5.2.0",
+    "mocha": "^6.0.0",
     "nyc": "^13.2.0",
     "pouchdb-find": "^6.4.3",
     "prettier-eslint-cli": "^4.7.1",
