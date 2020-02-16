@@ -36,7 +36,7 @@
     "couch-slouch": "^1.0.5",
     "fs-extra": "^8.0.0",
     "pouchdb": "^7.2.1",
-    "pouchdb-adapter-memory": "^7.0.0",
+    "pouchdb-adapter-memory": "^7.2.1",
     "request": "^2.88.0",
     "sporks": "^1.0.1",
     "squadron": "0.0.4",
