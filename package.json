@@ -60,7 +60,7 @@
     "koa-route": "^3.2.0",
     "mocha": "^6.0.0",
     "nyc": "^15.0.0",
-    "pouchdb-find": "^6.4.3",
+    "pouchdb-find": "^7.2.1",
     "prettier-eslint-cli": "^5.0.0",
     "sinon": "^8.0.0",
     "wait-on": "^4.0.0"
