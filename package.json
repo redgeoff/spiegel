@@ -35,7 +35,7 @@
     "bunyan": "^1.8.12",
     "couch-slouch": "^1.0.5",
     "fs-extra": "^8.0.0",
-    "pouchdb": "^7.0.0",
+    "pouchdb": "^7.2.1",
     "pouchdb-adapter-memory": "^7.0.0",
     "request": "^2.88.0",
     "sporks": "^1.0.1",
