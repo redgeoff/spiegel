@@ -63,7 +63,7 @@
     "pouchdb-find": "^6.4.3",
     "prettier-eslint-cli": "^5.0.0",
     "sinon": "^9.0.0",
-    "wait-on": "^4.0.0"
+    "wait-on": "^5.0.0"
   },
   "greenkeeper": {
     "ignore": [
