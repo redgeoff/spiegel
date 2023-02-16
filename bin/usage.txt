@@ -101,4 +101,30 @@ Options:
                             Applies to: change-listener, replicator
                             Default: 600
 
+  --backoff-strategy=type   The backoff strategy to apply to failed API requests. Supported backoff
+                            types are: linear, exponential.
+
+                            Applies to: change-listener
+                            Default: linear
+
+  --backoff-multiplier=num  If --backoff-strategy=exponential this value dictates the multiplier used
+                            when calculating the next retry interval.
+
+                            Applies to: change-listener
+                            Default: 2
+
+  --backoff-delay=secs      If backoff type is linear this is the constant interval between retry
+                            attempts. If backoff type is exponential then this is the initial interval,
+                            and each subsequent retry will be multiplied by the value of
+                            --backoff-multiplier.
+
+                            Applies to: change-listener
+                            Default: 5
+
+  --backoff-limit=num       The maximum number of retry attempts allowed for failed API requests. If this
+                            value is 0 (the default) then it will retry indefinitely.
+
+                            Applies to: change-listener
+                            Default: 0
+
   --version                 Output the version

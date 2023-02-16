@@ -1,5 +1,6 @@
 'use strict'
 
+require('./backoff')
 require('./change-listeners-bulk')
 require('./change-listeners')
 require('./change-processor')

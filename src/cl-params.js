@@ -24,7 +24,11 @@ class CLParams {
         'retry-after': 'retryAfterSeconds',
         'check-stalled': 'checkStalledSeconds',
         'assume-deleted-after': 'assumeDeletedAfterSeconds',
-        'passwords-file': 'passwords'
+        'passwords-file': 'passwords',
+        'backoff-strategy': 'backoffStrategy',
+        'backoff-multiplier': 'backoffMultiplier',
+        'backoff-delay': 'backoffDelay',
+        'backoff-limit': 'backoffLimit'
       },
       replicator: {
         concurrency: 'concurrency',

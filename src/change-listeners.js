@@ -4,7 +4,8 @@ const sporks = require('sporks')
 const Process = require('./process')
 const ChangeProcessor = require('./change-processor')
 const utils = require('./utils')
-const { DatabaseNotFoundError } = require('./errors')
+const { DatabaseNotFoundError, ApiRequestError } = require('./errors')
+const { Backoff } = require('./backoff')
 
 class ChangeListeners extends Process {
   constructor(spiegel, opts) {
@@ -15,7 +16,7 @@ class ChangeListeners extends Process {
         retryAfterSeconds: utils.getOpt(opts, 'retryAfterSeconds'),
         concurrency: utils.getOpt(opts, 'concurrency'),
         checkStalledSeconds: utils.getOpt(opts, 'checkStalledSeconds'),
-        assumeDeletedAfterSeconds: utils.getOpt(opts, 'retryAfterSeconds')
+        assumeDeletedAfterSeconds: utils.getOpt(opts, 'assumeDeletedAfterSeconds')
       },
       'change_listener'
     )
@@ -27,6 +28,19 @@ class ChangeListeners extends Process {
     this._idPrefix = 'spiegel_cl_'
 
     this._changeProcessor = new ChangeProcessor(spiegel, opts)
+
+    // Backoff policy allows us to retry failed API requests for change listeners with delays in
+    // between requests, preventing unwanted consumption of server resources.
+    this._backoff = new Backoff(
+      // The type of backoff policy. Either "exponential" or "linear".
+      utils.getOpt(opts, 'backoffStrategy', 'linear'),
+      // The type of backoff policy. Either "exponential" or "linear".
+      parseFloat(utils.getOpt(opts, 'backoffMultiplier', 2)),
+      // The interval between retries if type=linear or the initial interval if type=exponential.
+      parseInt(utils.getOpt(opts, 'backoffDelay', 5)),
+      // The maximum number of retries to make.
+      parseInt(utils.getOpt(opts, 'backoffLimit', 0))
+    )
   }
 
   _createListenersByDBNameView() {
@@ -81,7 +95,10 @@ class ChangeListeners extends Process {
   _updateLastSeq(id, lastSeq) {
     // Use getMergeUpsert as we want the lastSeq to be stored even if there is a conflict from say
     // another process dirtying this ChangeListener
-    return this._slouch.doc.getMergeUpsert(this._spiegel._dbName, { _id: id, last_seq: lastSeq })
+    return this._slouch.doc.getMergeUpsert(
+      this._spiegel._dbName,
+      { _id: id, last_seq: lastSeq }
+    )
   }
 
   async _getByDBNames(dbNames) {
@@ -231,8 +248,41 @@ class ChangeListeners extends Process {
     })
   }
 
-  async _waitForRequests(requests) {
-    await Promise.all(requests)
+  async _scheduleRetry(item) {
+    const retries = item.retries ? item.retries : 0
+
+    if (this._backoff.hasReachedRetryLimit(retries) === true) {
+      this._clearRetries(item)
+      return
+    }
+
+    let dirtyTime = new Date(
+      new Date().getTime() + this._backoff.getDelaySecs(retries) * 1000
+    ).toISOString()
+
+    this._setDirtyAt(item, dirtyTime)
+
+    item.retries = retries + 1
+
+    await this._updateItem(item, true)
+    this._queueSoiler(dirtyTime)
+  }
+
+  async _waitForRequests(requests, listener) {
+    await Promise
+      .all(requests)
+      .catch(async(err) => {
+        await this._onError(err)
+        if (err instanceof ApiRequestError) {
+          // If a request fails, we dirty the listener and leave the last sequence
+          // untouched so that the change is processed again. The listener is set
+          // to be dirtied at some point in the future based on the global command
+          // params for backoff.
+          await this._scheduleRetry(listener)
+        } else {
+          throw err
+        }
+      })
   }
 
   async _processChanges(listener, changes) {
@@ -252,7 +302,7 @@ class ChangeListeners extends Process {
     await chain
 
     // Wait for all API requests to complete
-    await this._waitForRequests(requests)
+    await this._waitForRequests(requests, listener)
   }
 
   _moreBatches(changes) {
@@ -265,7 +315,9 @@ class ChangeListeners extends Process {
     await this._processChanges(listener, changes)
 
     // Save the lastSeq as we want our next batch to resume from where we left off
-    await this._updateLastSeq(listener._id, changes.last_seq)
+    if (!!listener.dirty_at === false) {
+      await this._updateLastSeq(listener._id, changes.last_seq)
+    }
 
     // Are there more batches to process? If there are then we will leave this ChangeListener
     // dirty
@@ -280,7 +332,7 @@ class ChangeListeners extends Process {
         throw err
       }
       // Log and emit error
-      this._onError(err)
+      await this._onError(err)
 
       // Leave the ChangeListener as dirty so that it will be retried
       return true

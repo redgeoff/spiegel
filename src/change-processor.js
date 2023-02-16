@@ -6,6 +6,7 @@ const sporks = require('sporks')
 const PasswordInjector = require('./password-injector')
 const log = require('./log')
 const utils = require('./utils')
+const { ApiRequestError } = require('./errors')
 const URL_PARSE_RE = /(?=\$\{)|(?<=\})/
 const BRACE_FILTER_RE = /^(\$)\{(.*)\}$/
 
@@ -115,12 +116,19 @@ class ChangeProcessor {
   // Apparently, we cannot expect request to generate an error when we get a non-200 status code!
   // So, we need to create a wrapper.
   async _statusAwareRequest() {
-    let response = await this._req.apply(this._req, arguments)
+    let response = await this._req
+      .apply(this._req, arguments)
+      .catch((err) => {
+        throw new ApiRequestError(err.message, err.args)
+      })
 
     // Status code error?
-    if (response && response[0] &&
-      (response[0].statusCode >= 300 || response[0].statusCode < 200)) {
-      throw new Error(response[0].body)
+    if (
+      response &&
+      response[0] &&
+      (response[0].statusCode >= 300 || response[0].statusCode < 200)
+    ) {
+      throw new ApiRequestError(response[0].body)
     }
 
     return response

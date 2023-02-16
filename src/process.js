@@ -223,6 +223,11 @@ class Process extends events.EventEmitter {
     item.dirty = false
   }
 
+  _clearRetries(item) {
+    item.retries = null
+    item.dirty_at = null
+  }
+
   _setClean(item, leaveDirty) {
     // Leave dirty? This can occur when we want to unlock without cleaning as we still have more
     // processing to do for this item
@@ -236,6 +241,7 @@ class Process extends events.EventEmitter {
 
     item.locked_at = null
     item.possibly_deleted_at = null
+    this._clearRetries(item)
 
     // We do not upsert as we want the clean to fail if the item has been updated
     return this._updateItem(item, false)
