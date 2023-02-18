@@ -4,6 +4,10 @@ set -e
 
 # All command line params in alpha order without the starting --
 declare -a params=(
+  "backoff-delay"
+  "backoff-limit"
+  "backoff-multiplier"
+  "backoff-strategy"
   "batch-size"
   "batch-timeout"
   "check-stalled"

@@ -1065,7 +1065,13 @@ describe('process', () => {
     await proc._unlockAndClean({ _id: 'foo', possibly_deleted_at: new Date().toISOString() })
 
     stub.callCount.should.eql(1)
-    stub.calledWith({ _id: 'foo', locked_at: null, possibly_deleted_at: null }).should.eql(true)
+    stub.calledWith({
+      _id: 'foo',
+      locked_at: null,
+      possibly_deleted_at: null,
+      dirty_at: null,
+      retries: null
+    }).should.eql(true)
   })
 
   it('should clear possibly_deleted_at in _upsertUnlock', async() => {

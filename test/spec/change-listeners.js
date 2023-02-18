@@ -1,9 +1,11 @@
 'use strict'
 
 const ChangeListeners = require('../../src/change-listeners')
-const { DatabaseNotFoundError } = require('../../src/errors')
+const { DatabaseNotFoundError, ApiRequestError } = require('../../src/errors')
 const testUtils = require('../utils')
 const sporks = require('sporks')
+const Promise = require('sporks/scripts/promise')
+const { Backoff, BACKOFF_TYPE_LINEAR } = require('../../src/backoff')
 const sandbox = require('sinon').createSandbox()
 
 describe('change-listeners', () => {
@@ -17,7 +19,21 @@ describe('change-listeners', () => {
 
   const spy = () => {
     calls = []
-    testUtils.spy(listeners, ['_upsert', '_changesArray', '_onError', '_waitForRequests'], calls)
+    testUtils.spy(
+      listeners,
+      [
+        '_upsert',
+        '_changesArray',
+        '_onError',
+        '_waitForRequests',
+        '_scheduleRetry',
+        '_updateLastSeq',
+        '_updateItem',
+        '_queueSoiler',
+        '_setDirtyAt'
+      ],
+      calls
+    )
   }
 
   const fakeSlouchChangesArray = () => {
@@ -168,6 +184,7 @@ describe('change-listeners', () => {
     // Check requests
     requests.length.should.eql(1)
     requests[0].should.eql({ url: 'https://example.com', method: 'GET', qs: {} })
+    calls._updateLastSeq[0][0].should.eql(listener._id)
   })
 
   it('_processBatchOfChangesLogError should handle error', async() => {
@@ -216,5 +233,70 @@ describe('change-listeners', () => {
       }
     ])
     dbNames.should.eql(['db1'])
+  })
+
+  it('should _processBatchOfChanges and not update last_seq if dirty_at is set', async() => {
+    await setUpForBatchOfChanges()
+
+    listener.dirty_at = new Date().toISOString()
+
+    let moreBatches = await listeners._processBatchOfChanges(listener)
+    moreBatches.should.eql(false)
+
+    // Check requests
+    requests.length.should.eql(1)
+    requests[0].should.eql({ url: 'https://example.com', method: 'GET', qs: {} })
+    calls._updateLastSeq.should.eql([])
+  })
+
+  it('should schedule retries on API request failure', async() => {
+    await setUpForBatchOfChanges()
+
+    let err = new ApiRequestError('fail')
+    await listeners._waitForRequests(
+      [sporks.promiseError(err)],
+      listener
+    )
+
+    calls._onError[0][0].should.eql(err)
+    calls._scheduleRetry[0][0].should.eql(listener)
+    calls._updateItem[0][0].should.eql(listener)
+    calls._queueSoiler[0][0].should.eql(listener.dirty_at)
+  })
+
+  it('should re-throw non-api errors', async() => {
+    await setUpForBatchOfChanges()
+
+    let err = new Error('fail')
+
+    try {
+      await listeners._waitForRequests(
+        [sporks.promiseError(err)],
+        listener
+      )
+    } catch (err) {
+      err.message.should.eql('fail')
+    }
+
+    calls._onError[0][0].should.eql(err)
+    calls._scheduleRetry.should.eql([])
+  })
+
+  it('should not schedule retry on API request failure if retry limit reached', async() => {
+    await setUpForBatchOfChanges()
+
+    let limit = 3
+    listeners._backoff = new Backoff(BACKOFF_TYPE_LINEAR, 2, 1, limit)
+    listener.retries = limit + 1
+
+    let err = new ApiRequestError('fail')
+    await listeners._waitForRequests(
+      [sporks.promiseError(err)],
+      listener
+    )
+
+    calls._onError[0][0].should.eql(err)
+    calls._scheduleRetry[0][0].should.eql(listener)
+    calls._setDirtyAt.should.eql([])
   })
 })

@@ -4,6 +4,13 @@ class DatabaseNotFoundError extends Error {
   }
 }
 
+class ApiRequestError extends Error {
+  constructor(message, ...args) {
+    super('API request failed: ' + message, ...args)
+  }
+}
+
 module.exports = {
-  DatabaseNotFoundError
+  DatabaseNotFoundError,
+  ApiRequestError
 }

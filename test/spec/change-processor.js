@@ -129,8 +129,10 @@ describe('change-processor', () => {
 
     let url = changeProcessor._addPassword(changeProcessor._buildUrl(change, onChange, 'test_db1'))
 
-    url.should.eql(`https://user:password@example.com/mon_test_db1/${change.seq}/${
-      change.doc._id}-${change.doc._rev}`)
+    let path = `/mon_test_db1/${change.seq}/${change.doc._id}-${change.doc._rev}`
+    url.should.eql(
+      `https://user:password@example.com${path}`
+    )
   })
 
   it('should set params', () => {
@@ -342,7 +344,7 @@ describe('change-processor', () => {
       err = _err
     }
 
-    err.message.should.eql('redirecting put to /new')
+    err.message.should.eql('API request failed: redirecting put to /new')
   })
 
   it('should follow non-GET redirects with followAllRedirects', async() => {
@@ -369,7 +371,7 @@ describe('change-processor', () => {
       err = _err
     }
 
-    err.message.should.eql('Error')
+    err.message.should.eql('API request failed: Error')
   })
 
   it('should _requestAndPush', async() => {
@@ -383,5 +385,20 @@ describe('change-processor', () => {
 
     changeProcessor._requestAndPush(null, requests).should.eql(promise)
     requests[0].should.eql(promise)
+  })
+
+  it('should wrap request errors in ApiRequestError', async() => {
+    unfake()
+
+    let err = null
+    try {
+      await changeProcessor._request({
+        url: 'badscheme://hard-failure.com'
+      })
+    } catch (_err) {
+      err = _err
+    }
+
+    err.message.should.eql('API request failed: Invalid protocol: badscheme:')
   })
 })
