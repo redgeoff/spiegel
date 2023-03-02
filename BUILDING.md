@@ -3,8 +3,8 @@
 ## Prerequisites
 
 1. You must have the master branch checked out
-2. You must have npm access
-3. You must have docker hub access
+2. You must have npm access (`npm login`)
+3. You must have docker hub access (`docker login`)
 
 ## What does the build do?
 
